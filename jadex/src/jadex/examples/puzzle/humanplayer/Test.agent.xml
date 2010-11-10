@@ -1,0 +1,134 @@
+<!--
+  <H3>Test human player agent.</H3>
+
+-->
+<agent xmlns="http://jadex.sourceforge.net/jadex"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://jadex.sourceforge.net/jadex
+	                    http://jadex.sourceforge.net/jadex-0.96.xsd"
+	name="Test"
+	package="jadex.examples.puzzle.humanplayer">
+
+	<imports>
+		<import>jadex.examples.puzzle.*</import>
+		<import>jadex.runtime.*</import>
+		<import>jadex.util.*</import>
+		<import>jadex.*</import>
+		<import>jadex.adapter.fipa.*</import>
+		<import>java.util.*</import>
+	</imports>
+
+	<capabilities>
+		<capability name="amscap" file="jadex.planlib.AMS"/>
+	</capabilities>
+
+	<beliefs>
+		<!-- The game board offers possibilities to make moves,
+			take back moves and keep track of the game history. -->
+		<belief name="board" class="IBoard">
+ 			<fact>new Board(5)</fact>
+		</belief>
+
+		<!-- The gui of the game board. -->
+		<belief name="board_gui" class="BoardGui">
+			<fact>new BoardGui($agent.getExternalAccess(), $beliefbase.board, true)</fact>
+		</belief>
+
+		<belief name="humanplayer" class="AgentIdentifier"/>
+
+		<belief name="board_observer" class="BoardObserver">
+			<fact>new BoardObserver($beliefbase.board, $agent.getExternalAccess())</fact>
+		</belief>
+	</beliefs>
+
+	<goals>
+		<achievegoalref name="ams_create_agent">
+			<concrete ref="amscap.ams_create_agent"/>
+		</achievegoalref>
+	</goals>
+
+	<plans>
+		<plan name="create_hp">
+			<body class="CreateHumanPlayerPlan"/>
+			<!-- <body>new CreateHumanPlayerPlan()</body>-->
+		</plan>
+	</plans>
+
+	<events>
+		<messageevent name="request_move" type="fipa" direction="send">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.REQUEST</value>
+			</parameter>
+			<parameter name="language" class="String" direction="fixed">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+			<parameter name="ontology" class="String" direction="fixed">
+				<value>PuzzleOntology.ONTOLOGY_NAME</value>
+ 			</parameter>
+			<parameter name="content-class" class="Class" direction="fixed">
+				<value>RequestMove.class</value>
+			</parameter>
+			<parameter name="reply-with" class="String">
+				<value>SFipa.createUniqueId($scope.getAgentName())</value>
+			</parameter>
+		</messageevent>
+
+		<messageevent name="request_takeback" type="fipa" direction="send">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.REQUEST</value>
+			</parameter>
+			<parameter name="language" class="String" direction="fixed">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+			<parameter name="ontology" class="String" direction="fixed">
+				<value>PuzzleOntology.ONTOLOGY_NAME</value>
+ 			</parameter>
+			<parameter name="content-class" class="Class" direction="fixed">
+				<value>RequestTakeback.class</value>
+			</parameter>
+			<parameter name="reply-with" class="String">
+				<value>SFipa.createUniqueId($scope.getAgentName())</value>
+			</parameter>
+		</messageevent>
+
+		<messageevent name="inform_action_done" type="fipa" direction="receive">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.INFORM</value>
+			</parameter>
+			<parameter name="language" class="String" direction="fixed">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+			<parameter name="ontology" class="String" direction="fixed">
+				<value>PuzzleOntology.ONTOLOGY_NAME</value>
+ 			</parameter>
+			<parameter name="content-class" class="Class" direction="fixed">
+				<value>Done.class</value>
+			</parameter>
+		</messageevent>
+
+		<messageevent name="failure" type="fipa" direction="receive">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.FAILURE</value>
+			</parameter>
+			<parameter name="language" class="String" direction="fixed">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+			<parameter name="ontology" class="String" direction="fixed">
+				<value>PuzzleOntology.ONTOLOGY_NAME</value>
+ 			</parameter>
+		</messageevent>
+	</events>
+
+	<properties>
+		<property name="debugging">false</property>
+    </properties>
+
+	<configurations>
+		<configuration name="default">
+			<plans>
+				<initialplan ref="create_hp"/>
+			</plans>
+		</configuration>
+	</configurations>
+
+</agent>

@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- 
+	<H3>Check naming of referenced config elements</H3>
+	Part of ConfigElementRef test.
+ -->
+<capability xmlns="http://jadex.sourceforge.net/jadex"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://jadex.sourceforge.net/jadex
+						http://jadex.sourceforge.net/jadex-0.96.xsd"
+	name="ConfigElementRefWorker"
+	package="jadex.testcases.misc">
+	
+	<imports>
+		<import>jadex.adapter.fipa.AgentIdentifier</import>
+		<import>jadex.adapter.fipa.SFipa</import>
+	</imports>
+	
+	<goals>
+		<achievegoal name="testgoal" exported="true"/>
+	</goals>
+		
+	<events>
+		<internalevent name="testevent" exported="true" />
+		<messageevent name="testmsg" type="fipa" direction="send_receive" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.INFORM</value>
+			</parameter>
+			<parameter name="content" class="String" direction="fixed">
+				<value>"capability end message event"</value>
+			</parameter>
+			<parameter name="conversation-id" class="String" direction="fixed">
+				<value>"capability test converstaion"</value>
+			</parameter>
+			<parameterset name="receivers" class="AgentIdentifier">
+				<value>$agent.getAgentIdentifier()</value>
+			</parameterset>
+		</messageevent>
+	</events>
+	
+</capability>

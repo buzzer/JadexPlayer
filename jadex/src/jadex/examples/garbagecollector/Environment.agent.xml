@@ -1,0 +1,69 @@
+<!--
+  <H3>The environment agent.</H3>
+
+  Shows the environment and produces waste on it.
+-->
+
+<agent xmlns="http://jadex.sourceforge.net/jadex"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://jadex.sourceforge.net/jadex 
+	                    http://jadex.sourceforge.net/jadex-0.96.xsd"
+	name="Environment"
+	package="jadex.examples.garbagecollector">
+
+	<imports>
+		<import>jadex.runtime.*</import>
+		<import>jadex.util.*</import>
+		<import>jadex.*</import>
+	</imports>
+
+	<capabilities>
+		<!-- AMS capability is required to kill other agents on exit. -->
+		<capability name="amscap" file="jadex.planlib.AMS"/>
+	</capabilities>
+	
+	<beliefs>
+		<!-- Environment object as singleton.
+ 			Parameters are name and type of agent for adding it
+			No clean solution but avoids registering of agents.-->
+		<belief name="env" class="Environment">
+			<!-- <fact>Environment.getInstance(null, null)</fact> -->
+			<fact>Environment.getInstance(null, null)</fact>
+ 		</belief>
+ 		
+ 		<!-- Gui of the environment. -->
+ 		<belief name="gui" class="EnvironmentGui">
+	 		<fact>new EnvironmentGui($agent.getExternalAccess())</fact>
+ 		</belief>
+	</beliefs>
+
+	<goals>
+		<!-- Goal used to kill other agents on exit. -->
+		<achievegoalref name="ams_destroy_agent">
+			<concrete ref="amscap.ams_destroy_agent"/>
+		</achievegoalref>
+	</goals>
+	
+	<plans>
+		<!-- Initial plan for continually creating
+			garbarge at random positions. -->
+		<plan name="create_plan">
+			<body class="CreatePlan"/>
+			<!-- <body>new CreatePlan()</body> -->
+		</plan>
+		<plan name="clear_plan">
+			<body class="ClearPlan"/>
+			<!-- <body>new ClearPlan()</body> -->
+		</plan>
+	</plans>
+
+	<configurations>
+		<configuration name="default">
+			<plans>
+				<initialplan ref="create_plan"/>
+				<endplan ref="clear_plan"/>
+			</plans>
+		</configuration>
+	</configurations>
+
+</agent>

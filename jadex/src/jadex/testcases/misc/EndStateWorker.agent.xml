@@ -1,0 +1,167 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- 
+	<H3>Check end state and report to test case agent</H3>
+	Part of EndState test.
+ -->
+<agent xmlns="http://jadex.sourceforge.net/jadex"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://jadex.sourceforge.net/jadex
+						http://jadex.sourceforge.net/jadex-0.96.xsd"
+	name="EndStateWorker"
+	package="jadex.testcases.misc">
+	
+	<imports>
+		<import>jadex.adapter.fipa.AgentIdentifier</import>
+		<import>jadex.adapter.fipa.SFipa</import>
+		<import>jadex.planlib.TestReport</import>
+		<import>jadex.testcases.ResultPlan</import>
+	</imports>
+	
+	<capabilities>
+		<capability name="endcap" file="jadex.testcases.misc.EndStateWorker"/>
+	</capabilities>
+	
+	<beliefs>
+		<belief name="testagent" class="AgentIdentifier" exported="true"/>
+		<belief name="trigger" class="boolean">
+			<fact>false</fact>
+		</belief>
+		<beliefset name="reports" class="TestReport">
+			<fact>new TestReport("end plan", "Test if end plan is executed")</fact>
+			<fact>new TestReport("end goal", "Test if end goal is dispatched")</fact>
+			<fact>new TestReport("end internal event", "Test if end internal event is dispatched")</fact>
+			<fact>new TestReport("end message event", "Test if end message event is sent")</fact>
+			<fact>new TestReport("capability end goal", "Test if capability end goal is dispatched")</fact>
+			<fact>new TestReport("capability end internal event", "Test if capability end internal event is dispatched")</fact>
+			<fact>new TestReport("capability end message event", "Test if capability end message event is sent")</fact>
+		</beliefset>
+	</beliefs>
+	
+	<goals>
+		<!-- A goal that should not be triggered in end state. -->
+		<achievegoal name="testgoal">
+			<creationcondition>$beliefbase.trigger</creationcondition>
+		</achievegoal>
+		<achievegoal name="endgoal">
+			<parameter name="content" class="String">
+				<value>"end goal"</value>
+			</parameter>
+		</achievegoal>
+		<achievegoalref name="capendgoal">
+			<concrete ref="endcap.endgoal"/>
+		</achievegoalref>
+	</goals>
+	
+	<plans>
+		<plan name="endstateworker_plan">
+			<body class="EndStateWorkerPlan"/>
+			<!-- <body>new EndStateWorkerPlan()</body> -->
+		</plan>
+		<plan name="endstateinitiator_plan">
+			<body type="mobile">new EndStateInitiatorPlan()</body>
+		</plan>
+		<plan name="dummy_plan">
+			<body>new ResultPlan(100, true)</body>
+			<trigger>
+				<goal ref="testgoal"/>
+				<condition>$beliefbase.trigger</condition>
+			</trigger>
+		</plan>
+		<plan name="endstateworkertest_plan">
+			<parameter name="content" class="String">
+				<internaleventmapping ref="endevent.content"/>
+				<internaleventmapping ref="capendevent.content"/>
+				<messageeventmapping ref="endmsg.content"/>
+				<messageeventmapping ref="capendmsg.content"/>
+				<goalmapping ref="endgoal.content"/>
+				<goalmapping ref="capendgoal.content"/>
+			</parameter>
+			<body class="EndStateWorkerTestPlan"/>
+			<!-- <body>new EndStateWorkerTestPlan()</body>-->
+			<trigger>
+				<internalevent ref="endevent"/>
+				<internalevent ref="capendevent"/>
+				<messageevent ref="endmsg"/>
+				<messageevent ref="capendmsg"/>
+				<goal ref="endgoal"/>
+				<goal ref="capendgoal"/>
+			</trigger>
+		</plan>
+		<plan name="endstateworkertest_plan2">
+			<parameter name="content" class="String"/>
+			<body class="EndStateWorkerTestPlan"/>
+			<!-- <body>new EndStateWorkerTestPlan()</body> -->
+		</plan>
+	</plans>
+	
+	<events>
+		<internalevent name="endevent">
+			<parameter name="content" class="String">
+				<value>"end internal event"</value>
+			</parameter>
+		</internalevent>
+		<internaleventref name="capendevent">
+			<concrete ref="endcap.endevent"/>
+		</internaleventref>
+		<messageevent name="endmsg" type="fipa" direction="send_receive">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.INFORM</value>
+			</parameter>
+			<parameter name="content" class="String" direction="fixed">
+				<value>"end message event"</value>
+			</parameter>
+			<parameterset name="receivers" class="AgentIdentifier">
+				<value>$agent.getAgentIdentifier()</value>
+			</parameterset>
+		</messageevent>
+		<messageeventref name="capendmsg">
+			<concrete ref="endcap.endmsg"/>
+		</messageeventref>
+		<messageevent name="inform_reports" type="fipa" direction="send">
+			<parameter name="performative" class="String">
+				<value>SFipa.INFORM</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+			</parameter>
+			<parameterset name="receivers" class="AgentIdentifier">
+				<value>$beliefbase.testagent</value>
+			</parameterset>
+		</messageevent>
+	</events>
+	
+	<expressions>
+		<!-- Tests for end state elements are finished when all elements have
+			 been triggered and therefore there is no more unsucceeded test. -->
+		<condition name="end_tests_finished">
+			(select one TestReport $report from $beliefbase.reports
+			where !$report.isSucceeded())==null
+		</condition>
+	</expressions>
+	
+	<configurations>
+		<configuration name="default">
+			<goals>
+				<endgoal ref="endgoal"/>
+				<endgoal ref="capendgoal"/>
+			</goals>
+			<plans>
+				<initialplan ref="endstateworker_plan"/>
+				<initialplan ref="endstateinitiator_plan"/>
+				<endplan ref="endstateworkertest_plan2">
+					<parameter ref="content">
+						<value>"end plan"</value>
+					</parameter>
+				</endplan>
+			</plans>
+			<events>
+				<endinternalevent ref="endevent"/>
+				<endinternalevent ref="capendevent"/>
+				<endmessageevent ref="endmsg"/>
+				<endmessageevent ref="capendmsg"/>
+			</events>
+		</configuration>
+	</configurations>
+	
+</agent>

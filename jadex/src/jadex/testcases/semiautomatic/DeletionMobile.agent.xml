@@ -1,0 +1,27 @@
+<!--
+	<H3>Agent self-deletion test.</H3>
+	Test the deletion of an agent (itself).
+-->
+<agent xmlns="http://jadex.sourceforge.net/jadex"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://jadex.sourceforge.net/jadex 
+	                    http://jadex.sourceforge.net/jadex-0.96.xsd"
+	name="DeletionMobile"
+	package="jadex.testcases.semiautomatic">
+
+	<plans>
+		<plan name="deleter">
+			<body class="DeletionMobilePlan"/>
+			<!-- <body type="mobile">new DeletionMobilePlan()</body> -->
+		</plan>
+	</plans>
+
+	<configurations>
+		<configuration name="default">
+			<plans>
+				<initialplan ref="deleter"/>
+			</plans>
+		</configuration>
+	</configurations>
+
+</agent>

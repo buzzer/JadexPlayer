@@ -1,0 +1,180 @@
+; Fri Oct 21 15:30:16 GMT+01:00 2005
+; 
+;+ (version "3.0")
+;+ (build "Build 141")
+
+([action] of  BEANYNIZER-SLOT
+)
+
+([addresses] of  BEANYNIZER-SLOT
+)
+
+([AgentAction] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-FILES Fixed)
+	(BEANYNIZER-INTERFACES "java.io.Serializable"))
+
+([AgentDescription] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-INTERFACES "java.io.Serializable"))
+
+([agentdescription] of  BEANYNIZER-SLOT
+
+	(BEANYNIZER-GETTERNAME "getAgentDescription")
+	(BEANYNIZER-SETTERNAME "setAgentDescription"))
+
+([agentdescriptions] of  BEANYNIZER-SLOT
+
+	(BEANYNIZER-GETTERNAME "getAgentDescriptions")
+	(BEANYNIZER-SETTERNAME "setAgentDescriptions"))
+
+([agentidentifier] of  BEANYNIZER-SLOT
+
+	(BEANYNIZER-NAME "name"))
+
+([AgentIdentifier] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-FILES Editable)
+	(BEANYNIZER-INTERFACES "java.io.Serializable")
+	(BEANYNIZER-SUPERCLASS "jadex.runtime.BasicAgentIdentifier"))
+
+([AMSAgentDescription] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-INTERFACES "java.io.Serializable"))
+
+([AMSCreateAgent] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-FILES Fixed)
+	(BEANYNIZER-ISINTERFACE FALSE))
+
+([AMSDestroyAgent] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-FILES Fixed)
+	(BEANYNIZER-ISINTERFACE FALSE))
+
+([AMSSearchAgents] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-FILES Fixed)
+	(BEANYNIZER-ISINTERFACE FALSE))
+
+([AMSShutdownPlatform] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-FILES Fixed)
+	(BEANYNIZER-ISINTERFACE FALSE))
+
+([arguments] of  BEANYNIZER-SLOT
+
+	(BEANYNIZER-EXTERNAL FALSE))
+
+([beanynizer_beans_default_Facet_1] of  %3ASTANDARD-FACET
+)
+
+([configuration] of  BEANYNIZER-SLOT
+)
+
+([dfagentdescription] of  BEANYNIZER-SLOT
+
+	(BEANYNIZER-GETTERNAME "getAgentDescription")
+	(BEANYNIZER-SETTERNAME "setAgentDescription"))
+
+([dfagentdescriptions] of  BEANYNIZER-SLOT
+
+	(BEANYNIZER-GETTERNAME "getAgentDescriptions")
+	(BEANYNIZER-SETTERNAME "setAgentDescriptions"))
+
+([DFDeregister] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-FILES Fixed)
+	(BEANYNIZER-ISINTERFACE FALSE))
+
+([DFModify] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-FILES Fixed)
+	(BEANYNIZER-ISINTERFACE FALSE))
+
+([DFRegister] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-FILES Fixed)
+	(BEANYNIZER-ISINTERFACE FALSE))
+
+([DFSearch] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-FILES Fixed)
+	(BEANYNIZER-ISINTERFACE FALSE))
+
+([Done] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-FILES Fixed)
+	(BEANYNIZER-INTERFACES "java.io.Serializable"))
+
+([languages] of  BEANYNIZER-SLOT
+)
+
+([lease-time] of  BEANYNIZER-SLOT
+
+	(BEANYNIZER-TYPE "java.util.Date"))
+
+([max-depth] of  BEANYNIZER-SLOT
+)
+
+([max-results] of  BEANYNIZER-SLOT
+)
+
+([name] of  BEANYNIZER-SLOT
+)
+
+([ontologies] of  BEANYNIZER-SLOT
+)
+
+([ownership] of  BEANYNIZER-SLOT
+)
+
+([properties] of  BEANYNIZER-SLOT
+)
+
+([Property] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-FILES Fixed)
+	(BEANYNIZER-INTERFACES "java.io.Serializable"))
+
+([protocols] of  BEANYNIZER-SLOT
+)
+
+([resolvers] of  BEANYNIZER-SLOT
+)
+
+([result] of  BEANYNIZER-SLOT
+)
+
+([results] of  BEANYNIZER-SLOT
+)
+
+([search-id] of  BEANYNIZER-SLOT
+)
+
+([searchconstraints] of  BEANYNIZER-SLOT
+
+	(BEANYNIZER-GETTERNAME "getSearchConstraints")
+	(BEANYNIZER-SETTERNAME "setSearchConstraints"))
+
+([SearchConstraints] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-FILES Fixed)
+	(BEANYNIZER-INTERFACES "java.io.Serializable"))
+
+([ServiceDescription] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-INTERFACES "java.io.Serializable"))
+
+([services] of  BEANYNIZER-SLOT
+)
+
+([state] of  BEANYNIZER-SLOT
+)
+
+([type] of  BEANYNIZER-SLOT
+)
+
+([value] of  BEANYNIZER-SLOT
+
+	(BEANYNIZER-TYPE "Object"))

@@ -1,0 +1,1633 @@
+<!--
+	The protocols capability enables an easy goal-driven usage of
+	some often used FIPA protocols.
+-->
+<capability xmlns="http://jadex.sourceforge.net/jadex"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://jadex.sourceforge.net/jadex
+	                    http://jadex.sourceforge.net/jadex-0.96.xsd"
+	package="jadex.planlib"
+	name="Protocols">
+
+	<imports>
+		<import>jadex.adapter.fipa.*</import>
+		<import>java.util.*</import>
+		<import>jadex.runtime.*</import>
+		<import>jadex.runtime.impl.*</import>
+	</imports>
+
+	<beliefs>
+		<!-- Timeout for messages. -->
+		<belief name="timeout" class="Long" exported="true">
+			<fact>(Integer)$propertybase.getProperty("standard.timeout")</fact>
+		</belief>
+
+		<!-- Filters are only relevant for the participants protocol side. -->
+
+		<!-- The filter for deciding which initial request messages are handled in this capability. -->
+		<belief name="rp_filter" class="IFilter" exported="true">
+			<fact>IFilter.NEVER</fact>
+		</belief>
+
+		<!-- The filter for deciding which initial cfp messages are handled in this capability. -->
+		<belief name="cnp_filter" class="IFilter" exported="true">
+			<fact>IFilter.NEVER</fact>
+		</belief>
+		
+		<!-- The filter for deciding which initial iterated cfp messages are handled in this capability. -->
+		<belief name="icnp_filter" class="IFilter" exported="true">
+			<fact>IFilter.NEVER</fact>
+		</belief>
+		
+		<!-- The filter for deciding which initial cfp messages are handled in this capability. -->
+		<belief name="ea_filter" class="IFilter" exported="true">
+			<fact>IFilter.NEVER</fact>
+		</belief>
+		
+		<!-- The filter for deciding which initial cfp messages are handled in this capability. -->
+		<belief name="da_filter" class="IFilter" exported="true">
+			<fact>IFilter.NEVER</fact>
+		</belief>
+
+		<!-- The filter for deciding which cancel messages are handled in this capability. -->
+		<belief name="cm_filter" class="IFilter" exported="true">
+			<fact>
+				new ComposedFilter(new IFilter[]
+				{
+					$beliefbase.rp_filter,
+					$beliefbase.cnp_filter,
+					$beliefbase.icnp_filter,
+					$beliefbase.ea_filter,
+					$beliefbase.da_filter
+				}, ComposedFilter.OR)
+			</fact>
+		</belief>
+	</beliefs>
+
+	<goals>
+	
+		<!-- FIPA request protocol. -->
+
+		<!-- (Initiator side) Initiate a conversation using the fipa-request protocol. -->
+		<achievegoal name="rp_initiate" exported="true">
+			<!-- The receiver of the request. -->
+			<parameter name="receiver" class="AgentIdentifier"/>
+			<!-- The requested action. -->
+			<parameter name="action" class="Object"/>
+			<!-- Optional ontology for marshalling. -->
+			<parameter name="ontology" class="String" optional="true"/>
+			<!-- Optional language for marshalling. -->
+			<parameter name="language" class="String" optional="true"/>
+			<!-- The optional request timeout. -->
+			<parameter name="timeout" class="Long" optional="true"/>
+			<!-- The result of the request. -->
+			<parameter name="result" class="Object" direction="out"/>
+			<!-- The interaction state. -->
+			<parameter name="interaction_state" class="InteractionState" direction="out">
+				<value>new InteractionState()</value>
+			</parameter>
+		</achievegoal>
+
+		<!-- (Participant side) Request protocol interaction goal (top-level goal of all receiver-side interactions). -->
+		<performgoal name="rp_receiver_interaction" retry="false" exported="true">
+			<!-- The message that initiated the protocol. -->
+			<parameter name="message" class="IMessageEvent"/>
+			<!-- The interaction description (content of first message). -->
+			<parameter name="interaction_description" class="Object" direction="out"/>
+			<!-- The interaction state. -->
+			<parameter name="interaction_state" class="InteractionState" direction="out">
+				<value>new InteractionState()</value>
+			</parameter>
+			<!-- The interaction result. -->
+			<parameter name="result" class="Object" direction="out"/>
+		</performgoal>
+
+		<!-- (Participant side) Decide upon a requested task will be executed. -->
+		<querygoal name="rp_decide_request" exported="true">
+			<!-- The requested action. -->
+			<parameter name="action" class="Object"/>
+			<!-- The requesting agent. -->
+			<parameter name="initiator" class="AgentIdentifier"/>
+			<!-- True, if request should be done and agree message should be sent. -->
+			<parameter name="accept" class="Boolean" direction="out"/>
+		</querygoal>
+
+		<!-- (Participant side) Execute the requested task. -->
+		<achievegoal name="rp_execute_request" exported="true">
+			<!-- The requested action. -->
+			<parameter name="action" class="Object"/>
+			<!-- The requesting agent. -->
+			<parameter name="initiator" class="AgentIdentifier"/>
+			<!-- The result of the request. -->
+			<parameter name="result" class="Object" direction="out" optional="true"/>
+		</achievegoal>
+
+		<!-- FIPA contract net protocol. -->
+
+		<!-- (Initiator side) Initiate a call for proposal protcol. -->
+		<achievegoal name="cnp_initiate" exported="true">
+			<!-- The call-for-proposals is in the content. -->
+			<parameter name="cfp" class="Object"/>
+			<!-- The call-for-proposals info (local information). -->
+			<parameter name="cfp_info" class="Object" direction="inout" optional="true"/>
+			<!-- Optional ontology for marshalling. -->
+			<parameter name="ontology" class="String" optional="true"/>
+			<!-- Optional langauge for marshalling. -->
+			<parameter name="language" class="String" optional="true"/>
+			<!-- The timeout used during the negotiation. -->
+			<parameter name="timeout" class="Long" optional="true"/>
+			<!-- If several proposals are acceptable, should all be accepted. -->
+			<parameter name="executeall" class="Boolean" optional="true">
+				<value>Boolean.FALSE</value>
+			</parameter>
+			<!-- The interaction state. -->
+			<parameter name="interaction_state" class="InteractionState" direction="out">
+				<value>new InteractionState()</value>
+			</parameter>
+			<!-- The (initial) negotiation participants. -->
+			<parameterset name="receivers" class="AgentIdentifier"/>
+			<!-- The tasks done by the winners. -->
+			<parameterset name="result" class="Object" direction="out"/>
+			<!-- The negotiation history. -->
+			<parameterset name="history" class="NegotiationRecord" optional="true" direction="out"/>
+		</achievegoal>
+		
+		<!-- (Initiator side) Evaluate the received proposals. -->
+		<querygoal name="cnp_evaluate_proposals" exported="true">
+			<!-- The original call-for-proposals. -->
+			<parameter name="cfp" class="Object"/>
+			<!-- The call-for-proposals info (local information). -->
+			<parameter name="cfp_info" class="Object" optional="true" direction="inout"/>
+			<!-- Dummy paramter that leads to goal completion, when an acceptable proposal is available or all proposals are evaluated. -->
+			<parameter name="evaluated" class="Boolean" direction="out">
+				<value evaluationmode="dynamic">
+					($goal.acceptables.length>0 ||
+					(select one ParticipantProposal $prop from $goal.proposals
+					where $prop.getEvaluation()==null)==null) ? true : null
+				</value>
+			</parameter>
+			<!-- The received proposals. -->
+			<parameterset name="proposals" class="ParticipantProposal"/>
+			<!-- The negotiation history. -->
+			<parameterset name="history" class="NegotiationRecord"/>
+			<!--  The acceptable proposals, sorted by preference (best proposal first). -->
+			<parameterset name="acceptables" class="ParticipantProposal" optional="true" direction="out"/>
+		</querygoal>
+
+		<!-- (Participant side) Contract-net protocol interaction goal (top-level goal of all receiver-side interactions). -->
+		<performgoal name="cnp_receiver_interaction" retry="false" exported="true">
+			<!-- The message that initiated the protocol. -->
+			<parameter name="message" class="IMessageEvent"/>
+			<!-- The interaction description (content of first message). -->
+			<parameter name="interaction_description" class="Object" direction="out"/>
+			<!-- The interaction state. -->
+			<parameter name="interaction_state" class="InteractionState" direction="out">
+				<value>new InteractionState()</value>
+			</parameter>
+			<!-- The interaction result. -->
+			<parameter name="result" class="Object" direction="out"/>
+		</performgoal>
+
+		<!-- (Participant side) Make a cfp proposal. -->
+		<querygoal name="cnp_make_proposal" exported="true">
+			<!-- The cfp describing the task to be done. -->
+			<parameter name="cfp" class="Object"/>
+			<!-- The initiator of the interaction. -->
+			<parameter name="initiator" class="AgentIdentifier"/>
+			<!-- The proposal for doing the task. -->
+			<parameter name="proposal" class="Object" direction="out"/>
+			<!-- Optional information about the task that will be tranferred
+			to the task execution step (not sent to initiator).-->
+			<parameter name="proposal_info" class="Object" direction="out" optional="true"/>
+		</querygoal>
+
+		<!-- (Participant side) Execute a cfp task. -->
+		<achievegoal name="cnp_execute_task" exported="true">
+			<!-- The proposal for doing the task. -->
+			<parameter name="proposal" class="Object"/>
+			<!-- Optional information about the task from the 
+			preceding step (not sent to initiator).-->
+			<parameter name="proposal_info" class="Object" optional="true"/>
+			<!-- The initiator of the interaction. -->
+			<parameter name="initiator" class="AgentIdentifier"/>
+			<!-- Information about the task execution. -->
+			<parameter name="result" class="Object" direction="out" optional="true"/>
+		</achievegoal>
+		
+		<!-- FIPA iterated contract net protocol. -->
+
+		<!-- (Initiator side) Initiate a call for proposal protcol. -->
+		<achievegoal name="icnp_initiate" exported="true">
+			<!-- The call-for-proposals is in the content. -->
+			<parameter name="cfp" class="Object"/>
+			<!-- The call-for-proposals info (local information). -->
+			<parameter name="cfp_info" class="Object" direction="inout" optional="true"/>
+			<!-- Optional ontology for marshalling. -->
+			<parameter name="ontology" class="String" optional="true"/>
+			<!-- Optional langauge for marshalling. -->
+			<parameter name="language" class="String" optional="true"/>
+			<!-- The timeout used during the negotiation. -->
+			<parameter name="timeout" class="Long" optional="true"/>
+			<!-- If several proposals are acceptable, should all be accepted. -->
+			<parameter name="executeall" class="Boolean" optional="true">
+				<value>Boolean.FALSE</value>
+			</parameter>
+			<!-- The interaction state. -->
+			<parameter name="interaction_state" class="InteractionState" direction="out">
+				<value>new InteractionState()</value>
+			</parameter>
+			<!-- The (initial) negotiation participants. -->
+			<parameterset name="receivers" class="AgentIdentifier"/>
+			<!-- The tasks done by the winners. -->
+			<parameterset name="result" class="Object" direction="out"/>
+			<!-- The negotiation history. -->
+			<parameterset name="history" class="NegotiationRecord" direction="out"/>
+		</achievegoal>
+		
+		<!-- (Initiator side) Evaluate the received proposals. -->
+		<querygoal name="icnp_evaluate_proposals" exported="true">
+			<!-- The original call-for-proposals. -->
+			<parameter name="cfp" class="Object"/>
+			<!-- The call-for-proposals info (local information). -->
+			<parameter name="cfp_info" class="Object" optional="true" direction="inout"/>
+			<!-- Dummy paramter that leads to goal completion, when an acceptable proposal is available or all proposals are evaluated. -->
+			<parameter name="evaluated" class="Boolean" direction="out">
+				<value evaluationmode="dynamic">
+					($goal.acceptables.length>0 ||
+					(select one ParticipantProposal $prop from $goal.proposals
+					where $prop.getEvaluation()==null)==null) ? true : null
+				</value>
+			</parameter>
+			<!-- The received proposals -->
+			<parameterset name="proposals" class="ParticipantProposal"/>
+			<!-- The negotiation history. -->
+			<parameterset name="history" class="NegotiationRecord"/>
+			<!-- The acceptable proposals, sorted by preference (best proposal first).
+				 By default, setting acceptable proposals will end the protocol (i.e. no more iterations). -->
+			<parameterset name="acceptables" class="ParticipantProposal" optional="true" direction="out"/>
+		</querygoal>
+		
+		<!-- (Initiator side) Collect information for next round (if any). -->
+		<querygoal name="icnp_nextround_info" exported="true">
+			<!-- The call-for-proposal object sent to participants (should be refined for next round). -->
+			<parameter name="cfp" class="Object" direction="inout"/>
+			<!-- The call-for-proposal info (local information, can be refined for next round). -->
+			<parameter name="cfp_info" class="Object" optional="true" direction="inout"/>
+			<!-- Flag indicating the decision to iterate (set to true or false to end goal). -->
+			<parameter name="iterate" class="Boolean" direction="out"/>
+			<!-- The participants (can be altered for next negotiation round). -->
+			<parameterset name="participants" class="AgentIdentifier" direction="inout"/>
+			<!-- The proposals, received from participants including evaluation (if any). -->
+			<parameterset name="proposals" class="ParticipantProposal"/>
+			<!-- The negotiation history. -->
+			<parameterset name="history" class="NegotiationRecord"/>
+		</querygoal>
+
+		<!-- (Participant side) Iterated contract-net protocol interaction goal (top-level goal of all receiver-side interactions). -->
+		<performgoal name="icnp_receiver_interaction" retry="false" exported="true">
+			<!-- The message that initiated the protocol. -->
+			<parameter name="message" class="IMessageEvent"/>
+			<!-- The interaction description (content of first message). -->
+			<parameter name="interaction_description" class="Object" direction="out"/>
+			<!-- The interaction state. -->
+			<parameter name="interaction_state" class="InteractionState" direction="out">
+				<value>new InteractionState()</value>
+			</parameter>
+			<!-- The interaction result. -->
+			<parameter name="result" class="Object" direction="out"/>
+		</performgoal>
+
+		<!-- (Participant side) Make a cfp proposal. -->
+		<querygoal name="icnp_make_proposal" exported="true">
+			<!-- The cfp describing the task to be done. -->
+			<parameter name="cfp" class="Object"/>
+			<!-- The initiator of the interaction. -->
+			<parameter name="initiator" class="AgentIdentifier"/>
+			<!-- The proposal for doing the task. -->
+			<parameter name="proposal" class="Object" direction="out"/>
+			<!-- Optional information about the task that will be tranferred
+			to the task execution step (not sent to initiator).-->
+			<parameter name="proposal_info" class="Object" direction="out" optional="true"/>
+		</querygoal>
+
+		<!-- (Participant side) Execute a cfp task. -->
+		<achievegoal name="icnp_execute_task" exported="true">
+			<!-- The proposal for doing the task. -->
+			<parameter name="proposal" class="Object"/>
+			<!-- Optional information about the task from the 
+			preceding step (not sent to initiator).-->
+			<parameter name="proposal_info" class="Object" optional="true"/>
+			<!-- The initiator of the interaction. -->
+			<parameter name="initiator" class="AgentIdentifier"/>
+			<!-- Information about the task execution. -->
+			<parameter name="result" class="Object" direction="out" optional="true"/>
+		</achievegoal>
+		
+		<!-- FIPA english auction protocol. -->
+
+		<!-- (Initiator side) Initiate the english auction protocol. -->
+		<achievegoal name="ea_initiate" exported="true">
+			<!-- The auction description containing necessary information about the auction:
+				a) the auction topic, b) the round timeout, c) the starttime (optional) -->
+			<parameter name="auction_description" class="AuctionDescription"/>
+			<!-- The call-for-proposals is in the content. -->
+			<parameter name="cfp" class="Object"/>
+			<!-- The call-for-proposals info (local information). -->
+			<parameter name="cfp_info" class="Object" optional="true"/>
+			<!-- The optional limit offer (if defined no ea_decide_acceptance goal is thrown). -->
+			<parameter name="limit" class="Comparable" optional="true"/>
+			<!-- Optional ontology for marshalling. -->
+			<parameter name="ontology" class="String" optional="true"/>
+			<!-- Optional language for marshalling. -->
+			<parameter name="language" class="String" optional="true"/>
+			<!-- The auction result. -->
+			<parameter name="result" class="Object" direction="out" optional="true"/>
+			<!-- The interaction state. -->
+			<parameter name="interaction_state" class="InteractionState" direction="out">
+				<value>new InteractionState()</value>
+			</parameter>
+			<!-- The initially participating bidder agents. -->
+			<parameterset name="receivers" class="AgentIdentifier"/>
+		</achievegoal>
+		
+		<!-- (Initiator side) Decide if the next round should be executed and with which cfp. -->
+		<querygoal name="ea_decide_iteration" exported="true">
+			<!-- Decide about the cfp for the next round. -->
+			<parameter name="cfp" class="Object" direction="out"/>
+			<!-- Decide about the (new) cfp info. -->
+			<parameter name="cfp_info" class="Object" optional="true" direction="inout"/>
+			<!-- The history of cfps. -->
+			<parameterset name="history" class="Object"/>
+		</querygoal>
+		
+		<!-- (Initiator side) Decide if winning offer should be accepted. -->
+		<querygoal name="ea_decide_acceptance" exported="true">
+			<!-- The auction description. -->
+			<parameter name="auction_description" class="AuctionDescription"/>
+			<!-- The winning proposal -->
+			<parameter name="cfp" class="Object"/>
+			<!-- The local cfp info -->
+			<parameter name="cfp_info" class="Object" optional="true"/>
+			<!-- The winning agent. -->
+			<parameter name="winner" class="AgentIdentifier"/>
+			<!-- The result. -->
+			<parameter name="accept" class="Boolean" direction="out"/>
+			<!-- The history of cfps. -->
+			<parameterset name="history" class="Object"/>
+		</querygoal>
+		
+		<!-- (Participant side) English auction protocol interaction goal (top-level goal of all receiver-side interactions). -->
+		<performgoal name="ea_receiver_interaction" retry="false" exported="true">
+			<!-- The message that initiated the protocol. -->
+			<parameter name="message" class="IMessageEvent"/>
+			<!-- The interaction description (content of first message). -->
+			<parameter name="interaction_description" class="Object" direction="out"/>
+			<!-- The interaction state. -->
+			<parameter name="interaction_state" class="InteractionState" direction="out">
+				<value>new InteractionState()</value>
+			</parameter>
+			<!-- The interaction result. -->
+			<parameter name="result" class="Object" direction="out"/>
+		</performgoal>
+		
+		<!-- (Participant side) Optional goal that offers a possibility to decide about participation. -->		
+		<achievegoal name="ea_decide_participation" exported="true">
+			<!-- The initiator of the interaction. -->
+			<parameter name="initiator" class="AgentIdentifier"/>
+			<!-- The auction info describing the auction. -->
+			<parameter name="auction_description" class="AuctionDescription" direction="in"/>
+			<!-- Local auction info. -->
+			<parameter name="auction_info" class="Object" optional="true" direction="out"/>
+			<!-- False for not participating in the auction. -->
+			<parameter name="participate" class="Boolean" direction="out"/>
+		</achievegoal>
+								
+		<!-- (Participant side) Make a proposal for an english auction. -->
+		<querygoal name="ea_make_proposal" exported="true">
+			<!-- The current offer made by the auctioneer. -->
+			<parameter name="cfp" class="Object"/>
+			<!-- The auction description describing the auction. -->
+			<parameter name="auction_description" class="AuctionDescription"/>
+			<!-- Local auction info. -->
+			<parameter name="auction_info" class="Object" optional="true" direction="inout"/>
+			<!-- True, for accepting the offer. -->
+			<parameter name="accept" class="Boolean" direction="out"/>
+			<!-- True, for immediately leaving the current auction. -->
+			<parameter name="leave" class="Boolean" direction="out" optional="true"/>
+			<!-- The history of all offers in the auction. -->
+			<parameterset name="history" class="Object" optional="true"/>
+		</querygoal>
+		
+		<!-- FIPA dutch auction protocol. -->
+
+		<!-- (Initiator side) Initiate the dutch auction protocol. -->
+		<achievegoal name="da_initiate" exported="true">
+			<!-- The auction description containing necessary information about the auction:
+				a) the auction topic, b) the round timeout, c) the starttime (optional) -->
+			<parameter name="auction_description" class="AuctionDescription"/>
+			<!-- The current offer made by the auctioneer. -->
+			<parameter name="cfp" class="Object"/>
+			<!-- The call-for-proposals info (local information). -->
+			<parameter name="cfp_info" class="Object" optional="true" direction="in"/>
+			<!-- Optional ontology for marshalling. -->
+			<parameter name="ontology" class="String" optional="true"/>
+			<!-- Optional language for marshalling. -->
+			<parameter name="language" class="String" optional="true"/>
+			<!-- The result of the protocol execution. -->
+			<parameter name="result" class="Object" optional="true" direction="out"/>
+			<!-- The interaction state. -->
+			<parameter name="interaction_state" class="InteractionState" direction="out">
+				<value>new InteractionState()</value>
+			</parameter>
+			<!-- The initially participating bidder agents. -->
+			<parameterset name="receivers" class="AgentIdentifier"/>
+		</achievegoal>
+		
+		<!-- (Initiator side) Decide if the next round should be executed and with which cfp. -->
+		<querygoal name="da_decide_iteration" exported="true">
+			<!-- Decide about the cfp for the next round. -->
+			<parameter name="cfp" class="Object" direction="out"/>
+			<!-- Decide about the (new) cfp info. -->
+			<parameter name="cfp_info" class="Object" optional="true" direction="inout"/>
+			<!-- The history of cfps. -->
+			<parameterset name="history" class="Object"/>
+		</querygoal>
+				
+		<!-- (Participant side) Dutch auction protocol interaction goal (top-level goal of all receiver-side interactions). -->
+		<performgoal name="da_receiver_interaction" retry="false" exported="true">
+			<!-- The message that initiated the protocol. -->
+			<parameter name="message" class="IMessageEvent"/>
+			<!-- The interaction description (content of first message). -->
+			<parameter name="interaction_description" class="Object" direction="out"/>
+			<!-- The interaction state. -->
+			<parameter name="interaction_state" class="InteractionState" direction="out">
+				<value>new InteractionState()</value>
+			</parameter>
+			<!-- The interaction result. -->
+			<parameter name="result" class="Object" direction="out"/>
+		</performgoal>
+		
+		<!-- (Participant side) Optional goal that offers a possibility to decide a participation. -->		
+		<achievegoal name="da_decide_participation" exported="true">
+			<!-- The initiator of the interaction. -->
+			<parameter name="initiator" class="AgentIdentifier"/>
+			<!-- The auction description. -->
+			<parameter name="auction_description" class="AuctionDescription" direction="in"/>
+			<!-- Local auction info. -->
+			<parameter name="auction_info" class="Object" optional="true" direction="out"/>
+			<!-- False for not participating in the auction. -->
+			<parameter name="participate" class="Boolean" direction="out"/>
+		</achievegoal>		
+								
+		<!-- (Participant side) Accept a proposal in a dutch auction. -->
+		<querygoal name="da_make_proposal" exported="true">
+			<!-- The current offer made by the auctioneer. -->
+			<parameter name="cfp" class="Object"/>
+			<!-- The auction description. -->
+			<parameter name="auction_description" class="AuctionDescription"/>
+			<!-- Local auction info. -->
+			<parameter name="auction_info" class="Object" optional="true" direction="inout"/>
+			<!-- True, for accepting the offer. -->
+			<parameter name="accept" class="Boolean" direction="out"/>
+			<!-- True, for immediately leaving the current auction. -->
+			<parameter name="leave" class="Boolean" direction="out" optional="true"/>
+			<!-- The history of all offers in the auction. -->
+			<parameterset name="history" class="Object" optional="true"/>
+		</querygoal>
+
+		<!-- FIPA-Cancel-Meta-Protocol goals. -->
+
+		<!-- (Participant side) FIPA-Cancel-Meta-Protocol protocol interaction goal (top-level goal of all receiver-side interactions). -->
+		<performgoal name="cm_receiver_interaction" retry="false" exported="true">
+			<!-- The message that initiated the protocol. -->
+			<parameter name="message" class="IMessageEvent"/>
+			<!-- The interaction description (content of first message). -->
+			<parameter name="interaction_description" class="Object" direction="out"/>
+			<!-- The interaction state. -->
+			<parameter name="interaction_state" class="InteractionState" direction="out">
+				<value>new InteractionState()</value>
+			</parameter>
+			<!-- The interaction result. -->
+			<parameter name="result" class="Object" direction="out"/>
+		</performgoal>
+		
+		<!-- (Participant side) Optional goal to approve a cancel request (default=true). -->
+		<querygoal name="cm_approve_cancel" exported="true">
+			<!-- The interaction to be cancelled. -->
+			<parameter name="conversation-id" class="String"/>
+			<!-- The protocol of the interaction to be cancelled. -->
+			<parameter name="protocol" class="String"/>
+			<!-- The initiator agent for the cancel request. -->
+			<parameter name="initiator" class="AgentIdentifier"/>
+			<!-- True, if the cancellation is ok. -->
+			<parameter name="result" class="Boolean" direction="out"/>
+			<!-- A failure reason when cancellation is not ok. -->
+			<parameter name="failure_reason" class="Object" direction="out" optional="true"/>
+		</querygoal>
+
+		<!-- Generic goals. -->
+
+		<!-- A subgoal that can be posted to trigger  to protocol specific
+			 interaction handling. Should be used when implementing custom
+			 plan for receiver interaction goal. -->
+		<performgoal name="perform_interaction" retry="false" exported="true">
+			<!-- The message should be assign from the superordinated goal. -->
+			<parameter name="message" class="IMessageEvent"/>
+			<!-- The interaction description (content of first message). -->
+			<parameter name="interaction_description" class="Object" direction="out"/>
+			<!-- The interaction state should be assign from the superordinated goal. -->
+			<parameter name="interaction_state" class="InteractionState" direction="out"/>
+			<!-- The result should be passed back to the superordinated goal. -->
+			<parameter name="result" class="Object" direction="out"/>
+		</performgoal>
+
+	</goals>
+
+	<plans>
+		<!-- Generic interaction goal creation plan. -->
+		<plan name="rp_interaction_goal_creation_plan">
+			<parameter name="goaltype" class="String">
+				<value>"rp_receiver_interaction"</value>
+			</parameter>
+			<body class="InteractionGoalCreationPlan" />
+			<!-- <body>new InteractionGoalCreationPlan()</body> -->
+			<trigger>
+				<messageevent ref="rp_request"/>
+			</trigger>
+		</plan>
+		
+		<!-- Generic interaction goal creation plan. -->
+		<plan name="cnp_interaction_goal_creation_plan">
+			<parameter name="goaltype" class="String">
+				<value>"cnp_receiver_interaction"</value>
+			</parameter>
+			<body class="InteractionGoalCreationPlan" />
+			<!-- <body>new InteractionGoalCreationPlan()</body> -->
+			<trigger>
+				<messageevent ref="cnp_cfp"/>
+			</trigger>
+		</plan>
+		
+		<!-- Generic interaction goal creation plan. -->
+		<plan name="icnp_interaction_goal_creation_plan">
+			<parameter name="goaltype" class="String">
+				<value>"icnp_receiver_interaction"</value>
+			</parameter>
+			<body class="InteractionGoalCreationPlan" />
+			<!-- <body>new InteractionGoalCreationPlan()</body> -->
+			<trigger>
+				<messageevent ref="icnp_cfp"/>
+			</trigger>
+		</plan>
+		
+		<!-- Generic interaction goal creation plan. -->
+		<plan name="ea_interaction_goal_creation_plan">
+			<parameter name="goaltype" class="String">
+				<value>"ea_receiver_interaction"</value>
+			</parameter>
+			<body class="InteractionGoalCreationPlan" />
+			<!-- <body>new InteractionGoalCreationPlan()</body> -->
+			<trigger>
+				<messageevent ref="ea_inform_start_auction"/>
+			</trigger>
+		</plan>
+		
+		<!-- Generic interaction goal creation plan. -->
+		<plan name="da_interaction_goal_creation_plan">
+			<parameter name="goaltype" class="String">
+				<value>"da_receiver_interaction"</value>
+			</parameter>
+			<body class="InteractionGoalCreationPlan" />
+			<!-- <body>new InteractionGoalCreationPlan()</body> -->
+			<trigger>
+				<messageevent ref="da_inform_start_auction"/>
+			</trigger>
+		</plan>
+	
+		<plan name="request_initiator_plan">
+			<parameter name="receiver" class="AgentIdentifier">
+				<goalmapping ref="rp_initiate.receiver"/>
+			</parameter>
+			<parameter name="action" class="Object">
+				<goalmapping ref="rp_initiate.action"/>
+			</parameter>
+			<parameter name="ontology" class="String">
+				<goalmapping ref="rp_initiate.ontology"/>
+			</parameter>
+			<parameter name="language" class="String">
+				<goalmapping ref="rp_initiate.language"/>
+			</parameter>
+			<parameter name="timeout" class="Long">
+				<goalmapping ref="rp_initiate.timeout"/>
+			</parameter>
+			<parameter name="result" class="Object" direction="out">
+				<goalmapping ref="rp_initiate.result"/>
+			</parameter>
+			<parameter name="interaction_state" class="InteractionState" direction="out">
+				<goalmapping ref="rp_initiate.interaction_state"/>
+			</parameter>
+			<body class="RPInitiatorPlan" />
+			<!-- <body>new RPInitiatorPlan()</body> -->
+			<trigger>
+				<goal ref="rp_initiate"/>
+			</trigger>
+		</plan>
+
+		<plan name="rp_receiver_plan" priority="-1">
+			<parameter name="message" class="IMessageEvent">
+				<goalmapping ref="rp_receiver_interaction.message"/>
+				<goalmapping ref="perform_interaction.message"/>
+			</parameter>
+			<parameter name="interaction_state" class="InteractionState" direction="out">
+				<goalmapping ref="rp_receiver_interaction.interaction_state"/>
+				<goalmapping ref="perform_interaction.interaction_state"/>
+			</parameter>
+			<parameter name="interaction_description" class="Object" direction="out">
+				<goalmapping ref="rp_receiver_interaction.interaction_description"/>
+				<goalmapping ref="perform_interaction.interaction_description"/>
+			</parameter>
+			<parameter name="result" class="Object" direction="out">
+				<goalmapping ref="rp_receiver_interaction.result"/>
+				<goalmapping ref="perform_interaction.result"/>
+			</parameter>
+			<body class="RPReceiverPlan" />
+			<!-- <body>new RPReceiverPlan()</body> -->
+			<trigger>
+				<goal ref="rp_receiver_interaction"/>
+				<goal ref="perform_interaction">
+					<match>SFipa.PROTOCOL_REQUEST.equals($goal.message.getParameter(SFipa.PROTOCOL).getValue())</match>
+				</goal>
+			</trigger>
+		</plan>
+
+		<plan name="cnp_initiator_plan">
+			<parameter name="iterated" class="Boolean">
+				<value>Boolean.FALSE</value>
+			</parameter>
+			<parameter name="cfp" class="Object">
+				<goalmapping ref="cnp_initiate.cfp"/>
+			</parameter>
+			<parameter name="cfp_info" class="Object">
+				<goalmapping ref="cnp_initiate.cfp_info"/>
+			</parameter>
+			<parameter name="ontology" class="String">
+				<goalmapping ref="cnp_initiate.ontology"/>
+			</parameter>
+			<parameter name="language" class="String">
+				<goalmapping ref="cnp_initiate.language"/>
+			</parameter>
+			<parameter name="timeout" class="Long">
+				<goalmapping ref="cnp_initiate.timeout"/>
+			</parameter>
+			<parameter name="executeall" class="boolean">
+				<goalmapping ref="cnp_initiate.executeall"/>
+			</parameter>
+			<parameter name="interaction_state" class="InteractionState" direction="out">
+				<goalmapping ref="cnp_initiate.interaction_state"/>
+			</parameter>
+			<parameterset name="receivers" class="AgentIdentifier">
+				<goalmapping ref="cnp_initiate.receivers"/>
+			</parameterset>
+			<parameterset name="result" class="Object" direction="out">
+				<goalmapping ref="cnp_initiate.result"/>
+			</parameterset>
+			<parameterset name="history" class="NegotiationRecord">
+				<goalmapping ref="cnp_initiate.history"/>
+			</parameterset>
+			<body class="CNPInitiatorPlan" />
+			<!-- <body>new CNPInitiatorPlan()</body> -->
+			<trigger>
+				<goal ref="cnp_initiate"/>
+			</trigger>
+		</plan>
+
+		<!-- Default plan for evaluate proposals goal. -->
+		<plan name="cnp_evaluateproposals_plan" priority="-1">
+			<parameter name="cfp" class="Object">
+				<goalmapping ref="cnp_evaluate_proposals.cfp"/>
+			</parameter>
+			<parameter name="cfp_info" class="Object">
+				<goalmapping ref="cnp_evaluate_proposals.cfp_info"/>
+			</parameter>
+			<parameterset name="proposals" class="ParticipantProposal">
+				<goalmapping ref="cnp_evaluate_proposals.proposals"/>
+			</parameterset>
+			<parameterset name="acceptables" class="ParticipantProposal" optional="true" direction="out">
+				<goalmapping ref="cnp_evaluate_proposals.acceptables"/>
+			</parameterset>
+			<parameterset name="history" class="NegotiationRecord">
+				<goalmapping ref="cnp_evaluate_proposals.history"/>
+			</parameterset>
+			<body class="CNPEvaluateProposalsPlan" />
+			<trigger>
+				<goal ref="cnp_evaluate_proposals"/>
+			</trigger>
+			<precondition>$goal.cfp_info instanceof IProposalEvaluator</precondition>
+		</plan>
+
+		<plan name="cnp_receiver_plan">
+			<parameter name="iterated" class="Boolean">
+				<value>Boolean.FALSE</value>
+			</parameter>
+			<parameter name="message" class="IMessageEvent">
+				<goalmapping ref="cnp_receiver_interaction.message"/>
+				<goalmapping ref="perform_interaction.message"/>
+			</parameter>
+			<parameter name="interaction_state" class="InteractionState" direction="out">
+				<goalmapping ref="cnp_receiver_interaction.interaction_state"/>
+				<goalmapping ref="perform_interaction.interaction_state"/>
+			</parameter>
+			<parameter name="interaction_description" class="Object" direction="out">
+				<goalmapping ref="cnp_receiver_interaction.interaction_description"/>
+				<goalmapping ref="perform_interaction.interaction_description"/>
+			</parameter>
+			<parameter name="result" class="Object" direction="out">
+				<goalmapping ref="cnp_receiver_interaction.result"/>
+				<goalmapping ref="perform_interaction.result"/>
+			</parameter>
+			<body class="CNPReceiverPlan" />
+			<!-- <body>new CNPReceiverPlan()</body> -->
+			<trigger>
+				<goal ref="cnp_receiver_interaction"/>
+				<goal ref="perform_interaction">
+					<match>SFipa.PROTOCOL_CONTRACT_NET.equals($goal.message.getParameter(SFipa.PROTOCOL).getValue())</match>
+				</goal>
+			</trigger>
+		</plan>
+		
+		<plan name="icnp_initiator_plan">
+			<parameter name="iterated" class="Boolean">
+				<value>Boolean.TRUE</value>
+			</parameter>
+			<parameter name="cfp" class="Object">
+				<goalmapping ref="icnp_initiate.cfp"/>
+			</parameter>
+			<parameter name="cfp_info" class="Object">
+				<goalmapping ref="icnp_initiate.cfp_info"/>
+			</parameter>
+			<parameter name="ontology" class="String">
+				<goalmapping ref="icnp_initiate.ontology"/>
+			</parameter>
+			<parameter name="language" class="String">
+				<goalmapping ref="icnp_initiate.language"/>
+			</parameter>
+			<parameter name="timeout" class="Long">
+				<goalmapping ref="icnp_initiate.timeout"/>
+			</parameter>
+			<parameter name="executeall" class="boolean">
+				<goalmapping ref="icnp_initiate.executeall"/>
+			</parameter>
+			<parameter name="interaction_state" class="InteractionState" direction="out">
+				<goalmapping ref="icnp_initiate.interaction_state"/>
+			</parameter>
+			<parameterset name="receivers" class="AgentIdentifier">
+				<goalmapping ref="icnp_initiate.receivers"/>
+			</parameterset>
+			<parameterset name="result" class="Object" direction="out">
+				<goalmapping ref="icnp_initiate.result"/>
+			</parameterset>
+			<parameterset name="history" class="NegotiationRecord">
+				<goalmapping ref="icnp_initiate.history"/>
+			</parameterset>
+			<body class="CNPInitiatorPlan" />
+			<!-- <body>new CNPInitiatorPlan()</body> -->
+			<trigger>
+				<goal ref="icnp_initiate"/>
+			</trigger>
+		</plan>
+
+		<!-- Default plan for evaluate proposals goal. -->
+		<plan name="icnp_evaluateproposals_plan" priority="-1">
+			<parameter name="cfp" class="Object">
+				<goalmapping ref="icnp_evaluate_proposals.cfp"/>
+			</parameter>
+			<parameter name="cfp_info" class="Object">
+				<goalmapping ref="icnp_evaluate_proposals.cfp_info"/>
+			</parameter>
+			<parameterset name="proposals" class="ParticipantProposal">
+				<goalmapping ref="icnp_evaluate_proposals.proposals"/>
+			</parameterset>
+			<parameterset name="acceptables" class="ParticipantProposal" optional="true" direction="out">
+				<goalmapping ref="icnp_evaluate_proposals.acceptables"/>
+			</parameterset>
+			<parameterset name="history" class="NegotiationRecord">
+				<goalmapping ref="icnp_evaluate_proposals.history"/>
+			</parameterset>
+			<body class="CNPEvaluateProposalsPlan" />
+			<trigger>
+				<goal ref="icnp_evaluate_proposals"/>
+			</trigger>
+			<precondition>$goal.cfp_info instanceof IProposalEvaluator</precondition>
+		</plan>
+
+		<!-- Default plan for query nextround-info goal. -->
+		<plan name="icnp_querynextroundinfo_plan" priority="-1">
+			<parameter name="cfp" class="Object">
+				<goalmapping ref="icnp_nextround_info.cfp"/>
+			</parameter>
+			<parameter name="cfp_info" class="Object" direction="inout">
+				<goalmapping ref="icnp_nextround_info.cfp_info"/>
+			</parameter>
+			<parameter name="iterate" class="Boolean" direction="out">
+				<goalmapping ref="icnp_nextround_info.iterate"/>
+			</parameter>			
+			<parameterset name="participants" class="AgentIdentifier" direction="inout">
+				<goalmapping ref="icnp_nextround_info.participants"/>
+			</parameterset>
+			<parameterset name="proposals" class="ParticipantProposal">
+				<goalmapping ref="icnp_nextround_info.proposals"/>
+			</parameterset>
+			<parameterset name="history" class="NegotiationRecord">
+				<goalmapping ref="icnp_nextround_info.history"/>
+			</parameterset>
+			<body class="CNPQueryNextroundInfoPlan" />
+			<trigger>
+				<goal ref="icnp_nextround_info"/>
+			</trigger>
+			<precondition>$goal.cfp_info instanceof IQueryNextroundInfo</precondition>
+		</plan>
+
+		<plan name="icnp_receiver_plan">
+			<parameter name="iterated" class="Boolean">
+				<value>Boolean.TRUE</value>
+			</parameter>
+			<parameter name="message" class="IMessageEvent">
+				<goalmapping ref="icnp_receiver_interaction.message"/>
+				<goalmapping ref="perform_interaction.message"/>
+			</parameter>
+			<parameter name="interaction_state" class="InteractionState" direction="out">
+				<goalmapping ref="icnp_receiver_interaction.interaction_state"/>
+				<goalmapping ref="perform_interaction.interaction_state"/>
+			</parameter>
+			<parameter name="interaction_description" class="Object" direction="out">
+				<goalmapping ref="icnp_receiver_interaction.interaction_description"/>
+				<goalmapping ref="perform_interaction.interaction_description"/>
+			</parameter>
+			<parameter name="result" class="Object" direction="out">
+				<goalmapping ref="icnp_receiver_interaction.result"/>
+				<goalmapping ref="perform_interaction.result"/>
+			</parameter>
+			<body class="CNPReceiverPlan" />
+			<!-- <body>new CNPReceiverPlan()</body> -->
+			<trigger>
+				<goal ref="icnp_receiver_interaction"/>
+				<goal ref="perform_interaction">
+					<match>SFipa.PROTOCOL_ITERATED_CONTRACT_NET.equals($goal.message.getParameter(SFipa.PROTOCOL).getValue())</match>
+				</goal>
+			</trigger>
+		</plan>
+		
+		<plan name="ea_initiator_plan">		
+			<parameter name="auction_description" class="AuctionDescription">
+				<goalmapping ref="ea_initiate.auction_description"/>
+			</parameter>
+			<parameter name="cfp" class="Object">
+				<goalmapping ref="ea_initiate.cfp"/>
+			</parameter>
+			<parameter name="cfp_info" class="Object">
+				<goalmapping ref="ea_initiate.cfp_info"/>
+			</parameter>
+			<parameter name="limit" class="Comparable">
+				<goalmapping ref="ea_initiate.limit"/>
+			</parameter>
+			<parameter name="ontology" class="String">
+				<goalmapping ref="ea_initiate.ontology"/>
+			</parameter>
+			<parameter name="language" class="String">
+				<goalmapping ref="ea_initiate.language"/>
+			</parameter>
+			<parameter name="interaction_state" class="InteractionState" direction="out">
+				<goalmapping ref="ea_initiate.interaction_state"/>
+			</parameter>
+			<parameter name="result" class="Object">
+				<goalmapping ref="ea_initiate.result"/>
+			</parameter>
+			<parameterset name="receivers" class="AgentIdentifier">
+				<goalmapping ref="ea_initiate.receivers"/>
+			</parameterset>
+			<body class="EAInitiatorPlan" />
+			<!-- <body>new EAInitiatorPlan()</body> -->
+			<trigger>
+				<goal ref="ea_initiate"/>
+			</trigger>
+		</plan>		
+				
+		<plan name="ea_receiver_plan" priority="-1">
+			<parameter name="message" class="IMessageEvent">
+				<goalmapping ref="ea_receiver_interaction.message"/>
+				<goalmapping ref="perform_interaction.message"/>
+			</parameter>
+			<parameter name="interaction_state" class="InteractionState" direction="out">
+				<goalmapping ref="ea_receiver_interaction.interaction_state"/>
+				<goalmapping ref="perform_interaction.interaction_state"/>
+			</parameter>
+			<parameter name="interaction_description" class="Object" direction="out">
+				<goalmapping ref="ea_receiver_interaction.interaction_description"/>
+				<goalmapping ref="perform_interaction.interaction_description"/>
+			</parameter>
+			<parameter name="result" class="Object" direction="out">
+				<goalmapping ref="ea_receiver_interaction.result"/>
+				<goalmapping ref="perform_interaction.result"/>
+			</parameter>
+			<body class="EAReceiverPlan" />
+			<!-- <body>new EAReceiverPlan()</body> -->
+			<trigger>
+				<goal ref="ea_receiver_interaction"/>
+				<goal ref="perform_interaction">
+					<match>SFipa.PROTOCOL_ENGLISH_AUCTION.equals($goal.message.getParameter(SFipa.PROTOCOL).getValue())</match>
+				</goal>
+			</trigger>
+		</plan>
+				
+		<plan name="da_initiator_plan">		
+			<parameter name="auction_description" class="AuctionDescription">
+				<goalmapping ref="da_initiate.auction_description"/>
+			</parameter>
+			<parameter name="cfp" class="Object">
+				<goalmapping ref="da_initiate.cfp"/>
+			</parameter>
+			<parameter name="cfp_info" class="Object">
+				<goalmapping ref="da_initiate.cfp_info"/>
+			</parameter>
+			<parameter name="ontology" class="String">
+				<goalmapping ref="da_initiate.ontology"/>
+			</parameter>
+			<parameter name="language" class="String">
+				<goalmapping ref="da_initiate.language"/>
+			</parameter>
+			<parameter name="interaction_state" class="InteractionState" direction="out">
+				<goalmapping ref="da_initiate.interaction_state"/>
+			</parameter>
+			<parameter name="result" class="Object">
+				<goalmapping ref="da_initiate.result"/>
+			</parameter>
+			<parameterset name="receivers" class="AgentIdentifier">
+				<goalmapping ref="da_initiate.receivers"/>
+			</parameterset>
+			<body class="DAInitiatorPlan" />
+			<!-- <body>new DAInitiatorPlan()</body> -->
+			<trigger>
+				<goal ref="da_initiate"/>
+			</trigger>
+		</plan>		
+		
+		<plan name="da_receiver_plan" priority="-1">
+			<parameter name="message" class="IMessageEvent">
+				<goalmapping ref="da_receiver_interaction.message"/>
+				<goalmapping ref="perform_interaction.message"/>
+			</parameter>
+			<parameter name="interaction_state" class="InteractionState" direction="out">
+				<goalmapping ref="da_receiver_interaction.interaction_state"/>
+				<goalmapping ref="perform_interaction.interaction_state"/>
+			</parameter>
+			<parameter name="interaction_description" class="Object" direction="out">
+				<goalmapping ref="da_receiver_interaction.interaction_description"/>
+				<goalmapping ref="perform_interaction.interaction_description"/>
+			</parameter>
+			<parameter name="result" class="Object" direction="out">
+				<goalmapping ref="da_receiver_interaction.result"/>
+				<goalmapping ref="perform_interaction.result"/>
+			</parameter>
+			<body class="DAReceiverPlan" />
+			<!-- <body>new DAReceiverPlan()</body> -->
+			<trigger>
+				<goal ref="da_receiver_interaction"/>
+				<goal ref="perform_interaction">
+					<match>SFipa.PROTOCOL_DUTCH_AUCTION.equals($goal.message.getParameter(SFipa.PROTOCOL).getValue())</match>
+				</goal>
+			</trigger>
+		</plan>
+		
+		<!-- FIPA-Cancel-Meta-Protocol plans -->
+		
+		<!-- FIPA-Cancel-Meta-Protocol generic interaction goal creation plan. -->
+		<plan name="cm_interaction_goal_creation_plan">
+			<parameter name="goaltype" class="String">
+				<value>"cm_receiver_interaction"</value>
+			</parameter>
+			<body class="InteractionGoalCreationPlan" />
+			<!-- <body>new InteractionGoalCreationPlan()</body> -->
+			<trigger>
+				<messageevent ref="cm_cancel"/>
+			</trigger>
+		</plan>		
+		
+		<!-- Plan for cancelling an interaction (receiver side of FIPA-Cancel-Meta-Protocol). -->
+		<plan name="cm_receiver_plan">
+			<parameter name="message" class="IMessageEvent">
+				<goalmapping ref="cm_receiver_interaction.message"/>
+				<goalmapping ref="perform_interaction.message"/>
+			</parameter>
+			<body class="CMReceiverPlan" />
+			<!-- <body>new CMReceiverPlan()</body>-->
+			<trigger>
+				<goal ref="cm_receiver_interaction"/>
+				<goal ref="perform_interaction">
+					<match>SFipa.PROTOCOL_CANCEL_META.equals($goal.message.getParameter(SFipa.PROTOCOL).getValue())</match>
+				</goal>
+			</trigger>
+		</plan>
+		
+		<!-- Default plan for deciding about cancellation. -->
+		<plan name="cm_approve_cancel_plan" priority="-1">
+			<parameter name="result" class="boolean">
+				<goalmapping ref="cm_approve_cancel.result"/>
+			</parameter>
+			<body class="CMApproveCancelPlan" />
+			<!-- <body>new CMApproveCancelPlan()</body> -->
+			<trigger>
+				<goal ref="cm_approve_cancel"/>
+			</trigger>
+		</plan>
+		
+	</plans>
+
+	<events>
+		<messageevent name="rp_request" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.REQUEST</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_REQUEST</value>
+			</parameter>
+			<parameter name="conversation-id" class="String">
+				<value>SFipa.createUniqueId($scope.getAgentName())</value>
+			</parameter>
+			<!--<parameter name="reply-with" class="String">
+				<value>SFipa.createUniqueId($scope.getAgentName())</value>
+			</parameter>-->
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+			</parameter>
+			<match>$beliefbase.rp_filter.filter($messagemap) &amp;&amp; $messagemap.get("$conversation_id")!=null</match>
+		</messageevent>
+
+		<messageevent name="rp_agree" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.AGREE</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_REQUEST</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+ 			<match>$messagemap.get("$conversation_id")!=null</match>
+		</messageevent>
+
+		<messageevent name="rp_refuse" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.REFUSE</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_REQUEST</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+ 			<match>$messagemap.get("$conversation_id")!=null</match>
+		</messageevent>
+
+		<messageevent name="rp_failure" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.FAILURE</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_REQUEST</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+ 			<match>$messagemap.get("$conversation_id")!=null</match>
+		</messageevent>
+
+		<messageevent name="rp_not_understood" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.NOT_UNDERSTOOD</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_REQUEST</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+ 			<match>$messagemap.get("$conversation_id")!=null</match>
+		</messageevent>
+
+		<messageevent name="rp_inform" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.INFORM</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_REQUEST</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+ 			<match>$messagemap.get("$conversation_id")!=null</match>
+		</messageevent>
+
+		<!--- cnp -->
+
+		<messageevent name="cnp_cfp" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.CFP</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_CONTRACT_NET</value>
+			</parameter>
+			<!-- hmm inout needed to read it in plan :-( -->
+			<parameter name="conversation-id" class="String" direction="inout">
+				<value>SFipa.createUniqueId($scope.getAgentName())</value>
+			</parameter>
+			<!--<parameter name="reply-with" class="String">
+				<value>SFipa.createUniqueId($scope.getAgentName())</value>
+			</parameter>-->
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+			<match>$beliefbase.cnp_filter.filter($messagemap) &amp;&amp; $messagemap.get("$conversation_id")!=null</match>
+		</messageevent>
+
+		<messageevent name="cnp_propose" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.PROPOSE</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_CONTRACT_NET</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+ 			<match>$messagemap.get("$conversation_id")!=null</match>
+		</messageevent>
+
+		<messageevent name="cnp_refuse" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.REFUSE</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_CONTRACT_NET</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+ 			<match>$messagemap.get("$conversation_id")!=null</match>
+		</messageevent>
+
+		<messageevent name="cnp_reject" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.REJECT_PROPOSAL</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_CONTRACT_NET</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+ 			<match>$messagemap.get("$conversation_id")!=null</match>
+		</messageevent>
+
+		<messageevent name="cnp_accept" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.ACCEPT_PROPOSAL</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_CONTRACT_NET</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+ 			<match>$messagemap.get("$conversation_id")!=null</match>
+		</messageevent>
+
+		<messageevent name="cnp_inform" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.INFORM</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_CONTRACT_NET</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+ 			<match>$messagemap.get("$conversation_id")!=null</match>
+		</messageevent>
+
+		<messageevent name="cnp_failure" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.FAILURE</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_CONTRACT_NET</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+ 			<match>$messagemap.get("$conversation_id")!=null</match>
+		</messageevent>
+		
+		<messageevent name="cnp_not_understood" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.NOT_UNDERSTOOD</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_CONTRACT_NET</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+ 			<match>$messagemap.get("$conversation_id")!=null</match>
+		</messageevent>
+		
+		<!--- icnp -->
+
+		<messageevent name="icnp_cfp" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.CFP</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_ITERATED_CONTRACT_NET</value>
+			</parameter>
+			<!-- hmm inout needed to read it in plan :-( -->
+			<parameter name="conversation-id" class="String" direction="inout">
+				<value>SFipa.createUniqueId($scope.getAgentName())</value>
+			</parameter>
+			<!--<parameter name="reply-with" class="String">
+				<value>SFipa.createUniqueId($scope.getAgentName())</value>
+			</parameter>-->
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+			<match>$beliefbase.icnp_filter.filter($messagemap) &amp;&amp; $messagemap.get("$conversation_id")!=null</match>
+		</messageevent>
+
+		<messageevent name="icnp_propose" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.PROPOSE</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_ITERATED_CONTRACT_NET</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+ 			<match>$messagemap.get("$conversation_id")!=null</match>
+		</messageevent>
+
+		<messageevent name="icnp_refuse" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.REFUSE</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_ITERATED_CONTRACT_NET</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+ 			<match>$messagemap.get("$conversation_id")!=null</match>
+		</messageevent>
+
+		<messageevent name="icnp_reject" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.REJECT_PROPOSAL</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_ITERATED_CONTRACT_NET</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+ 			<match>$messagemap.get("$conversation_id")!=null</match>
+		</messageevent>
+
+		<messageevent name="icnp_accept" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.ACCEPT_PROPOSAL</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_ITERATED_CONTRACT_NET</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+ 			<match>$messagemap.get("$conversation_id")!=null</match>
+		</messageevent>
+
+		<messageevent name="icnp_inform" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.INFORM</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_ITERATED_CONTRACT_NET</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+ 			<match>$messagemap.get("$conversation_id")!=null</match>
+		</messageevent>
+
+		<messageevent name="icnp_failure" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.FAILURE</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_ITERATED_CONTRACT_NET</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+ 			<match>$messagemap.get("$conversation_id")!=null</match>
+		</messageevent>
+		
+		<messageevent name="icnp_not_understood" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.NOT_UNDERSTOOD</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_ITERATED_CONTRACT_NET</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+ 			<match>$messagemap.get("$conversation_id")!=null</match>
+		</messageevent>
+		
+		<!-- english auction -->
+		
+		<messageevent name="ea_inform_start_auction" type="fipa" exported="true" direction="send_receive">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.INFORM</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_ENGLISH_AUCTION</value>
+			</parameter>
+ 			<parameter name="conversation-id" class="String"  direction="inout">
+				<value>SFipa.createUniqueId($scope.getAgentName())</value>
+			</parameter>
+			<!-- <parameter name="reply-with" class="String">
+				<value>SFipa.createUniqueId($scope.getAgentName())</value>
+			</parameter> -->		
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter> 			
+ 			<!-- This is no encoding, but this is the only parameter left. -->					
+ 			<parameter name="encoding" class="String" direction="fixed">
+ 				<value>"begin_auction"</value>
+ 			</parameter>			
+ 			<parameter name="content" class="AuctionDescription" direction="inout"/>
+ 			<match>$beliefbase.ea_filter.filter($messagemap) &amp;&amp; $messagemap.get("$conversation_id")!=null</match>
+		</messageevent>
+		
+		<messageevent name="ea_inform_end_auction" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.INFORM</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_ENGLISH_AUCTION</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+ 			<!-- This is no encoding, but this is the only parameter left. -->					
+ 			<parameter name="encoding" class="String" direction="fixed">
+ 				<value>"end_auction"</value>
+ 			</parameter> 
+ 			<match>$messagemap.get("$conversation_id")!=null</match>
+		</messageevent>
+		
+		<messageevent name="ea_cfp" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.CFP</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_ENGLISH_AUCTION</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+			<match>$messagemap.get("$conversation_id")!=null</match>
+		</messageevent>
+
+		<messageevent name="ea_propose" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.PROPOSE</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_ENGLISH_AUCTION</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+ 			<match>$messagemap.get("$conversation_id")!=null</match>
+		</messageevent>
+		
+		<messageevent name="ea_not_understood" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.NOT_UNDERSTOOD</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_ENGLISH_AUCTION</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+ 			<match>$messagemap.get("$conversation_id")!=null</match>
+		</messageevent>
+
+		<messageevent name="ea_reject_proposal" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.REJECT_PROPOSAL</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_ENGLISH_AUCTION</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+ 			<match>$messagemap.get("$conversation_id")!=null</match>
+		</messageevent>
+
+		<messageevent name="ea_accept_proposal" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.ACCEPT_PROPOSAL</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_ENGLISH_AUCTION</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+  			<match>$messagemap.get("$conversation_id")!=null</match>
+		</messageevent>		
+
+		<!-- dutch auction -->
+		
+		<messageevent name="da_inform_start_auction" type="fipa" exported="true" direction="send_receive">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.INFORM</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_DUTCH_AUCTION</value>
+			</parameter>
+ 			<parameter name="conversation-id" class="String"  direction="inout">
+				<value>SFipa.createUniqueId($scope.getAgentName())</value>
+			</parameter>
+			<!-- <parameter name="reply-with" class="String">
+				<value>SFipa.createUniqueId($scope.getAgentName())</value>
+			</parameter> -->		
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+ 			<!-- This is no encoding, but this is the only parameter left. -->					
+ 			<parameter name="encoding" class="String" direction="fixed">
+ 				<value>"begin_auction"</value>
+ 			</parameter>
+ 			<parameter name="content" class="AuctionDescription" direction="inout"/>
+ 			<match>$beliefbase.da_filter.filter($messagemap) &amp;&amp; $messagemap.get("$conversation_id")!=null</match>
+		</messageevent>
+		
+		<messageevent name="da_inform_end_auction" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.INFORM</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_DUTCH_AUCTION</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+ 			<!-- This is no encoding, but this is the only parameter left. -->					
+ 			<parameter name="encoding" class="String" direction="fixed">
+ 				<value>"end_auction"</value>
+ 			</parameter>
+ 			<match>$messagemap.get("$conversation_id")!=null</match>
+		</messageevent>
+		
+		<messageevent name="da_cfp" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.CFP</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_DUTCH_AUCTION</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+ 			<match>$messagemap.get("$conversation_id")!=null</match>
+		</messageevent>
+
+		<messageevent name="da_propose" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.PROPOSE</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_DUTCH_AUCTION</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+  			<match>$messagemap.get("$conversation_id")!=null</match>
+		</messageevent>
+		
+		<messageevent name="da_not_understood" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.NOT_UNDERSTOOD</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_DUTCH_AUCTION</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+  			<match>$messagemap.get("$conversation_id")!=null</match>
+		</messageevent>
+
+		<messageevent name="da_reject_proposal" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.REJECT_PROPOSAL</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_DUTCH_AUCTION</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+  			<match>$messagemap.get("$conversation_id")!=null</match>
+		</messageevent>
+
+		<messageevent name="da_accept_proposal" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.ACCEPT_PROPOSAL</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_DUTCH_AUCTION</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+  			<match>$messagemap.get("$conversation_id")!=null</match>
+		</messageevent>	
+
+		<!-- Cancel message sent by initiator side to terminate an ongoing interaction.
+			 Part of the generic FIPA-Cancel-Meta-Protocol (CM). -->
+		<messageevent name="cm_cancel" type="fipa">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.CANCEL</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_CANCEL_META</value>
+			</parameter>
+  			<match>$beliefbase.cm_filter.filter($messagemap) &amp;&amp; $messagemap.get("$conversation_id")!=null</match>
+		</messageevent>	
+
+		<!-- Inform message sent by receiver side describing successful termination of an ongoing interaction.
+			 Part of the generic FIPA-Cancel-Meta-Protocol (CM). -->
+		<messageevent name="cm_inform" type="fipa">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.INFORM</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_CANCEL_META</value>
+			</parameter>
+  			<match>$messagemap.get("$conversation_id")!=null</match>
+		</messageevent>	
+
+		<!-- Failure message sent by receiver side describing failed termination of an ongoing interaction.
+			 Part of the generic FIPA-Cancel-Meta-Protocol (CM). -->
+		<messageevent name="cm_failure" type="fipa">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.FAILURE</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_CANCEL_META</value>
+			</parameter>
+  			<match>$messagemap.get("$conversation_id")!=null</match>
+		</messageevent>	
+		
+		<!-- Not-understood message sent by receiver side describing the whish to abort the interaction. -->
+		<messageevent name="cm_not_understood" type="fipa">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.NOT_UNDERSTOOD</value>
+			</parameter>
+  			<match>$messagemap.get("$conversation_id")!=null</match>
+		</messageevent>	
+	</events>
+	
+	<expressions>
+		<!-- todo!!! -->
+		<expression name="find_interaction_goal">
+			select one $g.getName()
+			from IRGoal $g in $goalbase.getGoals()
+			where $g.hasParameter("message") &amp;&amp;
+				((IMessageEvent)$g.getParameter("message").getValue())
+					.getParameter(SFipa.CONVERSATION_ID).getValue().equals($convid)
+			<parameter name="$convid" class="String"/>
+		</expression>
+	</expressions>
+	
+	<properties>
+		<!-- <property name="logging.level">java.util.logging.Level.INFO</property> -->
+	</properties>
+
+</capability>

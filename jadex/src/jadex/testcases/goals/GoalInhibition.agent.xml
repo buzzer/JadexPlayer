@@ -1,0 +1,97 @@
+<!--
+	<H3>Test goal inhibition.</H3>
+	
+	The "docnt" perform goal increments the "count" belief,
+	unless the "lowerbound" maintaingoal is active, which ensures that "count"
+	stays below 4.
+-->
+
+<agent xmlns="http://jadex.sourceforge.net/jadex"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://jadex.sourceforge.net/jadex 
+	                    http://jadex.sourceforge.net/jadex-0.96.xsd"
+	name="GoalInhibition"
+	package="jadex.testcases.goals">
+
+	<imports>
+		<import>jadex.testcases.*</import>
+		<import>jadex.planlib.*</import>
+		<import>java.util.logging.Level</import>
+	</imports>
+
+	<capabilities>
+		<capability name="testcap" file="jadex.planlib.Test"/>
+	</capabilities>
+
+	<beliefs>
+		<beliefsetref name="reports" class="TestReport">
+			<concrete ref="testcap.reports"/>
+		</beliefsetref>
+		<beliefref name="testcase_cnt" class="int">
+			<concrete ref="testcap.testcase_cnt"/>
+		</beliefref>
+		<beliefref name="timeout" class="long" exported="true">
+			<concrete ref="testcap.timeout"/>
+		</beliefref>
+		<beliefref name="testcenter" class="jadex.adapter.fipa.AgentIdentifier" exported="true">
+			<concrete ref="testcap.testcenter"/>
+		</beliefref>
+		<belief name="count"  class="int">
+			<fact>0</fact>
+		</belief>
+	</beliefs>
+
+	<goals>
+		<performgoal name="docnt" retry="true" retrydelay="100" exclude="never"/>
+		<maintaingoal name="lowerbounds">
+			<deliberation>
+				<inhibits ref="docnt" inhibit="when_in_process"/>
+			</deliberation>
+			<maintaincondition>
+				$beliefbase.count&lt;4
+			</maintaincondition>
+		</maintaingoal>
+	</goals>
+
+	<plans>
+        <plan name="increment">
+			<body>new BeliefIncrementPlan("count", 3, 0)</body>
+			<trigger>
+				<goal ref="docnt"/>
+			</trigger>
+		</plan>
+		 <plan name="decrement">
+			<body>new BeliefIncrementPlan("count", -1, 100)</body>
+			<trigger>
+				<goal ref="lowerbounds"/>
+			</trigger>
+		</plan>
+		<plan name="testplan">
+			<body class="GoalInhibitionPlan"/>
+			<!-- <body>new GoalInhibitionPlan()</body>-->
+		</plan>
+	</plans>
+	
+	<properties>
+		<!-- <property name="logging.level">Level.INFO</property> -->
+	</properties>
+
+	<configurations>
+		<configuration name="default">
+			<beliefs>
+				<initialbelief ref="testcase_cnt">
+					<fact>3</fact>
+				</initialbelief>
+			</beliefs>
+			<goals>
+				<initialgoal ref="docnt"/>
+				<initialgoal ref="lowerbounds"/>
+			</goals>
+			<plans>
+				<initialplan ref="testplan"/>
+			</plans>
+		</configuration>
+	</configurations>
+
+</agent>
+

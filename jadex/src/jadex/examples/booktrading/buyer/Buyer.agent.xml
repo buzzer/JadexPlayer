@@ -1,0 +1,143 @@
+<!--
+	<H3>The buyer agent that purchases books for its user.</H3>
+
+	The buyer agent comes with a user interface in which the
+	human user can enter its purchase book orders consisting of
+	a title, start price, price limit and a deadline. The agent
+	subsequently tries to buy the book and changes the price
+	according to the deadline.
+-->
+<agent xmlns="http://jadex.sourceforge.net/jadex"
+	   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	   xsi:schemaLocation="http://jadex.sourceforge.net/jadex
+                      http://jadex.sourceforge.net/jadex-0.96.xsd"
+	   name="Buyer" package="jadex.examples.booktrading.buyer">
+
+	<imports>
+		<import>jadex.examples.booktrading.common.*</import>
+		<import>jadex.adapter.fipa.SFipa</import>
+		<import>java.util.*</import>
+		<import>jadex.runtime.impl.*</import>
+		<import>jadex.planlib.*</import>
+	</imports>
+
+	<capabilities>
+		<capability name="procap" file="jadex.planlib.Protocols"/>
+		<capability name="dfcap" file="jadex.planlib.DF"/>
+	</capabilities>
+
+	<beliefs>
+		<beliefset name="orders" class="Order">
+			<facts evaluationmode="dynamic">
+				select $g.getParameter("order").getValue()
+				from IRGoal $g in $goalbase.getGoals("purchase_book")
+			</facts>
+		</beliefset>
+		
+		<belief name="time" class="long" updaterate="1000">
+			<fact>System.currentTimeMillis()</fact>
+		</belief>
+		
+		<belief name="initial_orders" class="Order[]" exported="true"/>
+		
+		<beliefset name="negotiation_reports" class="NegotiationReport"/>
+		
+		<belief name="gui" class="Gui"/>
+	</beliefs>
+
+	<goals>
+		<!--  Initiate negotiation rounds every 10 secs. -->
+		<achievegoal name="purchase_book" recur="true" recurdelay="10000">
+			<parameter name="order" class="Order">
+				<bindingoptions>$beliefbase.initial_orders</bindingoptions>
+			</parameter>
+			<unique/>
+			<creationcondition>$beliefbase.initial_orders!=null</creationcondition>
+			<targetcondition>Order.DONE.equals($goal.order.getState())</targetcondition>
+			<failurecondition>$beliefbase.time > $goal.order.getDeadline().getTime()</failurecondition>
+		</achievegoal>
+		
+		<achievegoalref name="df_search">
+			<concrete ref="dfcap.df_search"/>
+		</achievegoalref>
+		
+		<achievegoalref name="cnp_initiate">
+			<concrete ref="procap.cnp_initiate"/>
+		</achievegoalref>
+		
+		<querygoalref name="cnp_evaluate_proposals">
+			<concrete ref="procap.cnp_evaluate_proposals"/>
+		</querygoalref>
+	</goals>
+
+	<plans>
+		<plan name="purchase_book_plan">
+			<parameter name="order" class="Order">
+				<goalmapping ref="purchase_book.order"/>
+			</parameter>
+			<body class="PurchaseBookPlan" />
+			<!-- <body>new PurchaseBookPlan()</body> -->
+			<trigger>
+				<goal ref="purchase_book"/>
+			</trigger>
+		</plan>
+		
+		<plan name="evaluate_proposals_plan">
+			<parameter name="cfp" class="Object">
+				<goalmapping ref="cnp_evaluate_proposals.cfp"/>
+			</parameter>
+			<parameter name="cfp_info" class="Object" optional="true">
+				<goalmapping ref="cnp_evaluate_proposals.cfp_info"/>
+			</parameter>
+			<parameterset name="proposals" class="Object">
+				<goalmapping ref="cnp_evaluate_proposals.proposals"/>
+			</parameterset>
+			<parameterset name="history" class="NegotiationRecord" optional="true">
+				<goalmapping ref="cnp_evaluate_proposals.history"/>
+			</parameterset>
+			<parameterset name="acceptables" class="Object" direction="out">
+				<goalmapping ref="cnp_evaluate_proposals.acceptables"/>
+			</parameterset>
+			<body class="EvaluateProposalsPlan" />
+			<trigger>
+				<goal ref="cnp_evaluate_proposals"/>
+			</trigger>
+		</plan>
+	</plans>
+	
+	<expressions>
+		<expression name="search_reports">
+			select NegotiationReport $nr from $beliefbase.negotiation_reports
+			where $nr.getOrder().equals($order)
+			order by $nr.getTime()
+			<parameter name="$order" class="Order"/>
+		</expression>
+	</expressions>
+
+	<properties>
+		<property name="service_seller">
+			SFipa.createAgentDescription(null, SFipa.createServiceDescription(null, "service_seller", null))
+		</property>
+		<!--<property name="logging.level">java.util.logging.Level.FINE</property>-->
+		<!--<property name="debugging">true</property>-->
+	</properties>
+
+	<configurations>
+		<configuration name="default">
+			<beliefs>
+				<initialbelief ref="gui">
+					<fact>new Gui($agent.getExternalAccess(), true)</fact>
+				</initialbelief>
+			</beliefs>
+			<goals>
+				<!--<initialgoal ref="purchase_book">
+					<parameter ref="order">
+						<value>new Order("All about agents",
+							new Date(System.currentTimeMillis()+60000), 75, 110, true)</value>
+					</parameter>
+				</initialgoal>-->
+			</goals>
+		</configuration>
+	</configurations>
+
+</agent>

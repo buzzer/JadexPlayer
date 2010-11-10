@@ -1,0 +1,130 @@
+<!--
+	The movement capability supplies the agents with basic
+	goals, plans and beliefs for moving around.
+-->
+<capability xmlns="http://jadex.sourceforge.net/jadex"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://jadex.sourceforge.net/jadex 
+	                    http://jadex.sourceforge.net/jadex-0.96.xsd"
+	name="Movement"
+	package="jadex.examples.marsworld.movement">
+
+	<imports>
+		<import>jadex.examples.marsworld.*</import>
+		<import>jadex.*</import>
+		<import>jadex.runtime.*</import>
+		<import>jadex.planlib.*</import>
+	</imports>
+
+	<beliefs>
+		<!-- The environment as singleton object. -->
+		<beliefref name="environment" class="Environment" exported="true">
+			<abstract/>
+		</beliefref>
+
+		<!-- The current location. -->
+		<beliefref name="my_location" class="Location" exported="true">
+			<abstract/>
+		</beliefref>
+
+		<!-- The home location. -->
+		<beliefref name="my_home" class="Location" exported="true">
+			<abstract/>
+		</beliefref>
+
+		<!-- The agent type (carry, producer or sentry) -->
+		<beliefref name="my_type" class="String" exported="true">
+			<abstract/>
+		</beliefref>
+
+		<!-- The speed. -->
+		<beliefref name="my_speed" class="double" exported="true">
+			<abstract/>
+		</beliefref>
+
+		<!-- The sight radius. -->
+		<beliefref name="my_vision" class="double" exported="true">
+			<abstract/>
+		</beliefref>
+
+		<!-- Is the mission finished? -->
+		<belief name="missionend" class="boolean" updaterate="1000" exported="true">
+			<fact evaluationmode="dynamic">
+ 				$beliefbase.environment.getHomebase().getRemainingMissionTime()==0
+ 			</fact>
+		</belief>
+
+		<!-- The seen targets. -->
+		<beliefset name="my_targets" class="Target" exported="true" />
+	</beliefs>
+
+	<goals>
+		<!-- Move to a cretain location. -->
+		<achievegoal name="move_dest" exported="true">
+			<parameter name="destination" class="Location"/>
+		</achievegoal>
+
+		<!-- Walk around without target when nothing else to do. -->
+		<performgoal name="walk_around" retry="true" exclude="never" exported="true">
+			<dropcondition>
+				$beliefbase.missionend
+			</dropcondition>
+		</performgoal>
+
+		<!-- Watch for targets and memorize them. -->
+		<performgoal name="watch_targets" exported="true">
+ 			<dropcondition>
+				$beliefbase.missionend
+			</dropcondition>
+		</performgoal>
+
+		<!-- Move home when missionend. -->
+		<achievegoal name="missionend">
+			<parameter name="destination" class="Location">
+				<value>$beliefbase.my_home</value>
+			</parameter>
+			<unique/>
+			<creationcondition>
+				$beliefbase.missionend
+				&amp;&amp; !$beliefbase.my_location.isNear($beliefbase.my_home)
+			</creationcondition>
+		</achievegoal>
+	</goals>
+
+	<plans>
+
+		<!-- Go to a destination. -->
+		<plan name="go_destination">
+			<parameter name="destination" class="Location">
+ 				<goalmapping ref="move_dest.destination"/>
+ 				<goalmapping ref="missionend.destination"/>
+			</parameter>
+			<body class="MoveToLocationPlan"/>
+			<!-- <body>new MoveToLocationPlan()</body> -->
+			<trigger>
+				<goal ref="move_dest"/>
+				<goal ref="missionend"/>
+			</trigger>
+		</plan>
+
+		<!-- Walk around randomly. -->
+		<plan name="randomwalk">
+			<body class="RandomWalkPlan"/>
+			<!-- <body>new RandomWalkPlan()</body> -->
+			<trigger>
+				<goal ref="walk_around"/>
+			</trigger>
+		</plan>
+
+		<!-- Find targets and save them. -->
+		<plan name="find_targets">
+			<body class="FindTargetsPlan"/>
+			<!-- <body>new FindTargetsPlan()</body> -->
+			<trigger>
+				<goal ref="watch_targets"/>
+			</trigger>
+		</plan>
+
+	</plans>
+
+</capability>

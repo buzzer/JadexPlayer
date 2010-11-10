@@ -1,0 +1,44 @@
+<!--
+	<H3>Ping Agent for answering ping requests.</H3>
+
+	Reacts on "ping" query-ref and sends back inform "alive".
+-->
+
+<agent xmlns="http://jadex.sourceforge.net/jadex"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://jadex.sourceforge.net/jadex 
+	                    http://jadex.sourceforge.net/jadex-0.96.xsd"
+	name="Ping"
+	package="jadex.examples.ping.mobile">
+
+	<imports>
+		<import>jadex.adapter.fipa.SFipa</import>
+	</imports>
+
+	<plans>
+		<plan name="ping">
+			<body type="mobile">new PingPlan("ping", "alive")</body>
+			<trigger>
+				<messageevent ref="query_ping"/>
+			</trigger>
+		</plan>
+	</plans>
+
+	<events>
+		<messageevent name="query_ping" direction="receive" type="fipa">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.QUERY_REF</value>
+			</parameter>
+			<parameter name="content" class="String">
+				<value>"ping"</value>
+			</parameter>
+		</messageevent>
+		<messageevent name="inform" direction="send" type="fipa">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.INFORM</value>
+			</parameter>
+		</messageevent>
+	</events>
+
+</agent>
+

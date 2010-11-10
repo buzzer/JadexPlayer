@@ -1,0 +1,151 @@
+<!--
+  <H3>Human player agent.</H3>
+
+-->
+
+<agent xmlns="http://jadex.sourceforge.net/jadex"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://jadex.sourceforge.net/jadex
+	                    http://jadex.sourceforge.net/jadex-0.96.xsd"
+	name="HumanPlayer"
+	package="jadex.examples.puzzle.humanplayer">
+
+	<imports>
+		<import>jadex.examples.puzzle.*</import>
+		<import>jadex.runtime.*</import>
+		<import>jadex.util.*</import>
+		<import>jadex.*</import>
+		<import>jadex.adapter.fipa.*</import>
+		<import>java.util.*</import>
+	</imports>
+
+	<beliefs>
+		<!-- The game board offers possibilities to make moves,
+			take back moves and keep track of the game history. -->
+		<belief name="board" class="IBoard"/>
+
+		<!-- The gui of the game board. -->
+		<belief name="board_gui" class="BoardGui">
+			<fact>new BoardGui($agent.getExternalAccess(), $beliefbase.board, true)</fact>
+		</belief>
+	</beliefs>
+
+	<plans>
+		<plan name="make_move">
+			<body class="MakeMovePlan"/>
+			<!-- <body>new MakeMovePlan()</body> -->
+			<trigger>
+				<messageevent ref="request_move"/>
+			</trigger>
+		</plan>
+
+		<plan name="takeback_move">
+			<body class="TakebackPlan"/>
+			<!-- <body>new TakebackPlan()</body> -->
+			<trigger>
+				<messageevent ref="request_takeback"/>
+			</trigger>
+		</plan>
+	</plans>
+
+	<events>
+		<messageevent name="request_move" type="fipa" direction="receive">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.REQUEST</value>
+			</parameter>
+			<parameter name="language" class="String" direction="fixed">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+			<parameter name="ontology" class="String" direction="fixed">
+				<value>PuzzleOntology.ONTOLOGY_NAME</value>
+ 			</parameter>
+			<parameter name="content-class" class="Class" direction="fixed">
+				<value>RequestMove.class</value>
+			</parameter>
+		</messageevent>
+
+		<messageevent name="request_takeback" type="fipa" direction="receive">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.REQUEST</value>
+			</parameter>
+			<parameter name="language" class="String" direction="fixed">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+			<parameter name="ontology" class="String" direction="fixed">
+				<value>PuzzleOntology.ONTOLOGY_NAME</value>
+ 			</parameter>
+			<parameter name="content-class" class="Class" direction="fixed">
+				<value>RequestTakeback.class</value>
+			</parameter>
+		</messageevent>
+
+		<messageevent name="inform_action_done" type="fipa" direction="send">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.INFORM</value>
+			</parameter>
+			<parameter name="language" class="String" direction="fixed">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+			<parameter name="ontology" class="String" direction="fixed">
+				<value>PuzzleOntology.ONTOLOGY_NAME</value>
+ 			</parameter>
+			<parameter name="content-class" class="Class" direction="fixed">
+				<value>Done.class</value>
+			</parameter>
+		</messageevent>
+
+		<messageevent name="failure" type="fipa" direction="send">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.FAILURE</value>
+			</parameter>
+			<parameter name="language" class="String" direction="fixed">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+			<parameter name="ontology" class="String" direction="fixed">
+				<value>PuzzleOntology.ONTOLOGY_NAME</value>
+ 			</parameter>
+		</messageevent>
+	</events>
+
+	<properties>
+		<property name="debugging">false</property>
+    </properties>
+
+	<configurations default="5x5 board (standard)">
+		<configuration name="3x3 board (no solution)">
+			<beliefs>
+				<initialbelief ref="board">
+ 					<fact>new Board(3)</fact>
+				</initialbelief>
+			</beliefs>
+		</configuration>
+		<configuration name="5x5 board (standard)" >
+			<beliefs>
+				<initialbelief ref="board">
+ 					<fact>new Board(5)</fact>
+				</initialbelief>
+			</beliefs>
+		</configuration>
+		<configuration name="7x7 board (takes quite long)">
+			<beliefs>
+				<initialbelief ref="board">
+ 					<fact>new Board(7)</fact>
+				</initialbelief>
+			</beliefs>
+		</configuration>
+		<configuration name="9x9 board (takes very long)">
+			<beliefs>
+				<initialbelief ref="board">
+ 					<fact>new Board(9)</fact>
+				</initialbelief>
+			</beliefs>
+		</configuration>
+		<configuration name="jack-5x5">
+			<beliefs>
+				<initialbelief ref="board">
+ 					<fact>new JackBoard()</fact>
+				</initialbelief>
+			</beliefs>
+		</configuration>
+	</configurations>
+</agent>

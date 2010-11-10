@@ -1,0 +1,117 @@
+<!--
+	<H3>Test if a capability can be added at runtime.</H3>
+
+	DynamicCapabilityAgent
+	An agent that adds itself a new capability at runtime.
+	Also creates a beliefset reference to access a beliefset
+	of the included capability.
+	<p>Usage: Use e.g. the conversation center to send request messages to this agent.
+	<ol>
+	<li> "translate english_german dog" -> sends back a not understood
+	<li> "add capability" (adds a translation capability)
+	<li> "translate english_german dog" -> sends back an inform with dog - Hund
+	<li> "remove capability" (removes the translation capability)
+	<li> "translate english_german dog" -> sends back a not understood
+	</ol>
+	<p>Use the BDIViewer to observe how the capability and the beliefset
+	reference get added and removed.
+-->
+<agent xmlns="http://jadex.sourceforge.net/jadex"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://jadex.sourceforge.net/jadex 
+	                    http://jadex.sourceforge.net/jadex-0.96.xsd"
+	name="DynamicCapability" package="jadex.testcases.capabilities">
+
+	<imports>
+		<import>jadex.model.*</import>
+		<import>jadex.planlib.*</import>
+		<import>jadex.adapter.fipa.*</import>
+		<import>jadex.util.Tuple</import>
+		<import>java.util.logging.Level</import>
+	</imports>
+
+	<capabilities>
+		<capability name="testcap" file="jadex.planlib.Test"/>
+	</capabilities>
+
+	<beliefs>
+		<beliefsetref name="reports">
+			<concrete ref="testcap.reports"/>
+		</beliefsetref>
+		<beliefref name="testcase_cnt" class="int">
+			<concrete ref="testcap.testcase_cnt"/>
+		</beliefref>
+		<beliefref name="timeout" class="long" exported="true">
+			<concrete ref="testcap.timeout"/>
+		</beliefref>
+		<beliefref name="testcenter" class="jadex.adapter.fipa.AgentIdentifier" exported="true">
+			<concrete ref="testcap.testcenter"/>
+		</beliefref>
+	</beliefs>
+
+	<plans>
+		<!-- Reacts on all messages that can not be handled by the
+ 			the translation plan. -->
+		<plan name="notunderstood">
+			<body class="NotUnderstoodPlan"/>
+			<!-- <body>new NotUnderstoodPlan()</body> -->
+			<trigger>
+				<messageevent ref="any_message"/>
+			</trigger>
+		</plan>
+		<!-- performs the test. -->
+		<plan name="testplan">
+			<body class="DynamicCapabilityPlan"/>
+			<!-- <body>new DynamicCapabilityPlan()</body> -->
+		</plan>
+	</plans>
+
+	<events>
+		<!-- All messages can be also mapped to a any_message,
+ 			when no more specific mapping can be found. -->
+		<messageevent name="any_message" direction="receive" type="fipa">
+			<!-- As no required parameters are specified this event matches any message. -->
+		</messageevent>
+
+		<messageevent name="not_understood" direction="send" type="fipa">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.NOT_UNDERSTOOD</value>
+			</parameter>
+		</messageevent>
+
+		<messageevent name="request_translation" direction="send" type="fipa">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.REQUEST</value>
+			</parameter>
+			<parameter name="content" class="String" direction="fixed">
+				<value>"translate english_german dog"</value>
+			</parameter>
+			<!-- Initialized with unique random value. -->
+			<parameter name="reply-with" class="String">
+				<value>SFipa.createUniqueId($scope.getAgentName())</value>
+			</parameter>
+			<parameterset name="receivers" class="AgentIdentifier" direction="fixed">
+				<value>$agent.getAgentIdentifier()</value>
+			</parameterset>
+		</messageevent>
+	</events>
+
+	<properties>
+		<!-- <property name="debugging">true</property> -->
+		<!-- <property name="logging.level">Level.WARNING</property> -->
+	</properties>
+	
+	<configurations>
+		<configuration name="default">
+			<beliefs>
+				<initialbelief ref="testcase_cnt">
+					<fact>3</fact>
+				</initialbelief>
+			</beliefs>
+			<plans>
+				<initialplan ref="testplan"/>
+			</plans>
+		</configuration>
+	</configurations>
+</agent>
+

@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- 
+	<H3>Register in initial state and deregister in end state.</H3>
+	Part of EndState test.
+ -->
+<agent xmlns="http://jadex.sourceforge.net/jadex"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://jadex.sourceforge.net/jadex
+						http://jadex.sourceforge.net/jadex-0.96.xsd"
+	name="EndStateDeregister"
+	package="jadex.testcases.misc">
+	
+	<imports>
+		<import>jadex.adapter.fipa.SFipa</import>
+	</imports>
+	
+	<capabilities>
+		<capability name="dfcap" file="jadex.planlib.DF"/>
+	</capabilities>
+	
+	<goals>
+		<achievegoalref name="df_register">
+			<concrete ref="dfcap.df_register"/>
+		</achievegoalref>
+		<achievegoalref name="df_deregister">
+			<concrete ref="dfcap.df_deregister"/>
+		</achievegoalref>
+	</goals>
+	
+	<configurations>
+		<configuration name="default">
+			<goals>
+				<initialgoal ref="df_register">
+					<parameter ref="description">
+						<value>
+							SFipa.createAgentDescription(null,
+								SFipa.createServiceDescription("endstate_testservice", "endstate_testservice", "EndStateDeregister"))
+						</value>
+					</parameter>
+				</initialgoal>
+				<endgoal ref="df_deregister"/>
+			</goals>
+		</configuration>
+	</configurations>
+	
+</agent>

@@ -1,0 +1,145 @@
+<!--
+	<H3>Test the iterated contract net protocol.</H3>
+	This agent imports the protocols capability and tests the icnp protocol.
+	Represents the initiator in icnp protocol.
+-->
+
+<agent xmlns="http://jadex.sourceforge.net/jadex"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://jadex.sourceforge.net/jadex
+	                    http://jadex.sourceforge.net/jadex-0.96.xsd"
+	name="ICNPInitiator"
+	package="jadex.testcases.planlib">
+
+	<imports>
+		<import>jadex.planlib.*</import>
+		<import>jadex.adapter.fipa.SFipa</import>
+		<import>jadex.adapter.fipa.ServiceDescription</import>
+		<import>jadex.adapter.fipa.AgentIdentifier</import>
+		<import>java.util.logging.*</import>
+	</imports>
+
+	<capabilities>
+		<capability name="testcap" file="jadex.planlib.Test"/>
+		<capability name="amscap" file="jadex.planlib.AMS"/>
+		<capability name="protocolcap" file="jadex.planlib.Protocols"/>
+	</capabilities>
+
+	<beliefs>
+		<beliefsetref name="reports">
+			<concrete ref="testcap.reports"/>
+		</beliefsetref>
+		
+		<beliefref name="testcase_cnt" class="int">
+			<concrete ref="testcap.testcase_cnt"/>
+		</beliefref>
+		
+		<beliefref name="timeout" class="long" exported="true">
+			<concrete ref="testcap.timeout"/>
+		</beliefref>
+		
+		<beliefref name="testcenter" class="jadex.adapter.fipa.AgentIdentifier" exported="true">
+			<concrete ref="testcap.testcenter"/>
+		</beliefref>
+	</beliefs>
+
+	<goals>
+		<achievegoalref name="ams_create_agent">
+			<concrete ref="amscap.ams_create_agent"/>
+		</achievegoalref>
+		
+		<achievegoalref name="ams_destroy_agent">
+			<concrete ref="amscap.ams_destroy_agent"/>
+		</achievegoalref>
+		
+		<achievegoalref name="icnp_initiate">
+			<concrete ref="protocolcap.icnp_initiate"/>
+		</achievegoalref>
+		
+		<querygoalref name="icnp_evaluate_proposals">
+			<concrete ref="protocolcap.icnp_evaluate_proposals"/>
+		</querygoalref>
+		
+		<querygoalref name="icnp_nextround_info">
+			<concrete ref="protocolcap.icnp_nextround_info"/>
+		</querygoalref>
+	</goals>
+
+	<plans>
+		<plan name="test">
+			<body class="ICNPTestPlan"/>
+			<!-- <body>new ICNPTestPlan()</body> -->
+		</plan>
+		
+		<plan name="icnp_evaluator">
+			<parameter name="cfp" class="Object">
+				<goalmapping ref="icnp_evaluate_proposals.cfp"/>
+			</parameter>
+			<parameter name="cfp_info" class="Object" optional="true">
+				<goalmapping ref="icnp_evaluate_proposals.cfp_info"/>
+			</parameter>
+			<parameterset name="proposals" class="ParticipantProposal">
+				<goalmapping ref="icnp_evaluate_proposals.proposals"/>
+			</parameterset>
+			<parameterset name="history" class="NegotiationRecord" optional="true">
+				<goalmapping ref="icnp_evaluate_proposals.history"/>
+			</parameterset>
+			<parameterset name="acceptables" class="ParticipantProposal" direction="out">
+				<goalmapping ref="icnp_evaluate_proposals.acceptables"/>
+			</parameterset>
+			<body class="ICNPEvaluatorPlan"/>
+			<!-- <body>new ICNPEvaluatorPlan()</body> -->
+			<trigger>
+				<goal ref="icnp_evaluate_proposals"/>
+			</trigger>
+			<precondition>!($goal.cfp_info instanceof IProposalEvaluator)</precondition>
+		</plan>
+		
+		<plan name="icnp_nextround">
+			<parameter name="cfp" class="Object">
+				<goalmapping ref="icnp_nextround_info.cfp"/>
+			</parameter>
+			<parameter name="cfp_info" class="Object" optional="true">
+				<goalmapping ref="icnp_nextround_info.cfp_info"/>
+			</parameter>
+			<!-- Flag indicating the decision to iterate (set to true or false to end goal). -->
+			<parameter name="iterate" class="Boolean" direction="out">
+				<goalmapping ref="icnp_nextround_info.iterate"/>
+			</parameter>
+			<parameterset name="participants" class="AgentIdentifier" direction="inout">
+				<goalmapping ref="icnp_nextround_info.participants"/>
+			</parameterset>
+			<parameterset name="proposals" class="ParticipantProposal">
+				<goalmapping ref="icnp_nextround_info.proposals"/>
+			</parameterset>
+			<parameterset name="history" class="NegotiationRecord" optional="true">
+				<goalmapping ref="icnp_nextround_info.history"/>
+			</parameterset>
+			<body class="ICNPNextroundInfoPlan"/>
+			<trigger>
+				<goal ref="icnp_nextround_info"/>
+			</trigger>
+			<precondition>!($goal.cfp_info instanceof IQueryNextroundInfo)</precondition>
+		</plan>
+	</plans>
+
+	<properties>
+		<!-- <property name="debugging">true</property>-->
+		<!-- <property name="logging.level">java.util.logging.Level.FINE</property> -->
+		<!-- <property name="logging.useParentHandlers">true</property> -->
+	</properties>
+
+	<configurations>
+		<configuration name="default">
+			<beliefs>
+				<initialbelief ref="testcase_cnt">
+					<fact>4</fact>
+				</initialbelief>
+			</beliefs>
+			<plans>
+				<initialplan ref="test"/>
+			</plans>
+		</configuration>
+	</configurations>
+</agent>
+

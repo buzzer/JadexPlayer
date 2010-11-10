@@ -1,0 +1,37 @@
+<!--
+	This file contains the runtime properties for a Jadex agent.
+-->
+<properties xmlns="http://jadex.sourceforge.net/jadex"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://jadex.sourceforge.net/jadex 
+	                    http://jadex.sourceforge.net/jadex-0.96.xsd" >
+
+	<!-- Logging properties -->
+	<property name="logging.level">java.util.logging.Level.SEVERE</property>
+	<property name="logging.useParentHandlers">true</property>
+	<property name="logging.level.exceptions">java.util.logging.Level.SEVERE</property>
+
+	<!-- Max millis for one plan step, 0 for unlimited. -->
+	<property name="max_planstep_time">0</property>
+	<!-- Limitations for message settings. -->
+	<!-- Max number of stored and open outgoing messages, 0 for unlimited. -->
+	<property name="storedmessages.size">0</property>
+	<!-- The standard timeout setting (default for protocols and agent termination). -->
+	<property name="standard.timeout">10000</property>
+	<!-- The termination timeout (if null, standard.timeout will be used). -->
+	<property name="termination.timeout">null</property>
+
+	<!-- Plan executors. -->
+	<property name="planexecutor.standard">new jadex.runtime.JavaStandardPlanExecutor($agent)</property>
+	<property name="planexecutor.mobile">new jadex.runtime.JavaMobilePlanExecutor()</property>
+
+	<!-- Tool adapters -->
+	<property name="tooladapter.introspector">new jadex.tools.introspector.IntrospectorAdapter($agent)</property>
+	<property name="tooladapter.tracer">new jadex.tools.tracer.TracerAdapter($agent)</property>
+	<!-- <property name="tooladapter.logger">new jadex.tools.logger.LoggerAdapter($agent)</property> -->
+
+	<!-- Content condecs -->
+	<property name="contentcodec.java_xml">new jadex.runtime.JavaXMLContentCodec()</property>
+	<property name="contentcodec.nuggets_xml">new jadex.runtime.NuggetsXMLContentCodec()</property>
+
+</properties>

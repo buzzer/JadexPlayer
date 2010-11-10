@@ -1,0 +1,60 @@
+<!--
+	The introspector allows to observe and control
+	the execution of another agent.
+-->
+<agent 
+	xmlns="http://jadex.sourceforge.net/jadex"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://jadex.sourceforge.net/jadex 
+	                    http://jadex.sourceforge.net/jadex-0.96.xsd"
+	name="Introspector"
+	package="jadex.tools.introspector">
+
+	<imports>
+		<import>jadex.tools.common.Tool</import>
+		<import>jadex.adapter.fipa.AgentIdentifier</import>
+		<import>jadex.adapter.fipa.SFipa</import>
+	</imports>
+
+	<capabilities>
+		<capability name="toolcap" file="Tool"/>
+	</capabilities>
+
+	<beliefs>
+		<!-- The observed agent. -->
+		<belief name="agent" class="AgentIdentifier">
+			<fact>
+ 				new AgentIdentifier((String)$args[0])
+			</fact>
+		</belief>
+		
+		<belief name="gui" class="IntrospectorFrame"/>
+	</beliefs>
+
+	<goals>
+		<!-- Goal to manage a given tool panel. -->
+		<performgoalref name="manage_tool">
+			<concrete ref="toolcap.manage_tool"/>
+		</performgoalref>
+
+		<!-- Goal to issue a request to an observed agent. -->
+		<achievegoalref name="tool_request">
+			<concrete ref="toolcap.tool_request"/>
+		</achievegoalref>
+	</goals>
+
+	<properties>
+		<!--<property name="logging.level">java.util.logging.Level.INFO</property>-->
+	</properties>
+
+	<configurations>
+		<configuration name="default">
+			<beliefs>
+				<initialbelief ref="gui">
+					<fact>new IntrospectorFrame($agent.getExternalAccess())</fact>
+				</initialbelief>
+			</beliefs>
+		</configuration>
+	</configurations>
+
+</agent>

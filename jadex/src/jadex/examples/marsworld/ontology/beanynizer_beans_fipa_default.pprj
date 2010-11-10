@@ -1,0 +1,1617 @@
+; Fri Oct 21 15:30:17 GMT+01:00 2005
+; 
+;+ (version "3.0")
+;+ (build "Build 141")
+
+([beanynizer_beans_default_new_ProjectKB_Instance_20063] of  Boolean
+
+	(boolean_value FALSE)
+	(name "ButtonDisplayed-View References to Value  "))
+
+([beanynizer_beans_default_new_ProjectKB_Instance_20064] of  Boolean
+
+	(boolean_value FALSE)
+	(name "ButtonDisplayed-Delete Instance"))
+
+([beanynizer_beans_default_new_ProjectKB_Instance_20065] of  Boolean
+
+	(boolean_value FALSE)
+	(name "ButtonDisplayed-View References to Value  "))
+
+([beanynizer_beans_default_new_ProjectKB_Instance_20066] of  Boolean
+
+	(boolean_value FALSE)
+	(name "ButtonDisplayed-Delete Instance"))
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_187] of  Widget
+
+	(is_hidden TRUE)
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_188])
+	(widget_class_name "TGViztab.TGVizTab"))
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_188] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_189] of  Widget
+
+	(is_hidden TRUE)
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_190])
+	(widget_class_name "dfki.protege.ontoviz_tab.OntovizTab"))
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_190] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_191] of  Widget
+
+	(is_hidden TRUE)
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_192])
+	(widget_class_name "JessTab.JessTab"))
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_192] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_193] of  Widget
+
+	(is_hidden TRUE)
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_194])
+	(widget_class_name "script.ProtegeScriptTab"))
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_194] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_195] of  Widget
+
+	(is_hidden TRUE)
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_196])
+	(widget_class_name "edu.stanford.smi.protege.keywordsearch.StringSearch"))
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_196] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_197] of  Widget
+
+	(is_hidden TRUE)
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_198])
+	(widget_class_name "edu.stanford.smi.RemoteKBTab.WordNetTab"))
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_198] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_199] of  Widget
+
+	(is_hidden TRUE)
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_200])
+	(widget_class_name "edu.stanford.smi.protegex.psm.PSMTab"))
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_200] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_201] of  Widget
+
+	(is_hidden TRUE)
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_202])
+	(widget_class_name "ezOWLTab"))
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_202] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_203] of  Widget
+
+	(is_hidden TRUE)
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_204])
+	(widget_class_name "ezpal.EZPalTab"))
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_204] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_205] of  Widget
+
+	(is_hidden TRUE)
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_206])
+	(widget_class_name "edu.stanford.smi.protegex.owl.swrl.ui.tab.SWRLTab"))
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_206] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_207] of  Widget
+
+	(is_hidden TRUE)
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_208])
+	(widget_class_name "edu.stanford.smi.protegex.fctab.FacetConstraintsTab"))
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_208] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_209] of  Widget
+
+	(is_hidden TRUE)
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_210])
+	(widget_class_name "edu.stanford.smi.protegex.xml.tab.XMLTab"))
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_210] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_211] of  Widget
+
+	(is_hidden TRUE)
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_212])
+	(widget_class_name "edu.stanford.smi.protegex.prompt.PromptTab"))
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_212] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_213] of  Widget
+
+	(is_hidden TRUE)
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_214])
+	(widget_class_name "edu.stanford.smi.protegex.widget.pal.PalConstraintsTab"))
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_214] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_215] of  Widget
+
+	(is_hidden TRUE)
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_216])
+	(widget_class_name "DataGenieTab.DataGenieTab"))
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_216] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_217] of  Widget
+
+	(is_hidden TRUE)
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_218])
+	(widget_class_name "edu.stanford.smi.protege.widget.instance_tree.KnowledgeTreeTab"))
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_218] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_219] of  Widget
+
+	(is_hidden TRUE)
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_220])
+	(widget_class_name "edu.stanford.smi.protege.widget.instance_tree.InstanceTreeTab"))
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_220] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_221] of  Widget
+
+	(is_hidden TRUE)
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_222])
+	(widget_class_name "ca.uvic.csr.shrimp.protegeTab.JambalayaTab"))
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_222] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_223] of  Widget
+
+	(is_hidden TRUE)
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_224])
+	(widget_class_name "org.algernon.kb.okbc.protege.plugins.AlgernonTab"))
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_224] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_225] of  Widget
+
+	(is_hidden TRUE)
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_226])
+	(widget_class_name "edu.stanford.smi.protegex.widget.pal.PalQueriesTab"))
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_226] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_227] of  Widget
+
+	(is_hidden TRUE)
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_228])
+	(widget_class_name "edu.stanford.smi.RemoteKBTab.UMLSTab"))
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_228] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_229] of  Widget
+
+	(is_hidden TRUE)
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_230])
+	(widget_class_name "uk.ac.man.cs.mig.coode.owlviz.ui.OWLVizTab"))
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_230] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_231] of  Property_List
+
+	(properties
+		[beanynizer_beans_fipa_default_ProjectKB_Instance_232]
+		[beanynizer_beans_fipa_default_ProjectKB_Instance_233]))
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_232] of  Boolean
+
+	(boolean_value FALSE)
+	(name "ButtonDisplayed-View References to Value  "))
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_233] of  Boolean
+
+	(boolean_value FALSE)
+	(name "ButtonDisplayed-Delete Instance"))
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_234] of  Property_List
+
+	(properties
+		[beanynizer_beans_fipa_default_ProjectKB_Instance_235]
+		[beanynizer_beans_fipa_default_ProjectKB_Instance_236]))
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_235] of  Boolean
+
+	(boolean_value FALSE)
+	(name "ButtonDisplayed-Move up"))
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_236] of  Boolean
+
+	(boolean_value FALSE)
+	(name "ButtonDisplayed-Move down"))
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_242] of  Widget
+
+	(height 60)
+	(is_hidden FALSE)
+	(name "BEANYNIZER-TYPE")
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_243])
+	(widget_class_name "edu.stanford.smi.protege.widget.TextFieldWidget")
+	(width 200)
+	(x 200)
+	(y 275))
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_243] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_244] of  Widget
+
+	(height 60)
+	(is_hidden FALSE)
+	(name "BEANYNIZER-NAME")
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_245])
+	(widget_class_name "edu.stanford.smi.protege.widget.TextFieldWidget")
+	(width 200)
+	(x 0)
+	(y 335))
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_245] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_246] of  Widget
+
+	(height 60)
+	(is_hidden FALSE)
+	(name "BEANYNIZER-EXTERNAL")
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_247])
+	(widget_class_name "edu.stanford.smi.protege.widget.CheckBoxWidget")
+	(width 200)
+	(x 200)
+	(y 335))
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_247] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_248] of  Widget
+
+	(height 60)
+	(is_hidden FALSE)
+	(name "BEANYNIZER-SETTERNAME")
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_249])
+	(widget_class_name "edu.stanford.smi.protege.widget.TextFieldWidget")
+	(width 200)
+	(x 0)
+	(y 395))
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_249] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_250] of  Widget
+
+	(height 60)
+	(is_hidden FALSE)
+	(name "BEANYNIZER-GETTERNAME")
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_251])
+	(widget_class_name "edu.stanford.smi.protege.widget.TextFieldWidget")
+	(width 200)
+	(x 0)
+	(y 275))
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_251] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_252] of  Widget
+
+	(height 60)
+	(is_hidden FALSE)
+	(name "BEANYNIZER-TRANSIENT")
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_253])
+	(widget_class_name "edu.stanford.smi.protege.widget.CheckBoxWidget")
+	(width 200)
+	(x 200)
+	(y 395))
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_253] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_254] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_255] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_256] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_257] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_258] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_259] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_260] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_261] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_262] of  Widget
+
+	(height 60)
+	(is_hidden FALSE)
+	(name "BEANYNIZER-NAME")
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_263])
+	(widget_class_name "edu.stanford.smi.protege.widget.TextFieldWidget")
+	(width 200)
+	(x 0)
+	(y 270))
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_263] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_264] of  Widget
+
+	(height 180)
+	(is_hidden FALSE)
+	(name "BEANYNIZER-INTERFACES")
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_265])
+	(widget_class_name "edu.stanford.smi.protege.widget.StringListWidget")
+	(width 200)
+	(x 200)
+	(y 330))
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_265] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_266] of  Widget
+
+	(height 60)
+	(is_hidden FALSE)
+	(name "BEANYNIZER-SUPERCLASS")
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_267])
+	(widget_class_name "edu.stanford.smi.protege.widget.TextFieldWidget")
+	(width 200)
+	(x 0)
+	(y 390))
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_267] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_268] of  Widget
+
+	(height 60)
+	(is_hidden FALSE)
+	(name "BEANYNIZER-PACKAGE")
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_269])
+	(widget_class_name "edu.stanford.smi.protege.widget.TextFieldWidget")
+	(width 200)
+	(x 0)
+	(y 330))
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_269] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_270] of  Widget
+
+	(height 60)
+	(is_hidden FALSE)
+	(name "BEANYNIZER-FILES")
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_271])
+	(widget_class_name "edu.stanford.smi.protege.widget.ComboBoxWidget")
+	(width 100)
+	(x 200)
+	(y 270))
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_271] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_272] of  Widget
+
+	(height 60)
+	(is_hidden FALSE)
+	(name "BEANYNIZER-ISINTERFACE")
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_273])
+	(widget_class_name "edu.stanford.smi.protege.widget.CheckBoxWidget")
+	(width 200)
+	(x 0)
+	(y 450))
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_273] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_274] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_275] of  Property_List
+)
+
+([beanynizer_beans_fipa_default_ProjectKB_Instance_276] of  Property_List
+)
+
+([beanynizer_beans_fipa_new_ProjectKB_Instance_10181] of  String
+
+	(name "beanynizer-genmode")
+	(string_value "Java"))
+
+([beanynizer_beans_fipa_new_ProjectKB_Instance_181] of  String
+
+	(name "gen_mode")
+	(string_value "Java"))
+
+([beanynizer_beans_fipa_new_ProjectKB_Instance_182] of  String
+
+	(name "beanynizer-output_dir")
+	(string_value "../../../../kernel/src"))
+
+([beanynizer_default_ProjectKB_00002] of  Widget
+
+	(height 832)
+	(is_hidden FALSE)
+	(name "BEANYNIZER-CLASS")
+	(property_list [beanynizer_default_ProjectKB_00003])
+	(widget_class_name "edu.stanford.smi.protege.widget.FormWidget")
+	(width 1008)
+	(x 0)
+	(y 0))
+
+([beanynizer_default_ProjectKB_00003] of  Property_List
+
+	(name "class widget properties")
+	(properties
+		[beanynizer_default_ProjectKB_00004]
+		[beanynizer_default_ProjectKB_00012]
+		[beanynizer_default_ProjectKB_00013]
+		[beanynizer_default_ProjectKB_00014]
+		[beanynizer_default_ProjectKB_00015]
+		[beanynizer_default_ProjectKB_00016]
+		[beanynizer_default_ProjectKB_00017]
+		[beanynizer_default_ProjectKB_00018]
+		[beanynizer_default_ProjectKB_00019]
+		[beanynizer_default_ProjectKB_00029]
+		[beanynizer_beans_fipa_default_ProjectKB_Instance_262]
+		[beanynizer_beans_fipa_default_ProjectKB_Instance_264]
+		[beanynizer_beans_fipa_default_ProjectKB_Instance_266]
+		[beanynizer_beans_fipa_default_ProjectKB_Instance_268]
+		[beanynizer_beans_fipa_default_ProjectKB_Instance_270]
+		[beanynizer_beans_fipa_default_ProjectKB_Instance_272]))
+
+([beanynizer_default_ProjectKB_00004] of  Widget
+
+	(height 120)
+	(label "Constraints")
+	(name ":SLOT-CONSTRAINTS")
+	(property_list [beanynizer_default_ProjectKB_00005])
+	(widget_class_name "edu.stanford.smi.protege.widget.ConstraintsWidget")
+	(width 200)
+	(x 400)
+	(y 0))
+
+([beanynizer_default_ProjectKB_00005] of  Property_List
+
+	(properties
+		[beanynizer_default_ProjectKB_00006]
+		[beanynizer_default_ProjectKB_00007]
+		[beanynizer_default_ProjectKB_00008]
+		[beanynizer_default_ProjectKB_00009]
+		[beanynizer_default_ProjectKB_00010]
+		[beanynizer_default_ProjectKB_00011]
+		[beanynizer_beans_default_new_ProjectKB_Instance_20063]
+		[beanynizer_beans_default_new_ProjectKB_Instance_20064]))
+
+([beanynizer_default_ProjectKB_00006] of  Boolean
+
+	(boolean_value TRUE)
+	(name "ButtonDisplayed-View Selected Instances"))
+
+([beanynizer_default_ProjectKB_00007] of  Boolean
+
+	(boolean_value TRUE)
+	(name "ButtonDisplayed-Create Instance"))
+
+([beanynizer_default_ProjectKB_00008] of  Boolean
+
+	(boolean_value FALSE)
+	(name "ButtonDisplayed-References"))
+
+([beanynizer_default_ProjectKB_00009] of  Boolean
+
+	(boolean_value TRUE)
+	(name "ButtonDisplayed-Add"))
+
+([beanynizer_default_ProjectKB_00010] of  Boolean
+
+	(boolean_value TRUE)
+	(name "ButtonDisplayed-Remove"))
+
+([beanynizer_default_ProjectKB_00011] of  Boolean
+
+	(boolean_value FALSE)
+	(name "ButtonDisplayed-Delete Selected Instances"))
+
+([beanynizer_default_ProjectKB_00012] of  Widget
+
+	(name ":DIRECT-INSTANCES"))
+
+([beanynizer_default_ProjectKB_00013] of  Widget
+
+	(name ":DIRECT-SUBCLASSES"))
+
+([beanynizer_default_ProjectKB_00014] of  Widget
+
+	(name ":DIRECT-SUPERCLASSES"))
+
+([beanynizer_default_ProjectKB_00015] of  Widget
+
+	(height 120)
+	(label "Documentation")
+	(name ":DOCUMENTATION")
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_274])
+	(widget_class_name "edu.stanford.smi.protege.widget.DocumentationWidget")
+	(width 200)
+	(x 200)
+	(y 0))
+
+([beanynizer_default_ProjectKB_00016] of  Widget
+
+	(height 60)
+	(label "Name")
+	(name ":NAME")
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_275])
+	(widget_class_name "edu.stanford.smi.protege.widget.InstanceNameWidget")
+	(width 200)
+	(x 0)
+	(y 0))
+
+([beanynizer_default_ProjectKB_00017] of  Widget
+
+	(height 60)
+	(label "Role")
+	(name ":ROLE")
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_276])
+	(widget_class_name "edu.stanford.smi.protege.widget.RoleWidget")
+	(width 200)
+	(x 0)
+	(y 60))
+
+([beanynizer_default_ProjectKB_00018] of  Widget
+
+	(name ":DIRECT-TYPE"))
+
+([beanynizer_default_ProjectKB_00019] of  Widget
+
+	(height 150)
+	(label "Template Slots")
+	(name ":DIRECT-TEMPLATE-SLOTS")
+	(property_list [beanynizer_default_ProjectKB_00020])
+	(widget_class_name "edu.stanford.smi.protege.widget.TemplateSlotsWidget")
+	(width 600)
+	(x 0)
+	(y 120))
+
+([beanynizer_default_ProjectKB_00020] of  Property_List
+
+	(properties
+		[beanynizer_default_ProjectKB_00021]
+		[beanynizer_default_ProjectKB_00022]
+		[beanynizer_default_ProjectKB_00023]
+		[beanynizer_default_ProjectKB_00024]
+		[beanynizer_default_ProjectKB_00025]
+		[beanynizer_default_ProjectKB_00026]
+		[beanynizer_default_ProjectKB_00027]
+		[beanynizer_default_ProjectKB_00028]))
+
+([beanynizer_default_ProjectKB_00021] of  Boolean
+
+	(boolean_value TRUE)
+	(name "ButtonDisplayed-View selected slots"))
+
+([beanynizer_default_ProjectKB_00022] of  Boolean
+
+	(boolean_value TRUE)
+	(name "ButtonDisplayed-View selected slots at class"))
+
+([beanynizer_default_ProjectKB_00023] of  Boolean
+
+	(boolean_value TRUE)
+	(name "ButtonDisplayed-Create slot and attach to class"))
+
+([beanynizer_default_ProjectKB_00024] of  Boolean
+
+	(boolean_value TRUE)
+	(name "ButtonDisplayed-Remove overrides from selected slots"))
+
+([beanynizer_default_ProjectKB_00025] of  Boolean
+
+	(boolean_value TRUE)
+	(name "ButtonDisplayed-Add"))
+
+([beanynizer_default_ProjectKB_00026] of  Boolean
+
+	(boolean_value TRUE)
+	(name "ButtonDisplayed-Remove"))
+
+([beanynizer_default_ProjectKB_00027] of  Boolean
+
+	(boolean_value FALSE)
+	(name "ButtonDisplayed-Move up"))
+
+([beanynizer_default_ProjectKB_00028] of  Boolean
+
+	(boolean_value FALSE)
+	(name "ButtonDisplayed-Move down"))
+
+([beanynizer_default_ProjectKB_00029] of  Property_List
+
+	(name "layout properties")
+	(properties [beanynizer_default_ProjectKB_00030]))
+
+([beanynizer_default_ProjectKB_00030] of  String
+
+	(name "vertical_stretcher")
+	(string_value ":DIRECT-TEMPLATE-SLOTS"))
+
+([beanynizer_default_ProjectKB_00130] of  Integer
+
+	(integer_value 250)
+	(name "ClsesTab.left_right"))
+
+([beanynizer_default_ProjectKB_00131] of  Integer
+
+	(integer_value 400)
+	(name "ClsesTab.left.top_bottom"))
+
+([beanynizer_default_ProjectKB_00132] of  Integer
+
+	(integer_value 250)
+	(name "SlotsTab.left_right"))
+
+([beanynizer_default_ProjectKB_00133] of  Integer
+
+	(integer_value 400)
+	(name "SlotTab.left.top_bottom"))
+
+([beanynizer_default_ProjectKB_00134] of  Integer
+
+	(integer_value 250)
+	(name "FormsTab.left_right"))
+
+([beanynizer_default_ProjectKB_00135] of  Integer
+
+	(integer_value 250)
+	(name "InstancesTab.left_right"))
+
+([beanynizer_default_ProjectKB_00136] of  Integer
+
+	(integer_value 346)
+	(name "InstancesTab.right.left_right"))
+
+([beanynizer_default_ProjectKB_00137] of  String
+
+	(name "SearchTab_Query"))
+
+([beanynizer_default_ProjectKB_Instance_10] of  Widget
+
+	(name ":DIRECT-TYPE"))
+
+([beanynizer_default_ProjectKB_Instance_11] of  Widget
+
+	(height 95)
+	(label "Domain")
+	(name ":DIRECT-DOMAIN")
+	(property_list [beanynizer_default_ProjectKB_Instance_12])
+	(widget_class_name "edu.stanford.smi.protege.widget.InstanceListWidget")
+	(width 200)
+	(x 400)
+	(y 180))
+
+([beanynizer_default_ProjectKB_Instance_12] of  Property_List
+
+	(properties
+		[beanynizer_default_ProjectKB_Instance_13]
+		[beanynizer_default_ProjectKB_Instance_14]
+		[beanynizer_default_ProjectKB_Instance_15]
+		[beanynizer_default_ProjectKB_Instance_16]
+		[beanynizer_default_ProjectKB_Instance_17]
+		[beanynizer_default_ProjectKB_Instance_18]
+		[beanynizer_beans_default_new_ProjectKB_Instance_20065]
+		[beanynizer_beans_default_new_ProjectKB_Instance_20066]))
+
+([beanynizer_default_ProjectKB_Instance_13] of  Boolean
+
+	(boolean_value TRUE)
+	(name "ButtonDisplayed-View Selected Instances"))
+
+([beanynizer_default_ProjectKB_Instance_14] of  Boolean
+
+	(boolean_value TRUE)
+	(name "ButtonDisplayed-Create Instance"))
+
+([beanynizer_default_ProjectKB_Instance_15] of  Boolean
+
+	(boolean_value FALSE)
+	(name "ButtonDisplayed-References"))
+
+([beanynizer_default_ProjectKB_Instance_16] of  Boolean
+
+	(boolean_value TRUE)
+	(name "ButtonDisplayed-Add"))
+
+([beanynizer_default_ProjectKB_Instance_17] of  Boolean
+
+	(boolean_value TRUE)
+	(name "ButtonDisplayed-Remove"))
+
+([beanynizer_default_ProjectKB_Instance_18] of  Boolean
+
+	(boolean_value FALSE)
+	(name "ButtonDisplayed-Delete Selected Instances"))
+
+([beanynizer_default_ProjectKB_Instance_19] of  Widget
+
+	(height 90)
+	(label "Template Values")
+	(name ":SLOT-VALUES")
+	(property_list [beanynizer_default_ProjectKB_Instance_20])
+	(widget_class_name "edu.stanford.smi.protege.widget.SlotValuesWidget")
+	(width 200)
+	(x 400)
+	(y 0))
+
+([beanynizer_default_ProjectKB_Instance_20] of  Property_List
+
+	(properties
+		[beanynizer_default_ProjectKB_Instance_21]
+		[beanynizer_default_ProjectKB_Instance_22]
+		[beanynizer_default_ProjectKB_Instance_23]
+		[beanynizer_default_ProjectKB_Instance_24]))
+
+([beanynizer_default_ProjectKB_Instance_21] of  Boolean
+
+	(boolean_value TRUE)
+	(name "ButtonDisplayed-View the selected value"))
+
+([beanynizer_default_ProjectKB_Instance_22] of  Boolean
+
+	(boolean_value TRUE)
+	(name "ButtonDisplayed-Create a new value"))
+
+([beanynizer_default_ProjectKB_Instance_23] of  Boolean
+
+	(boolean_value TRUE)
+	(name "ButtonDisplayed-Add"))
+
+([beanynizer_default_ProjectKB_Instance_24] of  Boolean
+
+	(boolean_value TRUE)
+	(name "ButtonDisplayed-Remove"))
+
+([beanynizer_default_ProjectKB_Instance_25] of  Widget
+
+	(name ":DIRECT-SUPERSLOTS"))
+
+([beanynizer_default_ProjectKB_Instance_26] of  Widget
+
+	(name ":DIRECT-SUBSLOTS"))
+
+([beanynizer_default_ProjectKB_Instance_27] of  Widget
+
+	(height 90)
+	(label "Default")
+	(name ":SLOT-DEFAULTS")
+	(property_list [beanynizer_default_ProjectKB_Instance_28])
+	(widget_class_name "edu.stanford.smi.protege.widget.DefaultValuesWidget")
+	(width 200)
+	(x 400)
+	(y 90))
+
+([beanynizer_default_ProjectKB_Instance_28] of  Property_List
+
+	(properties
+		[beanynizer_default_ProjectKB_Instance_29]
+		[beanynizer_default_ProjectKB_Instance_30]
+		[beanynizer_default_ProjectKB_Instance_31]
+		[beanynizer_default_ProjectKB_Instance_32]))
+
+([beanynizer_default_ProjectKB_Instance_29] of  Boolean
+
+	(boolean_value TRUE)
+	(name "ButtonDisplayed-View the selected value"))
+
+([beanynizer_default_ProjectKB_Instance_3] of  Widget
+
+	(is_hidden FALSE)
+	(name "BEANYNIZER-SLOT")
+	(property_list [beanynizer_default_ProjectKB_Instance_6])
+	(widget_class_name "edu.stanford.smi.protege.widget.FormWidget"))
+
+([beanynizer_default_ProjectKB_Instance_30] of  Boolean
+
+	(boolean_value TRUE)
+	(name "ButtonDisplayed-Create a new value"))
+
+([beanynizer_default_ProjectKB_Instance_31] of  Boolean
+
+	(boolean_value TRUE)
+	(name "ButtonDisplayed-Add"))
+
+([beanynizer_default_ProjectKB_Instance_32] of  Boolean
+
+	(boolean_value TRUE)
+	(name "ButtonDisplayed-Remove"))
+
+([beanynizer_default_ProjectKB_Instance_33] of  Widget
+
+	(height 120)
+	(label "Documentation")
+	(name ":DOCUMENTATION")
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_256])
+	(widget_class_name "edu.stanford.smi.protege.widget.DocumentationWidget")
+	(width 200)
+	(x 200)
+	(y 0))
+
+([beanynizer_default_ProjectKB_Instance_34] of  Widget
+
+	(height 60)
+	(label "Maximum")
+	(name ":SLOT-NUMERIC-MAXIMUM")
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_257])
+	(widget_class_name "edu.stanford.smi.protege.widget.NumericMaximumWidget")
+	(width 100)
+	(x 100)
+	(y 215))
+
+([beanynizer_default_ProjectKB_Instance_35] of  Widget
+
+	(height 60)
+	(label "Minimum")
+	(name ":SLOT-NUMERIC-MINIMUM")
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_258])
+	(widget_class_name "edu.stanford.smi.protege.widget.NumericMinimumWidget")
+	(width 100)
+	(x 0)
+	(y 215))
+
+([beanynizer_default_ProjectKB_Instance_36] of  Widget
+
+	(name ":ASSOCIATED-FACET"))
+
+([beanynizer_default_ProjectKB_Instance_37] of  Widget
+
+	(height 60)
+	(label "Name")
+	(name ":NAME")
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_259])
+	(widget_class_name "edu.stanford.smi.protege.widget.InstanceNameWidget")
+	(width 200)
+	(x 0)
+	(y 0))
+
+([beanynizer_default_ProjectKB_Instance_38] of  Widget
+
+	(height 60)
+	(label "Inverse Slot")
+	(name ":SLOT-INVERSE")
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_260])
+	(widget_class_name "edu.stanford.smi.protege.widget.InverseSlotWidget")
+	(width 200)
+	(x 200)
+	(y 215))
+
+([beanynizer_default_ProjectKB_Instance_39] of  Widget
+
+	(height 155)
+	(label "Value Type")
+	(name ":SLOT-VALUE-TYPE")
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_261])
+	(widget_class_name "edu.stanford.smi.protege.widget.ValueTypeWidget")
+	(width 200)
+	(x 0)
+	(y 60))
+
+([beanynizer_default_ProjectKB_Instance_40] of  Property_List
+
+	(name "layout properties"))
+
+([beanynizer_default_ProjectKB_Instance_43] of  Widget
+
+	(is_hidden TRUE)
+	(property_list [beanynizer_default_ProjectKB_Instance_44])
+	(widget_class_name "edu.stanford.smi.protegex.owl.ui.OWLIndividualsTab"))
+
+([beanynizer_default_ProjectKB_Instance_44] of  Property_List
+)
+
+([beanynizer_default_ProjectKB_Instance_45] of  Widget
+
+	(is_hidden TRUE)
+	(property_list [beanynizer_default_ProjectKB_Instance_46])
+	(widget_class_name "edu.stanford.smi.protegex.owl.ui.metadatatab.OWLMetadataTab"))
+
+([beanynizer_default_ProjectKB_Instance_46] of  Property_List
+)
+
+([beanynizer_default_ProjectKB_Instance_51] of  Widget
+
+	(is_hidden FALSE)
+	(label "Beanynizer")
+	(property_list [beanynizer_default_ProjectKB_Instance_52])
+	(widget_class_name "jadex.tools.beanynizer.BeanynizerTab"))
+
+([beanynizer_default_ProjectKB_Instance_52] of  Property_List
+)
+
+([beanynizer_default_ProjectKB_Instance_53] of  Widget
+
+	(is_hidden TRUE)
+	(property_list [beanynizer_default_ProjectKB_Instance_54])
+	(widget_class_name "edu.stanford.smi.protegex.owl.ui.cls.OWLClsesTab"))
+
+([beanynizer_default_ProjectKB_Instance_54] of  Property_List
+)
+
+([beanynizer_default_ProjectKB_Instance_55] of  Widget
+
+	(is_hidden TRUE)
+	(property_list [beanynizer_default_ProjectKB_Instance_56])
+	(widget_class_name "edu.stanford.smi.protegex.owl.ui.properties.OWLPropertiesTab"))
+
+([beanynizer_default_ProjectKB_Instance_56] of  Property_List
+)
+
+([beanynizer_default_ProjectKB_Instance_57] of  Widget
+
+	(is_hidden TRUE)
+	(property_list [beanynizer_default_ProjectKB_Instance_58])
+	(widget_class_name "edu.stanford.smi.protegex.owl.jena.rdql.RDQLTab"))
+
+([beanynizer_default_ProjectKB_Instance_58] of  Property_List
+)
+
+([beanynizer_default_ProjectKB_Instance_6] of  Property_List
+
+	(name "slot widget properties")
+	(properties
+		[beanynizer_default_ProjectKB_Instance_7]
+		[beanynizer_default_ProjectKB_Instance_8]
+		[beanynizer_default_ProjectKB_Instance_9]
+		[beanynizer_default_ProjectKB_Instance_10]
+		[beanynizer_default_ProjectKB_Instance_11]
+		[beanynizer_default_ProjectKB_Instance_19]
+		[beanynizer_default_ProjectKB_Instance_25]
+		[beanynizer_default_ProjectKB_Instance_26]
+		[beanynizer_default_ProjectKB_Instance_27]
+		[beanynizer_default_ProjectKB_Instance_33]
+		[beanynizer_default_ProjectKB_Instance_34]
+		[beanynizer_default_ProjectKB_Instance_35]
+		[beanynizer_default_ProjectKB_Instance_36]
+		[beanynizer_default_ProjectKB_Instance_37]
+		[beanynizer_default_ProjectKB_Instance_38]
+		[beanynizer_default_ProjectKB_Instance_39]
+		[beanynizer_default_ProjectKB_Instance_40]
+		[beanynizer_beans_fipa_default_ProjectKB_Instance_242]
+		[beanynizer_beans_fipa_default_ProjectKB_Instance_244]
+		[beanynizer_beans_fipa_default_ProjectKB_Instance_246]
+		[beanynizer_beans_fipa_default_ProjectKB_Instance_248]
+		[beanynizer_beans_fipa_default_ProjectKB_Instance_250]
+		[beanynizer_beans_fipa_default_ProjectKB_Instance_252]))
+
+([beanynizer_default_ProjectKB_Instance_7] of  Widget
+
+	(height 60)
+	(label "Cardinality")
+	(name ":SLOT-MINIMUM-CARDINALITY")
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_254])
+	(widget_class_name "edu.stanford.smi.protege.widget.MinimumCardinalityWidget")
+	(width 200)
+	(x 200)
+	(y 120))
+
+([beanynizer_default_ProjectKB_Instance_70003] of  String
+
+	(name "beanynizer-classname")
+	(string_value "FIPAOntology"))
+
+([beanynizer_default_ProjectKB_Instance_70004] of  String
+
+	(name "beanynizer-package")
+	(string_value "jadex.adapter.fipa"))
+
+([beanynizer_default_ProjectKB_Instance_8] of  Widget
+
+	(height 35)
+	(name ":SLOT-MAXIMUM-CARDINALITY")
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_255])
+	(widget_class_name "edu.stanford.smi.protege.widget.MaximumCardinalityWidget")
+	(width 200)
+	(x 200)
+	(y 180))
+
+([beanynizer_default_ProjectKB_Instance_9] of  Widget
+
+	(name ":SLOT-CONSTRAINTS"))
+
+([BROWSER_SLOT_NAMES] of  Property_List
+)
+
+([CLSES_TAB] of  Widget
+
+	(is_hidden FALSE)
+	(label "Classes")
+	(property_list [ProjectKB_1483_00047])
+	(widget_class_name "edu.stanford.smi.protege.widget.ClsesTab"))
+
+([FORMS_TAB] of  Widget
+
+	(is_hidden FALSE)
+	(label "Forms")
+	(property_list [ProjectKB_1483_00077])
+	(widget_class_name "edu.stanford.smi.protege.widget.FormsTab"))
+
+([INSTANCE_ANNOTATION_FORM_WIDGET] of  Widget
+
+	(height 476)
+	(is_hidden FALSE)
+	(name ":INSTANCE-ANNOTATION")
+	(property_list [KB_532737_Instance_33])
+	(widget_class_name "edu.stanford.smi.protege.widget.FormWidget")
+	(width 603)
+	(x 0)
+	(y 0))
+
+([INSTANCES_TAB] of  Widget
+
+	(is_hidden FALSE)
+	(label "Instances")
+	(property_list [ProjectKB_1483_00080])
+	(widget_class_name "edu.stanford.smi.protege.widget.InstancesTab"))
+
+([KB_532737_Instance_0] of  Property_List
+
+	(name "class widget properties")
+	(properties
+		[KB_532737_Instance_1]
+		[KB_532737_Instance_2]
+		[KB_532737_Instance_3]
+		[KB_532737_Instance_4]
+		[KB_532737_Instance_5]
+		[KB_532737_Instance_6]
+		[KB_532737_Instance_7]
+		[KB_532737_Instance_8]
+		[KB_532737_Instance_9]
+		[KB_532737_Instance_10]))
+
+([KB_532737_Instance_1] of  Widget
+
+	(height 120)
+	(label "Constraints")
+	(name ":SLOT-CONSTRAINTS")
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_231])
+	(widget_class_name "edu.stanford.smi.protege.widget.ConstraintsWidget")
+	(width 200)
+	(x 400)
+	(y 0))
+
+([KB_532737_Instance_10] of  Property_List
+
+	(name "layout properties")
+	(properties [KB_532737_Instance_11]))
+
+([KB_532737_Instance_11] of  String
+
+	(name "vertical_stretcher")
+	(string_value ":DIRECT-TEMPLATE-SLOTS"))
+
+([KB_532737_Instance_12] of  Property_List
+
+	(name "slot widget properties")
+	(properties
+		[KB_532737_Instance_13]
+		[KB_532737_Instance_14]
+		[KB_532737_Instance_15]
+		[KB_532737_Instance_16]
+		[KB_532737_Instance_17]
+		[KB_532737_Instance_18]
+		[KB_532737_Instance_19]
+		[KB_532737_Instance_20]
+		[KB_532737_Instance_21]
+		[KB_532737_Instance_22]
+		[KB_532737_Instance_23]
+		[KB_532737_Instance_24]
+		[KB_532737_Instance_25]
+		[KB_532737_Instance_26]
+		[KB_532737_Instance_27]
+		[KB_532737_Instance_28]))
+
+([KB_532737_Instance_13] of  Widget
+
+	(height 60)
+	(label "Cardinality")
+	(name ":SLOT-MINIMUM-CARDINALITY")
+	(widget_class_name "edu.stanford.smi.protege.widget.MinimumCardinalityWidget")
+	(width 200)
+	(x 200)
+	(y 120))
+
+([KB_532737_Instance_14] of  Widget
+
+	(height 35)
+	(name ":SLOT-MAXIMUM-CARDINALITY")
+	(widget_class_name "edu.stanford.smi.protege.widget.MaximumCardinalityWidget")
+	(width 200)
+	(x 200)
+	(y 180))
+
+([KB_532737_Instance_15] of  Widget
+
+	(name ":SLOT-CONSTRAINTS"))
+
+([KB_532737_Instance_16] of  Widget
+
+	(name ":DIRECT-TYPE"))
+
+([KB_532737_Instance_17] of  Widget
+
+	(height 95)
+	(label "Domain")
+	(name ":DIRECT-DOMAIN")
+	(widget_class_name "edu.stanford.smi.protege.widget.DirectDomainWidget")
+	(width 200)
+	(x 400)
+	(y 180))
+
+([KB_532737_Instance_18] of  Widget
+
+	(height 90)
+	(label "Template Values")
+	(name ":SLOT-VALUES")
+	(widget_class_name "edu.stanford.smi.protege.widget.SlotValuesWidget")
+	(width 200)
+	(x 400)
+	(y 0))
+
+([KB_532737_Instance_19] of  Widget
+
+	(name ":DIRECT-SUPERSLOTS"))
+
+([KB_532737_Instance_2] of  Widget
+
+	(name ":DIRECT-INSTANCES"))
+
+([KB_532737_Instance_20] of  Widget
+
+	(name ":DIRECT-SUBSLOTS"))
+
+([KB_532737_Instance_21] of  Widget
+
+	(height 90)
+	(label "Default")
+	(name ":SLOT-DEFAULTS")
+	(widget_class_name "edu.stanford.smi.protege.widget.DefaultValuesWidget")
+	(width 200)
+	(x 400)
+	(y 90))
+
+([KB_532737_Instance_22] of  Widget
+
+	(height 120)
+	(label "Documentation")
+	(name ":DOCUMENTATION")
+	(widget_class_name "edu.stanford.smi.protege.widget.DocumentationWidget")
+	(width 200)
+	(x 200)
+	(y 0))
+
+([KB_532737_Instance_23] of  Widget
+
+	(height 60)
+	(label "Maximum")
+	(name ":SLOT-NUMERIC-MAXIMUM")
+	(widget_class_name "edu.stanford.smi.protege.widget.NumericMaximumWidget")
+	(width 100)
+	(x 100)
+	(y 215))
+
+([KB_532737_Instance_24] of  Widget
+
+	(height 60)
+	(label "Minimum")
+	(name ":SLOT-NUMERIC-MINIMUM")
+	(widget_class_name "edu.stanford.smi.protege.widget.NumericMinimumWidget")
+	(width 100)
+	(x 0)
+	(y 215))
+
+([KB_532737_Instance_25] of  Widget
+
+	(name ":ASSOCIATED-FACET"))
+
+([KB_532737_Instance_26] of  Widget
+
+	(height 60)
+	(label "Name")
+	(name ":NAME")
+	(widget_class_name "edu.stanford.smi.protege.widget.InstanceNameWidget")
+	(width 200)
+	(x 0)
+	(y 0))
+
+([KB_532737_Instance_27] of  Widget
+
+	(height 60)
+	(label "Inverse Slot")
+	(name ":SLOT-INVERSE")
+	(widget_class_name "edu.stanford.smi.protege.widget.InverseSlotWidget")
+	(width 200)
+	(x 200)
+	(y 215))
+
+([KB_532737_Instance_28] of  Widget
+
+	(height 155)
+	(label "Value Type")
+	(name ":SLOT-VALUE-TYPE")
+	(widget_class_name "edu.stanford.smi.protege.widget.ValueTypeWidget")
+	(width 200)
+	(x 0)
+	(y 60))
+
+([KB_532737_Instance_29] of  Property_List
+
+	(name "facet widget properties")
+	(properties
+		[KB_532737_Instance_30]
+		[KB_532737_Instance_31]
+		[KB_532737_Instance_32]))
+
+([KB_532737_Instance_3] of  Widget
+
+	(name ":DIRECT-SUBCLASSES"))
+
+([KB_532737_Instance_30] of  Widget
+
+	(height 60)
+	(label "Name")
+	(name ":NAME")
+	(widget_class_name "edu.stanford.smi.protege.widget.InstanceNameWidget")
+	(width 200)
+	(x 0)
+	(y 0))
+
+([KB_532737_Instance_31] of  Widget
+
+	(height 120)
+	(label "Documentation")
+	(name ":DOCUMENTATION")
+	(widget_class_name "edu.stanford.smi.protege.widget.DocumentationWidget")
+	(width 200)
+	(x 200)
+	(y 0))
+
+([KB_532737_Instance_32] of  Widget
+
+	(height 60)
+	(label "Associated Slot")
+	(name ":ASSOCIATED-SLOT")
+	(widget_class_name "edu.stanford.smi.protege.widget.InstanceFieldWidget")
+	(width 200)
+	(x 0)
+	(y 60))
+
+([KB_532737_Instance_33] of  Property_List
+
+	(properties
+		[KB_532737_Instance_34]
+		[KB_532737_Instance_35]
+		[KB_532737_Instance_36]
+		[KB_532737_Instance_37]))
+
+([KB_532737_Instance_34] of  Widget
+
+	(name ":ANNOTATED-INSTANCE"))
+
+([KB_532737_Instance_35] of  Widget
+
+	(name ":CREATOR"))
+
+([KB_532737_Instance_36] of  Widget
+
+	(name ":CREATION-TIMESTAMP"))
+
+([KB_532737_Instance_37] of  Widget
+
+	(height 100)
+	(is_hidden FALSE)
+	(name ":ANNOTATION-TEXT")
+	(widget_class_name "edu.stanford.smi.protege.widget.YellowStickyWidget")
+	(width 200)
+	(x 0)
+	(y 0))
+
+([KB_532737_Instance_38] of  Property_List
+
+	(properties
+		[KB_532737_Instance_39]
+		[KB_532737_Instance_40]
+		[KB_532737_Instance_41]
+		[KB_532737_Instance_42]))
+
+([KB_532737_Instance_39] of  Widget
+
+	(height 60)
+	(is_hidden FALSE)
+	(label "Name")
+	(name ":PAL-NAME")
+	(widget_class_name "edu.stanford.smi.protege.widget.TextFieldWidget")
+	(width 275)
+	(x 0)
+	(y 0))
+
+([KB_532737_Instance_4] of  Widget
+
+	(name ":DIRECT-SUPERCLASSES"))
+
+([KB_532737_Instance_40] of  Widget
+
+	(height 180)
+	(is_hidden FALSE)
+	(label "Range")
+	(name ":PAL-RANGE")
+	(widget_class_name "edu.stanford.smi.protegex.widget.pal.constraint.PalRangeWidget")
+	(width 250)
+	(x 275)
+	(y 180))
+
+([KB_532737_Instance_41] of  Widget
+
+	(height 180)
+	(is_hidden FALSE)
+	(label "Description")
+	(name ":PAL-DESCRIPTION")
+	(widget_class_name "edu.stanford.smi.protege.widget.TextAreaWidget")
+	(width 250)
+	(x 275)
+	(y 0))
+
+([KB_532737_Instance_42] of  Widget
+
+	(height 300)
+	(is_hidden FALSE)
+	(label "Statement")
+	(name ":PAL-STATEMENT")
+	(widget_class_name "edu.stanford.smi.protegex.widget.pal.constraint.PalConstraintWidget")
+	(width 275)
+	(x 0)
+	(y 60))
+
+([KB_532737_Instance_5] of  Widget
+
+	(height 120)
+	(label "Documentation")
+	(name ":DOCUMENTATION")
+	(widget_class_name "edu.stanford.smi.protege.widget.DocumentationWidget")
+	(width 200)
+	(x 200)
+	(y 0))
+
+([KB_532737_Instance_6] of  Widget
+
+	(height 60)
+	(label "Name")
+	(name ":NAME")
+	(widget_class_name "edu.stanford.smi.protege.widget.InstanceNameWidget")
+	(width 200)
+	(x 0)
+	(y 0))
+
+([KB_532737_Instance_7] of  Widget
+
+	(height 60)
+	(label "Role")
+	(name ":ROLE")
+	(widget_class_name "edu.stanford.smi.protege.widget.RoleWidget")
+	(width 200)
+	(x 0)
+	(y 60))
+
+([KB_532737_Instance_8] of  Widget
+
+	(name ":DIRECT-TYPE"))
+
+([KB_532737_Instance_9] of  Widget
+
+	(height 150)
+	(label "Template Slots")
+	(name ":DIRECT-TEMPLATE-SLOTS")
+	(property_list [beanynizer_beans_fipa_default_ProjectKB_Instance_234])
+	(widget_class_name "edu.stanford.smi.protege.widget.TemplateSlotsWidget")
+	(width 600)
+	(x 0)
+	(y 120))
+
+([PAL_FORM_WIDGET] of  Widget
+
+	(height 476)
+	(is_hidden FALSE)
+	(name ":PAL-CONSTRAINT")
+	(property_list [KB_532737_Instance_38])
+	(widget_class_name "edu.stanford.smi.protege.widget.FormWidget")
+	(width 603)
+	(x 0)
+	(y 0))
+
+([PROJECT] of  Project
+
+	(browser_slot_names [BROWSER_SLOT_NAMES])
+	(customized_instance_widgets
+		[STANDARD_FACET_FORM_WIDGET]
+		[INSTANCE_ANNOTATION_FORM_WIDGET]
+		[beanynizer_default_ProjectKB_00002]
+		[beanynizer_default_ProjectKB_Instance_3]
+		[PAL_FORM_WIDGET]
+		[STANDARD_SLOT_FORM_WIDGET]
+		[STANDARD_CLASS_FORM_WIDGET])
+	(default_cls_metaclass "BEANYNIZER-CLASS")
+	(default_facet_metaclass ":STANDARD-FACET")
+	(default_instance_widget_class_name "edu.stanford.smi.protege.widget.FormWidget")
+	(default_slot_metaclass "BEANYNIZER-SLOT")
+	(included_projects "beanynizer_beans_default.pprj")
+	(next_frame_number 0)
+	(options [ProjectKB_1483_00048])
+	(sources [SOURCES])
+	(tabs
+		[CLSES_TAB]
+		[SLOTS_TAB]
+		[FORMS_TAB]
+		[INSTANCES_TAB]
+		[QUERIES_TAB]
+		[ProjectKB_1483_00043]
+		[ProjectKB_1483_00045]
+		[beanynizer_default_ProjectKB_Instance_51]
+		[beanynizer_default_ProjectKB_Instance_53]
+		[beanynizer_default_ProjectKB_Instance_43]
+		[beanynizer_default_ProjectKB_Instance_45]
+		[beanynizer_default_ProjectKB_Instance_55]
+		[beanynizer_default_ProjectKB_Instance_57]))
+
+([ProjectKB_1483_00042] of  String
+
+	(name "factory_class_name")
+	(string_value "edu.stanford.smi.protege.storage.clips.ClipsKnowledgeBaseFactory"))
+
+([ProjectKB_1483_00043] of  Widget
+
+	(is_hidden TRUE)
+	(property_list [ProjectKB_1483_00044])
+	(widget_class_name "edu.stanford.smi.protege.widget.ClsesAndInstancesTab"))
+
+([ProjectKB_1483_00044] of  Property_List
+)
+
+([ProjectKB_1483_00045] of  Widget
+
+	(is_hidden TRUE)
+	(property_list [ProjectKB_1483_00046])
+	(widget_class_name "edu.stanford.smi.protege.widget.KAToolTab"))
+
+([ProjectKB_1483_00046] of  Property_List
+)
+
+([ProjectKB_1483_00047] of  Property_List
+
+	(properties
+		[beanynizer_default_ProjectKB_00130]
+		[beanynizer_default_ProjectKB_00131]))
+
+([ProjectKB_1483_00048] of  Options
+
+	(confirm_on_remove FALSE)
+	(display_abstract_class_icon TRUE)
+	(display_hidden_classes TRUE)
+	(display_multi_parent_class_icon TRUE)
+	(is_readonly FALSE)
+	(update_modification_slots FALSE))
+
+([ProjectKB_1483_00065] of  Property_List
+
+	(properties
+		[beanynizer_default_ProjectKB_00132]
+		[beanynizer_default_ProjectKB_00133]))
+
+([ProjectKB_1483_00077] of  Property_List
+
+	(properties [beanynizer_default_ProjectKB_00134]))
+
+([ProjectKB_1483_00080] of  Property_List
+
+	(properties
+		[beanynizer_default_ProjectKB_00135]
+		[beanynizer_default_ProjectKB_00136]))
+
+([ProjectKB_1483_00081] of  Property_List
+
+	(properties [beanynizer_default_ProjectKB_00137]))
+
+([ProjectKB_1483_00128] of  String
+
+	(name "classes_file_name")
+	(string_value "beanynizer_beans_fipa_default.pont"))
+
+([ProjectKB_1483_00129] of  String
+
+	(name "instances_file_name")
+	(string_value "beanynizer_beans_fipa_default.pins"))
+
+([QUERIES_TAB] of  Widget
+
+	(is_hidden FALSE)
+	(label "Queries")
+	(property_list [ProjectKB_1483_00081])
+	(widget_class_name "edu.stanford.smi.protegex.queries_tab.QueriesTab"))
+
+([SLOTS_TAB] of  Widget
+
+	(is_hidden FALSE)
+	(label "Slots")
+	(property_list [ProjectKB_1483_00065])
+	(widget_class_name "edu.stanford.smi.protege.widget.SlotsTab"))
+
+([SOURCES] of  Property_List
+
+	(properties
+		[ProjectKB_1483_00042]
+		[ProjectKB_1483_00128]
+		[ProjectKB_1483_00129]
+		[beanynizer_default_ProjectKB_Instance_70003]
+		[beanynizer_default_ProjectKB_Instance_70004]
+		[beanynizer_beans_fipa_new_ProjectKB_Instance_181]
+		[beanynizer_beans_fipa_new_ProjectKB_Instance_182]
+		[beanynizer_beans_fipa_new_ProjectKB_Instance_10181]))
+
+([STANDARD_CLASS_FORM_WIDGET] of  Widget
+
+	(height 832)
+	(name ":STANDARD-CLASS")
+	(property_list [KB_532737_Instance_0])
+	(widget_class_name "edu.stanford.smi.protege.widget.FormWidget")
+	(width 1008)
+	(x 0)
+	(y 0))
+
+([STANDARD_FACET_FORM_WIDGET] of  Widget
+
+	(name ":STANDARD-FACET")
+	(property_list [KB_532737_Instance_29])
+	(widget_class_name "edu.stanford.smi.protege.widget.FormWidget"))
+
+([STANDARD_SLOT_FORM_WIDGET] of  Widget
+
+	(name ":STANDARD-SLOT")
+	(property_list [KB_532737_Instance_12])
+	(widget_class_name "edu.stanford.smi.protege.widget.FormWidget"))

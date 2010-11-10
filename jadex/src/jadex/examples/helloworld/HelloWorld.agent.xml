@@ -1,0 +1,38 @@
+<!--
+	<H3>The HelloWorld agent.</H3>
+
+	It has the task to print out a welcome message.
+-->
+
+<agent xmlns="http://jadex.sourceforge.net/jadex"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://jadex.sourceforge.net/jadex 
+	                    http://jadex.sourceforge.net/jadex-0.96.xsd"
+	name="HelloWorld"
+	package="jadex.examples.helloworld">
+	
+	<beliefs>
+		<belief name="msg" class="String" exported="true">
+			<fact>"Welcome to Jadex."</fact>
+		</belief>
+	</beliefs>
+
+	<plans>
+		<!-- Plan which prints out a message and kills the agent. -->
+		<plan name="hello">
+			<body class="HelloWorldPlan"/>
+			<!-- <body>new HelloWorldPlan()</body> -->
+		</plan>
+	</plans>
+
+	<configurations>
+		<configuration name="default">
+			<plans>
+				<!-- Start hello plan when agent is born. -->
+				<initialplan ref="hello"/>
+			</plans>
+		</configuration>
+	</configurations>
+
+</agent>
+

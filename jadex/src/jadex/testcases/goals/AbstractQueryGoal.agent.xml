@@ -1,0 +1,52 @@
+<!--
+	<H3>Test abstract query goal dispatched by inner capability.</H3>
+
+	The agent defines a query goal which is assigned to the abstract goal
+	from a capability. The capability posts the abstract goal, which succeeds
+	due to out parameter settings in the concrete goal.
+-->
+<agent xmlns="http://jadex.sourceforge.net/jadex"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://jadex.sourceforge.net/jadex 
+	                    http://jadex.sourceforge.net/jadex-0.96.xsd"
+	name="AbstractQueryGoal"
+	package="jadex.testcases.goals">
+	
+	<imports>
+		<import>jadex.testcases.*</import>
+	</imports>
+	
+	<capabilities>
+		<capability name="capA" file="AbstractQueryGoal"/>
+		<capability name="testcap" file="jadex.planlib.Test"/>
+	</capabilities>
+	
+	<beliefs>
+		<beliefsetref name="reports">
+			<assignto ref="capA.reports"/>
+			<concrete ref="testcap.reports"/>
+		</beliefsetref>
+		<beliefref name="timeout" class="long" exported="true">
+			<concrete ref="testcap.timeout"/>
+		</beliefref>
+		<beliefref name="testcenter" class="jadex.adapter.fipa.AgentIdentifier" exported="true">
+			<concrete ref="testcap.testcenter"/>
+		</beliefref>
+	</beliefs>
+
+	<goals>
+		<querygoal name="qgoal" exported="true">
+			<assignto ref="capA.testgoal"/>
+			<parameterset name="params" class="String">
+				<assignto ref="capA.testgoal.params"/>
+			</parameterset>
+			<parameterset name="results" class="String" direction="out">
+				<assignto ref="capA.testgoal.results"/>
+				<values evaluationmode="dynamic">
+					new Object[]{select one String $result from $goal.params}
+				</values>
+			</parameterset>
+		</querygoal>
+	</goals>
+		
+</agent>

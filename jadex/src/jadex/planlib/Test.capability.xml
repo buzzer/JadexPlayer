@@ -1,0 +1,116 @@
+<!--
+  The Test capability is responsible for tracking
+  test results and publishes results either to a
+  test center or on console.
+-->
+<capability xmlns="http://jadex.sourceforge.net/jadex"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://jadex.sourceforge.net/jadex
+	                    http://jadex.sourceforge.net/jadex-0.96.xsd"
+	package="jadex.planlib"
+	name="Test">
+
+	<imports>
+		<import>jadex.adapter.fipa.*</import>
+	</imports>
+
+	<beliefs>
+		<!-- The number of testcases. -->
+		<belief name="testcase_cnt" class="int" exported="true">
+			<fact>1</fact>
+		</belief>
+
+		<!-- Default timeout is never. -->
+		<belief name="timeout" class="long" exported="true">
+			<fact>0</fact>
+			<!-- <fact>20000</fact> -->
+		</belief>
+
+		<!-- The test center identifier (null when the agent was not started from the test center). -->
+		<belief name="testcenter" class="AgentIdentifier" exported="true"/>
+
+		<!-- Keep the agent alive after ther tests have been performed. -->
+		<belief name="keepalive" class="boolean" exported="true">
+			<fact>false</fact>
+		</belief>
+
+		<!-- The start time. -->
+		<belief name="starttime" class="long">
+			<fact>System.currentTimeMillis()</fact>
+		</belief>
+
+		<!-- The indicator for a timeout (when no time left and reports incomplete). -->
+		<belief name="timeout_failure" class="boolean" updaterate="1000">
+			<fact>$beliefbase.timeout>0 
+				&amp;&amp; $beliefbase.starttime+$beliefbase.timeout &lt;= System.currentTimeMillis()
+				&amp;&amp; $beliefbase.testcase_cnt!=$beliefbase.reports.length</fact>
+		</belief>
+
+		<!-- The testcase reports. -->
+		<beliefset name="reports" class="TestReport" exported="true"/>
+	</beliefs>
+
+	<goals>
+		<achievegoal name="tests_finished"/>
+	</goals>
+
+	<plans>
+		<!-- Plan to wait until all tests are finished and then to create the tests_finished goal. -->
+		<plan name="tests_finished_plan">
+			<body type="mobile" class="TestsFinishedPlan" />
+			<!-- <body type="mobile">new TestsFinishedPlan()</body> -->
+		</plan>
+
+		<!-- Send results to test center. -->
+		<plan name="send_reports">
+			<body class="SendReportsPlan" />
+			<!-- <body>new SendReportsPlan()</body> -->
+			<trigger>
+				<goal ref="tests_finished"/>
+			</trigger>
+			<precondition>$beliefbase.testcenter!=null</precondition>
+		</plan>
+
+		<!-- Print results to console. -->
+		<plan name="print_reports">
+			<body class="PrintReportsPlan" />
+			<!-- <body>new PrintReportsPlan()</body> -->
+			<trigger>
+				<goal ref="tests_finished"/>
+			</trigger>
+		</plan>
+	</plans>
+
+	<events>
+		<!--  The inform reports message event. -->
+		<messageevent name="inform_reports" type="fipa" exported="true" direction="send">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.INFORM</value>
+			</parameter>
+			<parameter name="reply-with" class="String">
+				<value>SFipa.createUniqueId($scope.getAgentName())</value>
+			</parameter>
+			<parameter name="language" class="String" direction="fixed">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+		</messageevent>
+	</events>
+	
+	<expressions>
+		<!-- The tests are finished when as many reports have been added as
+			tests have been declared and tests to do >0 or the timeout has occurred. -->
+		<condition name="tests_finished">
+			$beliefbase.testcase_cnt==$beliefbase.reports.length || $beliefbase.timeout_failure
+		</condition>
+	</expressions>
+
+	<configurations>
+		<configuration name="default">
+			<plans>
+				<initialplan ref="tests_finished_plan"/>
+			</plans>
+		</configuration>
+		<configuration name="off"/>
+	</configurations>
+
+</capability>

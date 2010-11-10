@@ -1,0 +1,62 @@
+<!--
+	<H3>The Environment observer agent allows to watch the environment.</H3>
+-->
+<agent xmlns="http://jadex.sourceforge.net/jadex"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://jadex.sourceforge.net/jadex 
+	                    http://jadex.sourceforge.net/jadex-0.96.xsd"
+	name="EnvironmentObserver"
+	package="jadex.examples.cleanerworld.multi.environment">
+
+	<imports>
+		<import>jadex.examples.cleanerworld.multi.*</import>
+		<import>jadex.adapter.fipa.*</import>
+	</imports>
+
+	<capabilities>
+		<capability name="dfcap" file="jadex.planlib.DF"/>
+		<capability name="procap" file="jadex.planlib.Protocols"/>
+	</capabilities>
+
+	<beliefs>
+		<belief name="environment" class="IEnvironment">
+ 			<fact>new Environment()</fact>
+		</belief>
+		<belief name="environmentagent" class="AgentIdentifier" />
+		<belief name="df" class="AgentIdentifier">
+			<fact>
+				new AgentIdentifier("df@alex",
+					new String[]{"nio-mtp://vsisstaff0:5678"})
+			</fact>
+		</belief>
+		<belief name="gui" class="EnvironmentGui">
+			<fact>new EnvironmentGui($agent.getExternalAccess())</fact>
+		</belief>		
+	</beliefs>
+
+	<goals>
+		<achievegoalref name="df_search">
+			<concrete ref="dfcap.df_search"/>
+		</achievegoalref>
+
+		<achievegoalref name="rp_initiate">
+			<concrete ref="procap.rp_initiate"/>
+		</achievegoalref>
+	</goals>
+
+	<plans>
+		<plan name="updateenvironment">
+			<body>new UpdateEnvironmentPlan()</body>
+		</plan>
+	</plans>
+
+	<configurations>
+		<configuration name="default">
+			<plans>
+				<initialplan ref="updateenvironment" />
+			</plans>
+		</configuration>
+	</configurations>
+
+</agent>
+

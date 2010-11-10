@@ -1,0 +1,81 @@
+<!--
+	The df capability has all necessay plans, beliefs and goals for all
+	activities concerned with df functionality.
+-->
+<capability xmlns="http://jadex.sourceforge.net/jadex"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://jadex.sourceforge.net/jadex 
+	                    http://jadex.sourceforge.net/jadex-0.96.xsd"
+	abstract="true"
+	package="jadex.planlib"
+	name="DF">
+
+	<imports>
+		<import>jadex.adapter.fipa.*</import>
+	</imports>
+	
+	<beliefs>
+		<!-- The timeout (defaults to standards timeout specified in runtime properties). -->
+		<belief name="timeout" class="Long" exported="true"/>
+	</beliefs>
+
+	<goals>
+
+		<!-- Register an agent description at the given (or default) DF. -->
+		<achievegoal name="df_register" exported="true">
+			<parameter name="description" class="AgentDescription"/>
+			<parameter name="df" class="AgentIdentifier" optional="true"/>
+			<parameter name="leasetime" class="Long" optional="true"/>
+			<parameter name="result" class="AgentDescription" direction="out"/>
+		</achievegoal>
+
+		<!-- Modify an agent description at the given (or default) DF. -->
+		<achievegoal name="df_modify" exported="true">
+			<parameter name="description" class="AgentDescription"/>
+			<parameter name="df" class="AgentIdentifier" optional="true"/>
+			<parameter name="leasetime" class="Long" optional="true"/>
+			<parameter name="result" class="AgentDescription" direction="out"/>
+		</achievegoal>
+
+		<!-- Maintain a registration at the given (or default) DF. -->
+		<maintaingoal name="df_keep_registered" recurdelay="60000" exported="true">
+			<!-- Will contain the actually registered agent description. -->
+			<parameter name="description" class="AgentDescription" direction="inout"/>
+			<parameter name="df" class="AgentIdentifier" optional="true"/>
+			<parameter name="leasetime" class="Long" optional="true">
+				<!--<value>20000</value>-->
+			</parameter>
+			<parameter name="buffertime" class="long">
+				<value>3000</value>
+			</parameter>
+			<parameter name="current_time"  class="long" updaterate="1000">
+				<value>System.currentTimeMillis()</value>
+			</parameter>
+			<parameter name="result" class="AgentDescription" direction="out"/>
+			<maintaincondition>
+				($goal.result != null)
+				&amp;&amp;
+				($goal.result.getLeaseTime() == null?
+ 				true: $goal.result.getLeaseTime().getTime()
+				- $goal.current_time - $goal.buffertime &gt; 0)
+			</maintaincondition>
+		</maintaingoal>
+
+		<!-- Deregister an agent description at the given (or default) DF. -->
+		<achievegoal name="df_deregister" exported="true">
+			<!-- The agent description to deregister. -->
+			<parameter name="description" class="AgentDescription" optional="true"/>
+			<parameter name="df" class="AgentIdentifier" optional="true"/>
+		</achievegoal>
+
+		<!-- Search for an agent description at the given (or default) DF. -->
+		<achievegoal name="df_search" exported="true">
+			<parameter name="description" class="AgentDescription"/>
+			<parameter name="df" class="AgentIdentifier" optional="true"/>
+			<parameter name="constraints" class="SearchConstraints" optional="true"/>
+			<parameterset name="result" class="AgentDescription" direction="out"/>
+		</achievegoal>
+
+	</goals>
+
+</capability>

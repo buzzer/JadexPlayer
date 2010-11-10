@@ -1,0 +1,86 @@
+<!--
+	<H3>This agent tests change propagation of beliefs (and goal parameters)</H3>
+
+	Use the BDI-viewer to perform the test.
+	When the belief "my_value" is changed to "magic"
+	the dependent belief "react_on value" should
+	have the value "magic" as well.
+	When from the beliefset "my_values" one value
+	is deleted the dependent belief "react_on_values"
+	should have the value "magic".
+-->
+
+<agent xmlns="http://jadex.sourceforge.net/jadex"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://jadex.sourceforge.net/jadex 
+	                    http://jadex.sourceforge.net/jadex-0.96.xsd"
+	name="PropagateChanges"
+	package="jadex.testcases.beliefs">
+
+	<capabilities>
+		<capability name="testcap" file="jadex.planlib.Test"/>
+	</capabilities>
+
+	<beliefs>
+		<beliefsetref name="reports">
+			<concrete ref="testcap.reports"/>
+		</beliefsetref>
+		<beliefref name="testcase_cnt" class="int">
+			<concrete ref="testcap.testcase_cnt"/>
+		</beliefref>
+		<beliefref name="timeout" class="long" exported="true">
+			<concrete ref="testcap.timeout"/>
+		</beliefref>
+		<beliefref name="testcenter" class="jadex.adapter.fipa.AgentIdentifier" exported="true">
+			<concrete ref="testcap.testcenter"/>
+		</beliefref>
+
+		<belief name="my_value" class="String">
+			<fact>"blurps"</fact>
+		</belief>
+		<belief name="react_on_value" class="String">
+			<fact evaluationmode="dynamic">
+ 				$beliefbase.my_value.equals("magic")? "magic": "n/a"
+			</fact>
+		</belief>
+
+		<beliefset name="my_values" class="int">
+			<fact>0</fact>
+			<fact>1</fact>
+			<fact>2</fact>
+		</beliefset>
+		<belief name="react_on_values" class="String">
+			<fact evaluationmode="dynamic">
+ 				$beliefbase.my_values.length==2? "magic": "n/a"
+			</fact>
+		</belief>
+	</beliefs>
+
+	<plans>
+		<plan name="tester">
+			<body class="DependentBeliefPlan"/>
+			<!-- <body>new DependentBeliefPlan()</body> -->
+		</plan>
+	</plans>
+
+	<properties>
+        <!--<property name="debugging">true</property>-->
+        <!--<property name="logging.level">java.util.logging.Level.FINE</property>-->
+        <property name="logging.useParentHandlers">true</property>
+    </properties>
+
+	<configurations>
+		<configuration name="default">
+			<beliefs>
+				<initialbelief ref="testcase_cnt">
+					<fact>2</fact>
+				</initialbelief>
+			</beliefs>
+			<plans>
+				<initialplan ref="tester"/>
+			</plans>
+		</configuration>
+	</configurations>
+
+</agent>
+

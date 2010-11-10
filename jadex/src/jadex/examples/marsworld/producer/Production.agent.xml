@@ -1,0 +1,223 @@
+<!--
+	<H3>Production agent for producing ore.</H3>
+
+	This Agent is called to move to an Location to produce ore there.
+	Therefore it is registering it's production-servivce at the DF.
+-->
+<agent xmlns="http://jadex.sourceforge.net/jadex"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://jadex.sourceforge.net/jadex 
+	                    http://jadex.sourceforge.net/jadex-0.96.xsd"
+	name="Production"
+	package="jadex.examples.marsworld.producer">
+
+	<imports>
+		<import>jadex.examples.marsworld.movement.*</import>
+		<import>jadex.examples.marsworld.*</import>
+		<import>jadex.adapter.fipa.*</import>
+		<import>jadex.runtime.*</import>
+		<import>jadex.planlib.*</import>
+	</imports>
+
+	<capabilities>
+		<!-- Include the df capability as dfcap for finding other agents
+			and registering the production service. -->
+		<capability name="dfcap" file="jadex.planlib.DF"/>
+		<!-- Include the move capability as move for basic movement. -->
+		<capability name="move" file="Movement" />
+	</capabilities>
+
+	<beliefs>
+		<!-- The environment as singleton object. -->
+		<belief name="environment" class="Environment">
+			<assignto ref="move.environment"/>
+			<fact>Environment.getInstance()</fact>
+	  	</belief>
+
+		<!-- The home location. -->
+		<belief name="my_home" class="Location">
+			<assignto ref="move.my_home"/>
+			<fact>$beliefbase.environment.getHomebase().getLocation()</fact>
+		</belief>
+
+		<!-- The current location. -->
+	    <belief name="my_location" class="Location">
+			<assignto ref="move.my_location"/>
+			<fact>$beliefbase.my_home</fact>
+		</belief>
+
+		<!-- The agent type (carry, producer or sentry) -->
+	    <belief name="my_type" class="String">
+			<assignto ref="move.my_type"/>
+			<fact>Environment.PRODUCTION_AGENT</fact>
+	  	</belief>
+
+		<!-- The speed. -->
+		<belief name="my_speed" class="double">
+			<assignto ref="move.my_speed"/>
+			<fact>10</fact>
+		</belief>
+
+		<!-- Is the mission finished? -->
+		<beliefref name="missionend">
+			<concrete ref="move.missionend"/>
+		</beliefref>
+
+		<!-- The sight radius. -->
+		<belief name="my_vision" class="double">
+			<assignto ref="move.my_vision"/>
+			<fact>0.05</fact>
+		</belief>
+
+		<!-- The seen targets. -->
+		<beliefsetref name="my_targets">
+			<concrete ref="move.my_targets"/>
+		</beliefsetref>
+
+		<!-- The targets sent to the sentries. -->
+		<beliefset name="finished_targets" class="Target"/>
+	</beliefs>
+
+	<goals>
+		<!-- Produce ore at a target. -->
+		<achievegoal name="produce_ore">
+			<parameter name="target" class="Target"/>
+			<dropcondition>
+				$beliefbase.missionend
+			</dropcondition>
+			<deliberation>
+				<inhibits ref="walk_around"/>
+			</deliberation>
+		</achievegoal>
+
+		<!-- Just walk around without a target. -->
+		<performgoalref name="walk_around">
+			<concrete ref="move.walk_around"/>
+		</performgoalref>
+		<!-- Watch out for targets. -->
+		<performgoalref name="watch_targets">
+			<concrete ref="move.watch_targets"/>
+		</performgoalref>
+		<!-- Move to some destination. -->
+		<achievegoalref name="move_dest">
+			<concrete ref="move.move_dest"/>
+		</achievegoalref>
+
+		<!-- Register the agent description at the df. -->
+		<achievegoalref name="df_register">
+			<concrete ref="dfcap.df_register"/>
+		</achievegoalref>
+		<!-- Deregister the agent description at the df. -->
+		<achievegoalref name="df_deregister">
+			<concrete ref="dfcap.df_deregister"/>
+		</achievegoalref>
+		<!-- Usable for searching other agents. -->
+		<achievegoalref name="df_search">
+			<concrete ref="dfcap.df_search"/>
+		</achievegoalref>
+	</goals>
+
+	<plans>
+		<!-- The main plan handling action requests. -->
+		<plan name="produce">
+			<body class="ProductionPlan"/>
+			<!-- <body>new ProductionPlan()</body> -->
+			<waitqueue>
+				<messageevent ref="request_production"/>
+			</waitqueue>
+		</plan>
+
+		<!-- Produce ore at a target. -->
+		<plan name="produce_ore">
+			<parameter name="target" class="Target">
+				<goalmapping ref="produce_ore.target"/>
+			</parameter>
+			<body class="ProduceOrePlan"/>
+			<!-- <body>new ProduceOrePlan()</body> -->
+			<trigger>
+				<goal ref="produce_ore"/>
+			</trigger>
+		</plan>
+
+		<!-- Inform sentries about new targets. -->
+		<plan name="informer">
+			<body class="InformNewTargetPlan"/>
+			<!-- <body>new InformNewTargetPlan()</body> -->
+			<!-- Inform whenever a new fact is added to the belief set my_targets. -->
+			<trigger>
+				<factadded ref="my_targets"/>
+			</trigger>
+		</plan>
+	</plans>
+
+	<events>
+		<!-- Message event for produce ore task allocation. -->
+		<messageevent name="request_production" type="fipa" direction="receive">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.REQUEST</value>
+			</parameter>
+			<parameter name="content-class" class="Class" direction="fixed">
+				<value>RequestProduction.class</value>
+			</parameter>
+			<parameter name="ontology" class="String" direction="fixed">
+				<value>MarsOntology.ONTOLOGY_NAME</value>
+			</parameter>
+		</messageevent>
+
+		<messageevent name="inform_target" type="fipa" direction="send">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.INFORM</value>
+			</parameter>
+			<parameter name="language" class="String" direction="fixed">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+			<parameter name="ontology" class="String" direction="fixed">
+				<value>MarsOntology.ONTOLOGY_NAME</value>
+			</parameter>
+		</messageevent>
+
+		<messageevent name="request_carries" type="fipa" direction="send">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.REQUEST</value>
+			</parameter>
+			<parameter name="language" class="String" direction="fixed">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+			<parameter name="ontology" class="String" direction="fixed">
+				<value>MarsOntology.ONTOLOGY_NAME</value>
+			</parameter>
+		</messageevent>
+	</events>
+
+	<properties>
+		<property name="fipa.servicedescription.produce">
+			SFipa.createServiceDescription("service_produce", "service_produce", "University of Hamburg")
+		</property>
+		<property name="fipa.agentdescription.producer">
+			SFipa.createAgentDescription(null, (ServiceDescription)$propertybase.getProperty("fipa.servicedescription.produce"))
+		</property>
+	</properties>
+
+	<configurations>
+		<configuration name="default">
+			<goals>
+				<!-- Create a goal for registering at the df. -->
+				<initialgoal ref="df_register">
+					<parameter ref="description">
+						<value>$propertybase.getProperty("fipa.agentdescription.producer")</value>
+					</parameter>
+				</initialgoal>
+				<!-- Create a goal for walking around. -->
+				<initialgoal ref="walk_around"/>
+				<!-- Create a goal for watching for targets. -->
+				<initialgoal ref="watch_targets"/>
+				<endgoal ref="df_deregister"/>
+			</goals>
+			<plans>
+				<initialplan ref="produce"/>
+			</plans>
+		</configuration>
+		
+	</configurations>
+
+</agent>

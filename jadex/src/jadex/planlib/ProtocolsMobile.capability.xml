@@ -1,0 +1,368 @@
+<!--
+	The protocols capability enables an easy goal-driven usage of
+	some often used FIPA protocols.
+-->
+<capability xmlns="http://jadex.sourceforge.net/jadex"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://jadex.sourceforge.net/jadex
+	                    http://jadex.sourceforge.net/jadex-0.96.xsd"
+	package="jadex.planlib"
+	name="ProtocolsMobile">
+
+	<imports>
+		<import>jadex.adapter.fipa.*</import>
+		<import>java.util.*</import>
+		<import>jadex.runtime.*</import>
+	</imports>
+
+	<beliefs>
+		<!-- Timeout for messages. -->
+		<belief name="timeout" class="Long" exported="true">
+			<fact>(Integer)$propertybase.getProperty("standard.timeout")</fact>
+		</belief>
+
+		<!-- The filter for deciding which initial request messages are handled in this capability (not yet supported). -->
+		<belief name="rp_filter" class="IFilter" exported="true">
+			<fact>IFilter.NEVER</fact>
+		</belief>
+
+		<!-- The filter for deciding which initial cfp messages are handled in this capability. -#->
+		<belief name="cnp_filter" class="IFilter" exported="true">
+			<fact>IFilter.NEVER</fact>
+		</belief> -->
+	</beliefs>
+
+	<goals>
+		<!-- Initiate a conversation using the fipa-request protocol. -->
+		<achievegoal name="rp_initiate" exported="true">
+			<parameter name="receiver" class="AgentIdentifier"/>
+			<parameter name="content" class="Object"/>
+			<parameter name="ontology" class="String" optional="true"/>
+			<parameter name="language" class="String" optional="true"/>
+			<parameter name="timeout" class="Long" optional="true"/>
+			<parameter name="result" class="Object" direction="out"/>
+		</achievegoal>
+
+		<!-- Decide upon a requested task will be executed. -#->
+		<achievegoal name="rp_decide_request" exported="true">
+			<parameter name="request" class="Object"/>
+			<parameter name="result" class="Boolean" direction="out"/>
+		</achievegoal>
+
+		<!-#- Execute the requested task. -#->
+		<achievegoal name="rp_execute_request" exported="true">
+			<parameter name="request" class="Object"/>
+			<parameter name="result" class="Object" direction="out" optional="true"/>
+		</achievegoal>
+
+		<!-#- Initiate a contract net protcol. -#->
+		<achievegoal name="cnp_initiate" exported="true">
+			<parameter name="content" class="Object"/>
+			<parameter name="ontology" class="String" optional="true"/>
+			<parameter name="language" class="String" optional="true"/>
+			<parameter name="timeout" class="Long" optional="true"/>
+			<parameter name="comparator" class="Comparator" optional="true"/>
+			<parameter name="selector" class="ISelector" optional="true"/>
+			<parameter name="result" class="Object" direction="out"/>
+			<parameterset name="receivers" class="AgentIdentifier"/>
+		</achievegoal>
+
+		<!-#- Make a cnp proposal. -#->
+		<achievegoal name="cnp_make_proposal" exported="true">
+			<parameter name="task" class="Object"/>
+			<parameter name="proposal" class="Object" direction="out"/>
+			<parameter name="proposal_info" class="Object" direction="out" optional="true"/>
+		</achievegoal>
+
+		<!-#- Execute a cnp task. -#->
+		<achievegoal name="cnp_execute_task" exported="true">
+			<parameter name="proposal" class="Object"/>
+			<parameter name="proposal_info" class="Object" optional="true"/>
+			<parameter name="result" class="Object" direction="out" optional="true"/>
+		</achievegoal> -->
+	</goals>
+
+	<plans>
+		<plan name="request_initiator_plan">
+			<parameter name="receiver" class="AgentIdentifier">
+				<goalmapping ref="rp_initiate.receiver"/>
+			</parameter>
+			<parameter name="content" class="Object">
+				<goalmapping ref="rp_initiate.content"/>
+			</parameter>
+			<parameter name="ontology" class="String">
+				<goalmapping ref="rp_initiate.ontology"/>
+			</parameter>
+			<parameter name="language" class="String">
+				<goalmapping ref="rp_initiate.language"/>
+			</parameter>
+			<parameter name="timeout" class="String">
+				<goalmapping ref="rp_initiate.timeout"/>
+			</parameter>
+			<parameter name="result" class="Object" direction="out">
+				<goalmapping ref="rp_initiate.result"/>
+			</parameter>
+			<body type="mobile" class="RPInitiatorMobilePlan" />
+			<!-- <body type="mobile">new RPInitiatorMobilePlan()</body>-->
+			<trigger>
+				<goal ref="rp_initiate"/>
+			</trigger>
+		</plan>
+		<!-- 
+		<plan name="rp_receiver" priority="-1">
+			<body>new RPReceiverPlan()</body>
+			<trigger>
+				<messageevent ref="rp_request"/>
+			</trigger>
+		</plan>
+
+		<plan name="cnp_initiator_plan">
+			<parameter name="content" class="Object">
+				<goalmapping ref="cnp_initiate.content"/>
+			</parameter>
+			<parameter name="ontology" class="String">
+				<goalmapping ref="cnp_initiate.ontology"/>
+			</parameter>
+			<parameter name="language" class="String">
+				<goalmapping ref="cnp_initiate.language"/>
+			</parameter>
+			<parameter name="timeout" class="String">
+				<goalmapping ref="cnp_initiate.timeout"/>
+			</parameter>
+			<parameter name="comparator" class="Object">
+				<goalmapping ref="cnp_initiate.comparator"/>
+			</parameter>
+			<parameter name="selector" class="ISelector">
+				<goalmapping ref="cnp_initiate.selector"/>
+			</parameter>
+			<parameter name="result" class="Object" direction="out">
+				<goalmapping ref="cnp_initiate.result"/>
+			</parameter>
+			<parameterset name="receivers" class="AgentIdentifier">
+				<goalmapping ref="cnp_initiate.receivers"/>
+			</parameterset>
+			<body>new CNPInitiatorPlan()</body>
+			<trigger>
+				<goal ref="cnp_initiate"/>
+			</trigger>
+		</plan>
+
+		<plan name="cnp_receiver_plan" priority="-1">
+			<body>new CNPReceiverPlan()</body>
+			<trigger>
+				<messageevent ref="cnp_cfp"/>
+			</trigger>
+		</plan> -->
+	</plans>
+
+	<events>
+		<messageevent name="rp_request" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.REQUEST</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_REQUEST</value>
+			</parameter>
+			<parameter name="conversation-id" class="String">
+				<value>SFipa.createUniqueId($scope.getAgentName())</value>
+			</parameter>
+			<parameter name="reply-with" class="String">
+				<value>SFipa.createUniqueId($scope.getAgentName())</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+			</parameter>
+			<match>$beliefbase.rp_filter.filter($messagemap)</match>
+		</messageevent>
+
+		<messageevent name="rp_agree" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.AGREE</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_REQUEST</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+		</messageevent>
+
+		<messageevent name="rp_refuse" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.REFUSE</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_REQUEST</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+		</messageevent>
+
+		<messageevent name="rp_failure" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.FAILURE</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_REQUEST</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+		</messageevent>
+
+		<messageevent name="rp_not_understood" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.NOT_UNDERSTOOD</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_REQUEST</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+		</messageevent>
+
+		<messageevent name="rp_inform_done" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.INFORM</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_REQUEST</value>
+			</parameter>
+			<!--<parameter name="content-class" class="Class" direction="fixed">
+ 				<value>Done.class</value>
+			</parameter>-->
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+		</messageevent>
+
+		<!--<messageevent name="rp_inform_result" type="fipa" direction="receive">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.INFORM</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_REQUEST</value>
+			</parameter>
+			<parameter name="content-class" class="Class" direction="fixed">
+ 				<value>Result.class</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+		</messageevent>-->
+
+		<!-- cnp -#->
+
+		<messageevent name="cnp_cfp" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.CFP</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_CONTRACT_NET</value>
+			</parameter>
+			<parameter name="conversation-id" class="String">
+				<value>SFipa.createUniqueId($scope.getAgentName())</value>
+			</parameter>
+			<parameter name="reply-with" class="String">
+				<value>SFipa.createUniqueId($scope.getAgentName())</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+			<match>$beliefbase.cnp_filter.filter($messagemap)</match>
+		</messageevent>
+
+		<messageevent name="cnp_propose" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.PROPOSE</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_CONTRACT_NET</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+		</messageevent>
+
+		<messageevent name="cnp_refuse" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.REFUSE</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_CONTRACT_NET</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+		</messageevent>
+
+		<messageevent name="cnp_reject" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.REJECT_PROPOSAL</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_CONTRACT_NET</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+		</messageevent>
+
+		<messageevent name="cnp_accept" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.ACCEPT_PROPOSAL</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_CONTRACT_NET</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+		</messageevent>
+
+		<messageevent name="cnp_inform_done" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.INFORM</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_CONTRACT_NET</value>
+			</parameter>
+			<!-#- <parameter name="content-class" class="Class" direction="fixed">
+ 				<value>Done.class</value>
+			</parameter> -#->
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+		</messageevent>
+
+	<!-#-	<messageevent name="cnp_inform_result" type="fipa" direction="receive" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.INFORM</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_CONTRACT_NET</value>
+			</parameter>
+			<parameter name="content-class" class="Class" direction="fixed">
+ 				<value>Done.class</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+		</messageevent>-#->
+
+		<messageevent name="cnp_failure" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.FAILURE</value>
+			</parameter>
+			<parameter name="protocol" class="String" direction="fixed">
+				<value>SFipa.PROTOCOL_CONTRACT_NET</value>
+			</parameter>
+			<parameter name="language" class="String">
+				<value>SFipa.NUGGETS_XML</value>
+ 			</parameter>
+		</messageevent>-->
+	</events>
+
+</capability>

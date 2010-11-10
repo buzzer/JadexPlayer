@@ -1,0 +1,274 @@
+; Wed Feb 22 15:36:50 CET 2006
+; 
+;+ (version "3.0")
+;+ (build "Build 141")
+
+
+(defclass %3ACLIPS_TOP_LEVEL_SLOT_CLASS "Fake class to save top-level slot information"
+	(is-a USER)
+	(role abstract)
+	(single-slot age
+;+		(comment "The age of the creature (in simulation steps).")
+		(type INTEGER)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot vision
+;+		(comment "The current vision of the creature.")
+		(type INSTANCE)
+;+		(allowed-classes Vision)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot creature
+;+		(comment "The creature.")
+		(type INSTANCE)
+;+		(allowed-classes Creature)
+;+		(cardinality 1 1)
+		(create-accessor read-write))
+	(multislot objects
+;+		(comment "The visible objects with locations relative to the creature.")
+		(type INSTANCE)
+;+		(allowed-classes WorldObject)
+		(create-accessor read-write))
+	(single-slot object
+;+		(comment "The object being eaten.")
+		(type INSTANCE)
+;+		(allowed-classes WorldObject)
+;+		(cardinality 1 1)
+		(create-accessor read-write))
+	(single-slot location
+;+		(comment "The location of the object.")
+		(type INSTANCE)
+;+		(allowed-classes Location)
+;+		(cardinality 1 1)
+		(create-accessor read-write))
+	(single-slot width
+;+		(comment "The width of the world.")
+		(type INTEGER)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot height
+;+		(comment "The height of the world.")
+		(type INTEGER)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot x
+;+		(comment "The x-coordinate.")
+		(type INTEGER)
+;+		(cardinality 1 1)
+		(create-accessor read-write))
+	(single-slot y
+;+		(comment "The y-coordinate.")
+		(type INTEGER)
+;+		(cardinality 1 1)
+		(create-accessor read-write))
+	(single-slot points
+		(type INTEGER)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot direction
+;+		(comment "The movement direction.")
+		(type SYMBOL)
+		(allowed-values up down left right)
+;+		(cardinality 1 1)
+		(create-accessor read-write))
+	(single-slot aid
+;+		(comment "Agent identifier of the creature.")
+		(type INSTANCE)
+;+		(allowed-classes AgentIdentifier)
+;+		(cardinality 1 1)
+		(create-accessor read-write))
+	(single-slot world-width
+;+		(comment "The width of the world.")
+		(type INTEGER)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot world-height
+;+		(comment "The height of the world.")
+		(type INTEGER)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot visionrange
+;+		(comment "The distance a creature is able to see.")
+		(type INTEGER)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot leaseticks
+;+		(comment "The number of simulation ticks, this creature is considered alive.")
+		(type INTEGER)
+;+		(cardinality 0 1)
+		(create-accessor read-write)))
+
+(defclass RequestMove "The movement of a creature."
+	(is-a AgentAction)
+	(role concrete)
+	(single-slot creature
+;+		(comment "The creature.")
+		(type INSTANCE)
+;+		(allowed-classes Creature)
+;+		(cardinality 1 1)
+		(create-accessor read-write))
+	(single-slot direction
+;+		(comment "The movement direction.")
+		(type SYMBOL)
+		(allowed-values up down left right)
+;+		(cardinality 1 1)
+		(create-accessor read-write)))
+
+(defclass RequestEat "A creature eating something."
+	(is-a AgentAction)
+	(role concrete)
+	(single-slot creature
+;+		(comment "The creature.")
+		(type INSTANCE)
+;+		(allowed-classes Creature)
+;+		(cardinality 1 1)
+		(create-accessor read-write))
+	(single-slot object
+;+		(comment "The object being eaten.")
+		(type INSTANCE)
+;+		(allowed-classes WorldObject)
+;+		(cardinality 1 1)
+		(create-accessor read-write)))
+
+(defclass RequestVision "Obtain a current vision for a creature."
+	(is-a AgentAction)
+	(role concrete)
+	(single-slot vision
+;+		(comment "The current vision of the creature.")
+		(type INSTANCE)
+;+		(allowed-classes Vision)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot creature
+;+		(comment "The creature.")
+		(type INSTANCE)
+;+		(allowed-classes Creature)
+;+		(cardinality 1 1)
+		(create-accessor read-write)))
+
+(defclass RequestWorldSize "Query the size of the world."
+	(is-a AgentAction)
+	(role concrete)
+	(single-slot height
+;+		(comment "The height of the world.")
+		(type INTEGER)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot width
+;+		(comment "The width of the world.")
+		(type INTEGER)
+;+		(cardinality 0 1)
+		(create-accessor read-write)))
+
+(defclass CurrentVision "The current vision of a creature."
+	(is-a USER)
+	(role concrete)
+	(single-slot creature
+;+		(comment "The creature.")
+		(type INSTANCE)
+;+		(allowed-classes Creature)
+;+		(cardinality 1 1)
+		(create-accessor read-write))
+	(single-slot vision
+;+		(comment "The current vision of the creature.")
+		(type INSTANCE)
+;+		(allowed-classes Vision)
+;+		(cardinality 1 1)
+		(create-accessor read-write)))
+
+(defclass WorldObject "Base class for all objects in the hunter prey world."
+	(is-a USER)
+	(role concrete)
+	(single-slot location
+;+		(comment "The location of the object.")
+		(type INSTANCE)
+;+		(allowed-classes Location)
+;+		(cardinality 1 1)
+		(create-accessor read-write)))
+
+(defclass Creature "Base class for creatures in the simulation."
+	(is-a WorldObject)
+	(role abstract)
+	(single-slot age
+;+		(comment "The age of the creature (in simulation steps).")
+		(type INTEGER)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot points
+		(type INTEGER)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot name_
+;+		(comment "Unique name for this creature.")
+		(type STRING)
+;+		(cardinality 1 1)
+		(create-accessor read-write))
+	(single-slot aid
+;+		(comment "Agent identifier of the creature.")
+		(type INSTANCE)
+;+		(allowed-classes AgentIdentifier)
+;+		(cardinality 1 1)
+		(create-accessor read-write))
+	(single-slot visionrange
+;+		(comment "The distance a creature is able to see.")
+		(type INTEGER)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot world-width
+;+		(comment "The width of the world.")
+		(type INTEGER)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot world-height
+;+		(comment "The height of the world.")
+		(type INTEGER)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot leaseticks
+;+		(comment "The number of simulation ticks, this creature is considered alive.")
+		(type INTEGER)
+;+		(cardinality 0 1)
+		(create-accessor read-write)))
+
+(defclass Hunter "A hunter which tries to catch and eat prey."
+	(is-a Creature)
+	(role concrete))
+
+(defclass Prey "Prey looks for food and tries to avoid being eaten by hunters."
+	(is-a Creature)
+	(role concrete))
+
+(defclass Observer "An observer is not shown on the map and may not perform actions, but receives complete visions of the map."
+	(is-a Creature)
+	(role concrete))
+
+(defclass Food "Food that can be eaten by prey."
+	(is-a WorldObject)
+	(role concrete))
+
+(defclass Obstacle "Creatures can not move on or through fields which have an obstacle (eg a tree) on it."
+	(is-a WorldObject)
+	(role concrete))
+
+(defclass Location "A location on the world map given by x- and y-coordinates.  A location may be relativ (e.g. to a creature) or absolute."
+	(is-a USER)
+	(role concrete)
+	(single-slot x
+;+		(comment "The x-coordinate.")
+		(type INTEGER)
+;+		(cardinality 1 1)
+		(create-accessor read-write))
+	(single-slot y
+;+		(comment "The y-coordinate.")
+		(type INTEGER)
+;+		(cardinality 1 1)
+		(create-accessor read-write)))
+
+(defclass Vision "The vision of a creature."
+	(is-a USER)
+	(role concrete)
+	(multislot objects
+;+		(comment "The visible objects with locations relative to the creature.")
+		(type INSTANCE)
+;+		(allowed-classes WorldObject)
+		(create-accessor read-write)))

@@ -1,0 +1,109 @@
+<!--
+	<H3>Test overwriting initial belief(set) values.</H3>
+
+	The most outside (near agent) initial values for beliefs
+	and belief sets should be used.
+
+	The agent uses a capability which defines a belief
+	and a belief set with default values. Additionally
+	the capability has two configurations. In configuration 0
+	initial values for the belief/set are defined. In
+	configuration 1 nothing is initially defined.
+	The agent references the belief/set and overwrites
+	the values in configuartion 0 (in 1 nothing is)
+	overwritten.
+
+	agent:test_0 capa:test0/1 -> agent_initial_name (Agent values are used)
+	agent:test_1 capa:test0 -> capability_initial_name (Capability initial values are used)
+	agent:test_1 capa:test1 -> capability_default_name (Capability default values are used)
+-->
+<agent xmlns="http://jadex.sourceforge.net/jadex"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://jadex.sourceforge.net/jadex 
+	                    http://jadex.sourceforge.net/jadex-0.96.xsd"
+	name="InitialBelief"
+	package="jadex.testcases.beliefs">
+
+	<imports>
+		<import>jadex.testcases.*</import>
+	</imports>
+
+	<capabilities>
+		<capability name="cap_a" file="InitialBelief"/>
+		<capability name="cap_b" file="InitialBelief"/>
+		<capability name="cap_c" file="InitialBelief"/>
+		<capability name="testcap" file="jadex.planlib.Test"/>
+	</capabilities>
+
+	<beliefs>
+		<beliefsetref name="reports">
+			<concrete ref="testcap.reports"/>
+		</beliefsetref>
+		<beliefref name="timeout" class="long" exported="true">
+			<concrete ref="testcap.timeout"/>
+		</beliefref>
+		<beliefref name="testcenter" class="jadex.adapter.fipa.AgentIdentifier" exported="true">
+			<concrete ref="testcap.testcenter"/>
+		</beliefref>
+
+		<!-- Initial agent values. -->
+		<beliefref name="bel_a">
+			<concrete ref="cap_a.bel"/>
+		</beliefref>
+		<beliefsetref name="belset_a">
+			<concrete ref="cap_a.belset"/>
+		</beliefsetref>
+
+		<!-- Initial capability values. -->
+		<beliefref name="bel_b">
+			<concrete ref="cap_b.bel"/>
+		</beliefref>
+		<beliefsetref name="belset_b">
+			<concrete ref="cap_b.belset"/>
+		</beliefsetref>
+
+		<!-- Default capability values. -->
+		<beliefref name="bel_c">
+			<concrete ref="cap_c.bel"/>
+		</beliefref>
+		<beliefsetref name="belset_c">
+			<concrete ref="cap_c.belset"/>
+		</beliefsetref>
+	</beliefs>
+
+	<plans>
+		<plan name="tester">
+			<body class="BeliefValuePlan"/>
+			<!-- <body>new BeliefValuePlan()</body> -->
+		</plan>
+	</plans>
+
+	<properties>
+        <!--<property name="debugging">true</property>-->
+        <!-- <property name="logging.level">java.util.logging.Level.FINE</property> -->
+        <property name="logging.useParentHandlers">true</property>
+    </properties>
+
+	<configurations>
+		<configuration name="default">
+			<capabilities>
+				<initialcapability ref="cap_b" configuration="test_0"/>
+				<initialcapability ref="cap_c" configuration="test_1"/>
+			</capabilities>
+			<beliefs>
+				<initialbelief ref="bel_a">
+					<fact>"agent_initial_bel"</fact>
+				</initialbelief>
+				<initialbeliefset ref="belset_a">
+					<fact>"agent_initial_belset_0"</fact>
+					<fact>"agent_initial_belset_1"</fact>
+				</initialbeliefset>
+			</beliefs>
+			<plans>
+				<initialplan ref="tester"/>
+			</plans>
+		</configuration>
+	</configurations>
+
+</agent>
+

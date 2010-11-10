@@ -1,0 +1,102 @@
+; Fri Dec 16 15:03:05 GMT+01:00 2005
+; 
+;+ (version "3.1.1")
+;+ (build "Build 216")
+
+([action-arguments] of  BEANYNIZER-SLOT
+
+	(BEANYNIZER-NAME "arguments"))
+
+([action-name] of  BEANYNIZER-SLOT
+)
+
+([attribute-name] of  BEANYNIZER-SLOT
+)
+
+([cause] of  BEANYNIZER-SLOT
+)
+
+([ChangeAttribute] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-ISINTERFACE FALSE))
+
+([command] of  BEANYNIZER-SLOT
+)
+
+([CurrentState] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-ISINTERFACE FALSE))
+
+([Deregister] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-ISINTERFACE FALSE))
+
+([element-name] of  BEANYNIZER-SLOT
+)
+
+([element-type] of  BEANYNIZER-SLOT
+)
+
+([ElementAction] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-ISINTERFACE FALSE))
+
+([event-type] of  BEANYNIZER-SLOT
+
+	(BEANYNIZER-NAME "type"))
+
+([event-types] of  BEANYNIZER-SLOT
+)
+
+([ExecuteCommand] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-ISINTERFACE FALSE))
+
+([index] of  BEANYNIZER-SLOT
+)
+
+([PerformAction] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-ISINTERFACE FALSE))
+
+([Register] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-ISINTERFACE FALSE))
+
+([scope] of  BEANYNIZER-SLOT
+)
+
+([source] of  BEANYNIZER-SLOT
+
+	(BEANYNIZER-TYPE "Object"))
+
+([supported] of  BEANYNIZER-SLOT
+)
+
+([system-events] of  BEANYNIZER-SLOT
+)
+
+([SystemEvent] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-FILES External)
+	(BEANYNIZER-ISINTERFACE FALSE)
+	(BEANYNIZER-PACKAGE "jadex.runtime"))
+
+([tool-type] of  BEANYNIZER-SLOT
+)
+
+([ToolAction] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-ISINTERFACE FALSE))
+
+([ToolRequest] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-ISINTERFACE FALSE))
+
+([ToolSupport] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-ISINTERFACE FALSE))
+
+([value2] of  BEANYNIZER-SLOT
+
+	(BEANYNIZER-NAME "value"))

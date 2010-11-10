@@ -1,0 +1,124 @@
+<!--
+	<H3>Bidder for Dutch Auction Protocol.</H3>
+-->
+
+<agent xmlns="http://jadex.sourceforge.net/jadex"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://jadex.sourceforge.net/jadex
+	                    http://jadex.sourceforge.net/jadex-0.96.xsd"
+	name="DAReceiver" package="jadex.testcases.planlib">
+
+	<imports>
+		<import>jadex.planlib.*</import>
+		<import>jadex.runtime.*</import>
+		<import>jadex.runtime.impl.*</import>
+		<import>jadex.adapter.fipa.*</import>
+	</imports>
+
+	<capabilities>
+		<capability name="procap" file="jadex.planlib.Protocols" />
+	</capabilities>
+
+	<beliefs>
+		<belief name="max_price" class="double" exported="true" />
+		<beliefref name="timeout" class="Long">
+			<concrete ref="procap.timeout" />
+		</beliefref>
+		<beliefref name="da_filter" class="IFilter">
+			<concrete ref="procap.da_filter" />
+		</beliefref>
+		<belief name="participate" class="Boolean" exported="true">
+			<fact>true</fact>
+		</belief>
+	</beliefs>
+
+	<goals>
+		<performgoalref name="da_receiver_interaction">
+			<concrete ref="procap.da_receiver_interaction"/>
+		</performgoalref>
+		<achievegoalref name="decide_participation">
+			<concrete ref="procap.da_decide_participation" />
+		</achievegoalref>
+		<querygoalref name="make_proposal">
+			<concrete ref="procap.da_make_proposal" />
+		</querygoalref>
+	</goals>
+
+	<plans>
+		<plan name="decide_participation_plan">
+			<parameter name="initiator" class="AgentIdentifier">
+				<goalmapping ref="decide_participation.initiator" />
+			</parameter>
+			<parameter name="participate" class="Boolean" direction="out">
+				<goalmapping ref="decide_participation.participate" />
+			</parameter>
+			<parameter name="auction_description" class="AuctionDescription">
+				<goalmapping ref="decide_participation.auction_description" />
+			</parameter>
+			<parameter name="auction_info" class="Object">
+				<goalmapping ref="decide_participation.auction_info" />
+			</parameter>
+			<body class="DADecideParticipationPlan"/>
+			<!-- <body>new DADecideParticipationPlan()</body> -->
+			<trigger>
+				<goal ref="decide_participation"></goal>
+			</trigger>
+		</plan>
+		
+		<plan name="make_proposal_plan">
+			<parameter name="accept" class="Boolean" direction="out" optional="true">
+				<goalmapping ref="make_proposal.accept" />
+			</parameter>
+			<parameter name="leave" class="Boolean" direction="out" optional="true">
+				<goalmapping ref="make_proposal.leave" />
+			</parameter>
+			<parameter name="cfp" class="Object">
+				<goalmapping ref="make_proposal.cfp" />
+			</parameter>
+			<parameter name="auction_description" class="AuctionDescription">
+				<goalmapping ref="make_proposal.auction_description" />
+			</parameter>
+			<parameter name="auction_info" class="Object">
+				<goalmapping ref="make_proposal.auction_info" />
+			</parameter>
+			<parameterset name="history" class="Comparable" optional="true">
+				<goalmapping ref="make_proposal.history" />
+			</parameterset>
+			<body class="DAMakeProposalPlan"/>
+			<!-- <body>new DAMakeProposalPlan()</body> -->
+			<trigger>
+				<goal ref="make_proposal"/>
+			</trigger>
+		</plan>
+		
+		<plan name="negotiation_finished_plan">
+			<parameter name="interaction_state" class="InteractionState">
+				<!-- <goalmapping ref="da_receiver_interaction.interaction_state"/> -->
+				<value>(InteractionState)((IRGoalEvent)$event).getGoal().getParameter("interaction_state").getValue()</value>
+			</parameter>
+			<parameter name="result" class="Object">
+				<!-- <goalmapping ref="da_receiver_interaction.result"/> -->
+				<value>((IRGoalEvent)$event).getGoal().getParameter("result").getValue()</value>
+			</parameter>
+			<body>new jadex.testcases.PrintResultPlan($plan.result)</body>
+			<trigger>
+				<goalfinished ref="da_receiver_interaction"/>
+			</trigger>
+		</plan>
+	</plans>
+
+	<properties>
+		<!-- <property name="logging.level">java.util.logging.Level.FINE</property> -->
+	</properties>
+
+	<configurations>
+		<configuration name="default">
+			<beliefs>
+				<initialbelief ref="da_filter">
+					<fact>IFilter.ALWAYS</fact>
+				</initialbelief>
+			</beliefs>
+		</configuration>
+	</configurations>
+</agent>
+

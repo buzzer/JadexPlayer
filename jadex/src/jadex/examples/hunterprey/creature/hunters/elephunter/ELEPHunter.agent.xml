@@ -1,0 +1,69 @@
+<!--
+	<H3>The emergent line establishing predatory hunter.</H3>
+
+	An implementation of a hunter based on
+	emergent line establishing predatory
+	behaviour (ELEP). Hence the name ;-)
+-->
+<agent xmlns="http://jadex.sourceforge.net/jadex"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://jadex.sourceforge.net/jadex 
+	                    http://jadex.sourceforge.net/jadex-0.96.xsd"
+	name="ELEPHunter"
+	package="jadex.examples.hunterprey.creature.hunters.elephunter">
+
+	<imports>
+		<import>jadex.examples.hunterprey.*</import>
+		<import>jadex.adapter.fipa.*</import>
+	</imports>
+
+	<capabilities>
+		<capability name="actsensecap" file="jadex.examples.hunterprey.creature.actsense.Creature"/>
+	</capabilities>
+
+	<beliefs>
+
+		<!-- The creature -->
+		<belief name="my_self" class="Creature">
+			<assignto ref="actsensecap.my_self"/>
+			<fact>new Hunter($agent.getName(), (AgentIdentifier)$agent.getAgentIdentifier(), new Location(10,10))</fact>
+		</belief>
+
+		<!-- The current vision. -->
+		<beliefref name="vision">
+			<concrete ref="actsensecap.vision"/>
+		</beliefref>
+
+	</beliefs>
+
+	<goals>
+		<achievegoalref name="move">
+			<concrete ref="actsensecap.move"/>
+		</achievegoalref>
+		<achievegoalref name="eat">
+			<concrete ref="actsensecap.eat"/>
+		</achievegoalref>
+	</goals>
+
+	<plans>
+		<!-- Dumb move plan. -->
+		<plan name="elep_plan">
+			<body class="ELEPHunterPlan"/>
+			<!-- <body>new ELEPHunterPlan()</body> -->
+		</plan>
+	</plans>
+
+<!--	<properties>
+        <property name="logging.level">java.util.logging.Level.INFO</property>
+	</properties>-->
+
+	<configurations>
+		<configuration name="default">
+			<plans>
+				<initialplan ref="elep_plan"/>
+ 			</plans>
+		</configuration>
+	</configurations>
+
+</agent>
+

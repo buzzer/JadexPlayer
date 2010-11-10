@@ -1,0 +1,238 @@
+; Wed Feb 22 15:39:17 CET 2006
+; 
+;+ (version "3.0")
+;+ (build "Build 141")
+
+
+(defclass %3ACLIPS_TOP_LEVEL_SLOT_CLASS "Fake class to save top-level slot information"
+	(is-a USER)
+	(role abstract)
+	(single-slot location
+;+		(comment "The location of the object.")
+		(type INSTANCE)
+;+		(allowed-classes Location)
+;+		(cardinality 1 1)
+		(create-accessor read-write))
+	(single-slot x
+;+		(comment "The x-coordinate.")
+		(type FLOAT)
+;+		(cardinality 1 1)
+		(create-accessor read-write))
+	(single-slot y
+;+		(comment "The y-coordinate.")
+		(type FLOAT)
+;+		(cardinality 1 1)
+		(create-accessor read-write))
+	(single-slot id
+		(type STRING)
+;+		(cardinality 1 1)
+		(create-accessor read-write))
+	(single-slot target
+		(type INSTANCE)
+;+		(allowed-classes)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(multislot wastes
+		(type INSTANCE)
+;+		(allowed-classes Waste)
+		(create-accessor read-write))
+	(single-slot capacity
+		(type INTEGER)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot chargestate
+		(type FLOAT)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot carried-waste
+		(type INSTANCE)
+;+		(allowed-classes Waste)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot vision-range
+		(type FLOAT)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot waste
+		(type INSTANCE)
+;+		(allowed-classes Waste)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot wastebinname
+		(type STRING)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(multislot cleaners
+		(type INSTANCE)
+;+		(allowed-classes Cleaner)
+		(create-accessor read-write))
+	(single-slot vision
+		(type INSTANCE)
+;+		(allowed-classes Vision)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot cleaner
+		(type INSTANCE)
+;+		(allowed-classes Cleaner)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(multislot wastebins
+		(type INSTANCE)
+;+		(allowed-classes Wastebin)
+		(create-accessor read-write))
+	(multislot stations
+		(type INSTANCE)
+;+		(allowed-classes Chargingstation)
+		(create-accessor read-write))
+	(single-slot daytime
+		(type SYMBOL)
+		(allowed-values FALSE TRUE)
+;+		(cardinality 0 1)
+		(create-accessor read-write)))
+
+(defclass RequestDropWaste
+	(is-a AgentAction)
+	(role concrete)
+	(single-slot waste
+		(type INSTANCE)
+;+		(allowed-classes Waste)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot wastebinname
+		(type STRING)
+;+		(cardinality 0 1)
+		(create-accessor read-write)))
+
+(defclass RequestPickUpWaste
+	(is-a AgentAction)
+	(role concrete)
+	(single-slot waste
+		(type INSTANCE)
+;+		(allowed-classes Waste)
+;+		(cardinality 0 1)
+		(create-accessor read-write)))
+
+(defclass RequestVision
+	(is-a AgentAction)
+	(role concrete)
+	(single-slot vision
+		(type INSTANCE)
+;+		(allowed-classes Vision)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot cleaner
+		(type INSTANCE)
+;+		(allowed-classes Cleaner)
+;+		(cardinality 0 1)
+		(create-accessor read-write)))
+
+(defclass RequestCompleteVision
+	(is-a AgentAction)
+	(role concrete)
+	(single-slot vision
+		(type INSTANCE)
+;+		(allowed-classes Vision)
+;+		(cardinality 0 1)
+		(create-accessor read-write)))
+
+(defclass Location "A location on the world map given by x- and y-coordinates."
+	(is-a USER)
+	(role concrete)
+	(single-slot x
+;+		(comment "The x-coordinate.")
+		(type FLOAT)
+;+		(cardinality 1 1)
+		(create-accessor read-write))
+	(single-slot y
+;+		(comment "The y-coordinate.")
+		(type FLOAT)
+;+		(cardinality 1 1)
+		(create-accessor read-write)))
+
+(defclass LocationObject
+	(is-a USER)
+	(role abstract)
+	(single-slot id
+		(type STRING)
+;+		(cardinality 1 1)
+		(create-accessor read-write))
+	(single-slot location
+;+		(comment "The location of the object.")
+		(type INSTANCE)
+;+		(allowed-classes Location)
+;+		(cardinality 1 1)
+		(create-accessor read-write)))
+
+(defclass Vision
+	(is-a LocationObject)
+	(role concrete)
+	(multislot cleaners
+		(type INSTANCE)
+;+		(allowed-classes Cleaner)
+		(create-accessor read-write))
+	(multislot wastebins
+		(type INSTANCE)
+;+		(allowed-classes Wastebin)
+		(create-accessor read-write))
+	(multislot wastes
+		(type INSTANCE)
+;+		(allowed-classes Waste)
+		(create-accessor read-write))
+	(multislot stations
+		(type INSTANCE)
+;+		(allowed-classes Chargingstation)
+		(create-accessor read-write))
+	(single-slot daytime
+		(type SYMBOL)
+		(allowed-values FALSE TRUE)
+;+		(cardinality 0 1)
+		(create-accessor read-write)))
+
+(defclass Waste
+	(is-a LocationObject)
+	(role concrete))
+
+(defclass Wastebin
+	(is-a LocationObject)
+	(role concrete)
+	(multislot wastes
+		(type INSTANCE)
+;+		(allowed-classes Waste)
+		(create-accessor read-write))
+	(single-slot capacity
+		(type INTEGER)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot name_
+		(type STRING)
+;+		(cardinality 1 1)
+		(create-accessor read-write)))
+
+(defclass Cleaner
+	(is-a LocationObject)
+	(role concrete)
+	(single-slot chargestate
+		(type FLOAT)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot carried-waste
+		(type INSTANCE)
+;+		(allowed-classes Waste)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot vision-range
+		(type FLOAT)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot name_
+		(type STRING)
+;+		(cardinality 1 1)
+		(create-accessor read-write)))
+
+(defclass Chargingstation
+	(is-a LocationObject)
+	(role concrete)
+	(single-slot name_
+		(type STRING)
+;+		(cardinality 1 1)
+		(create-accessor read-write)))

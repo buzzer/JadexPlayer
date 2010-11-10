@@ -1,0 +1,27 @@
+; Fri Dec 16 15:18:55 GMT+01:00 2005
+; 
+;+ (version "3.1.1")
+;+ (build "Build 216")
+
+([Position] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-FILES External)
+	(BEANYNIZER-ISINTERFACE FALSE)
+	(BEANYNIZER-PACKAGE "jadex.examples.puzzle"))
+
+([RequestMove] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-ISINTERFACE FALSE))
+
+([RequestTakeback] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-ISINTERFACE FALSE))
+
+([start] of  BEANYNIZER-SLOT
+)
+
+([x] of  BEANYNIZER-SLOT
+)
+
+([y] of  BEANYNIZER-SLOT
+)

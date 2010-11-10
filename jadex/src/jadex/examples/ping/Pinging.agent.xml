@@ -1,0 +1,39 @@
+<!--
+	<H3>The pinging agent pings another agent.</H3>
+
+	Send ping requests in certain intervals.
+-->
+
+<agent xmlns="http://jadex.sourceforge.net/jadex"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://jadex.sourceforge.net/jadex 
+	                    http://jadex.sourceforge.net/jadex-0.96.xsd"
+	name="Pinging"
+	package="jadex.examples.ping">
+
+	<imports>
+		<import>jadex.adapter.fipa.*</import>
+		<import>jadex.planlib.*</import>
+	</imports>
+
+	<capabilities>
+		<capability name="ping" file="Ping"/>
+	</capabilities>
+
+	<beliefs>
+		<belief name="ping_receiver" class="AgentIdentifier" exported="true">
+			<assignto ref="ping.ping_receiver"/>
+			<fact>new AgentIdentifier("Ping", true)</fact>
+		</belief>
+	</beliefs>
+
+	<configurations>
+		<configuration name="default">
+			<capabilities>
+				<initialcapability ref="ping" configuration="pinging"/>
+			</capabilities>
+		</configuration>
+	</configurations>
+
+</agent>
+

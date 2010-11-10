@@ -1,0 +1,71 @@
+<!--
+	<H3>The blocksword evaluation agent.</H3>
+
+	Uses the blocksworld scenario to evaluate Jadex performance.
+	Tests different settings for goal deliberation options.
+	Results are written to .csv file.
+-->
+
+<agent xmlns="http://jadex.sourceforge.net/jadex"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://jadex.sourceforge.net/jadex 
+	                    http://jadex.sourceforge.net/jadex-0.96.xsd"
+	name="Evaluation"
+	package="jadex.examples.blocksworld">
+
+	<goals>
+		<achievegoal name="stack_delib">
+			<parameter name="block" class="Block" />
+			<parameter name="target" class="Block" />
+			<deliberation>
+				<!-- This is always false, as there is only one goal per block -->
+				<inhibits ref="stack_delib">
+					$goal.block==$ref.block
+				</inhibits>
+			</deliberation>
+			<targetcondition>
+ 				$goal.block.getLower()==$goal.target
+ 			</targetcondition>
+		</achievegoal>
+
+		<achievegoal name="stack">
+			<parameter name="block" class="Block" />
+			<parameter name="target" class="Block" />
+			<targetcondition>
+ 				$goal.block.getLower()==$goal.target
+ 			</targetcondition>
+		</achievegoal>
+	</goals>
+
+	<plans>
+		<plan name="stack">
+			<parameter name="block" class="Block">
+				<goalmapping ref="stack_delib.block"/>
+				<goalmapping ref="stack.block"/>
+			</parameter>
+			<parameter name="target" class="Block">
+				<goalmapping ref="stack_delib.target"/>
+				<goalmapping ref="stack.target"/>
+			</parameter>
+			<body class="EvaluationStackPlan" />
+			<!-- <body>new EvaluationStackPlan()</body> -->
+			<trigger>
+				<goal ref="stack_delib"/>
+				<goal ref="stack"/>
+			</trigger>
+		</plan>
+		<plan name="evaluation">
+			<body class="EvaluationPlan" />
+			<!-- <body>new EvaluationPlan()</body> -->
+		</plan>
+	</plans>
+
+	<configurations>
+		<configuration name="default">
+			<plans>
+				<initialplan ref="evaluation" />
+			</plans>
+		</configuration>
+	</configurations>
+</agent>
+

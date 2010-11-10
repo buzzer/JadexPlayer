@@ -1,0 +1,103 @@
+; Fri Oct 28 17:36:43 CEST 2005
+; 
+;+ (version "3.1.1")
+;+ (build "Build 216")
+
+([account] of  BEANYNIZER-SLOT
+)
+
+([bet] of  BEANYNIZER-SLOT
+)
+
+([card] of  BEANYNIZER-SLOT
+)
+
+([Card] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-FILES Editable)
+	(BEANYNIZER-ISINTERFACE FALSE))
+
+([cards] of  BEANYNIZER-SLOT
+)
+
+([col] of  BEANYNIZER-SLOT
+
+	(BEANYNIZER-GETTERNAME "getColor")
+	(BEANYNIZER-SETTERNAME "setColor"))
+
+([colorvalue] of  BEANYNIZER-SLOT
+
+	(BEANYNIZER-GETTERNAME "getColorValue")
+	(BEANYNIZER-SETTERNAME "setColorValue"))
+
+([dealer] of  BEANYNIZER-SLOT
+)
+
+([GameResult] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-FILES Fixed)
+	(BEANYNIZER-ISINTERFACE FALSE))
+
+([gameresult] of  BEANYNIZER-SLOT
+)
+
+([GameState] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-FILES Editable)
+	(BEANYNIZER-ISINTERFACE FALSE))
+
+([money] of  BEANYNIZER-SLOT
+)
+
+([Player] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-FILES External)
+	(BEANYNIZER-ISINTERFACE FALSE)
+	(BEANYNIZER-NAME "Player")
+	(BEANYNIZER-PACKAGE "jadex.examples.blackjack"))
+
+([player] of  BEANYNIZER-SLOT
+)
+
+([players] of  BEANYNIZER-SLOT
+)
+
+([playingstate] of  BEANYNIZER-SLOT
+
+	(BEANYNIZER-GETTERNAME "getState")
+	(BEANYNIZER-SETTERNAME "setState"))
+
+([RequestBet] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-FILES Fixed)
+	(BEANYNIZER-ISINTERFACE FALSE))
+
+([RequestDraw] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-FILES Fixed)
+	(BEANYNIZER-ISINTERFACE FALSE))
+
+([RequestFinished] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-ISINTERFACE FALSE))
+
+([RequestJoin] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-FILES Fixed)
+	(BEANYNIZER-ISINTERFACE FALSE))
+
+([strategyname] of  BEANYNIZER-SLOT
+
+	(BEANYNIZER-GETTERNAME "getStrategyName")
+	(BEANYNIZER-SETTERNAME "setStrategyName"))
+
+([timeout] of  BEANYNIZER-SLOT
+)
+
+([val] of  BEANYNIZER-SLOT
+
+	(BEANYNIZER-GETTERNAME "getValue")
+	(BEANYNIZER-SETTERNAME "setValue"))
+
+([won] of  BEANYNIZER-SLOT
+)

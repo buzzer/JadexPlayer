@@ -1,0 +1,190 @@
+; Fri Oct 28 17:36:43 CEST 2005
+; 
+;+ (version "3.1.1")
+;+ (build "Build 216")
+
+
+(defclass %3ACLIPS_TOP_LEVEL_SLOT_CLASS "Fake class to save top-level slot information"
+	(is-a USER)
+	(role abstract)
+	(single-slot dealer
+		(type INSTANCE)
+;+		(allowed-classes Player)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot col
+		(type STRING)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot colorvalue
+		(type INTEGER)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(multislot players
+		(type INSTANCE)
+;+		(allowed-classes Player)
+		(create-accessor read-write))
+	(single-slot won
+		(type SYMBOL)
+		(allowed-values FALSE TRUE)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot bet
+		(type INTEGER)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot player
+		(type INSTANCE)
+;+		(allowed-classes Player)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot card
+		(type INSTANCE)
+;+		(allowed-classes Card)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(multislot cards
+		(type INSTANCE)
+;+		(allowed-classes Card)
+		(create-accessor read-write))
+	(single-slot gameresult
+		(type INSTANCE)
+;+		(allowed-classes GameResult)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot account
+		(type INTEGER)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot strategyname
+		(type STRING)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot timeout
+		(type INTEGER)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot money
+		(type INTEGER)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot playingstate
+		(type STRING)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot val
+		(type INTEGER)
+;+		(cardinality 0 1)
+		(create-accessor read-write)))
+
+(defclass RequestJoin
+	(is-a AgentAction)
+	(role concrete)
+	(single-slot timeout
+		(type INTEGER)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot player
+		(type INSTANCE)
+;+		(allowed-classes Player)
+;+		(cardinality 0 1)
+		(create-accessor read-write)))
+
+(defclass RequestBet
+	(is-a AgentAction)
+	(role concrete)
+	(single-slot bet
+		(type INTEGER)
+;+		(cardinality 0 1)
+		(create-accessor read-write)))
+
+(defclass RequestDraw
+	(is-a AgentAction)
+	(role concrete)
+	(multislot cards
+		(type INSTANCE)
+;+		(allowed-classes Card)
+		(create-accessor read-write)))
+
+(defclass RequestFinished
+	(is-a AgentAction)
+	(role concrete)
+	(single-slot gameresult
+		(type INSTANCE)
+;+		(allowed-classes GameResult)
+;+		(cardinality 0 1)
+		(create-accessor read-write)))
+
+(defclass Player
+	(is-a USER)
+	(role concrete)
+	(single-slot colorvalue
+		(type INTEGER)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot name_
+		(type STRING)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot strategyname
+		(type STRING)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot account
+		(type INTEGER)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot playingstate
+		(type STRING)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(multislot cards
+		(type INSTANCE)
+;+		(allowed-classes Card)
+		(create-accessor read-write))
+	(single-slot bet
+		(type INTEGER)
+;+		(cardinality 0 1)
+		(create-accessor read-write)))
+
+(defclass GameState
+	(is-a USER)
+	(role concrete)
+	(single-slot dealer
+		(type INSTANCE)
+;+		(allowed-classes Player)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(multislot players
+		(type INSTANCE)
+;+		(allowed-classes Player)
+		(create-accessor read-write)))
+
+(defclass Card
+	(is-a USER)
+	(role concrete)
+	(single-slot col
+		(type STRING)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot type
+		(type STRING)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot val
+		(type INTEGER)
+;+		(cardinality 0 1)
+		(create-accessor read-write)))
+
+(defclass GameResult
+	(is-a USER)
+	(role concrete)
+	(single-slot won
+		(type SYMBOL)
+		(allowed-values FALSE TRUE)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot money
+		(type INTEGER)
+;+		(cardinality 0 1)
+		(create-accessor read-write)))

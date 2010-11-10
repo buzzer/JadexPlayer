@@ -1,0 +1,138 @@
+<!--
+	The ping capability helps integrating ping behaviour for agents.
+-->
+<capability xmlns="http://jadex.sourceforge.net/jadex"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://jadex.sourceforge.net/jadex 
+	                    http://jadex.sourceforge.net/jadex-0.96.xsd"
+	package="jadex.planlib"
+	name="Ping">
+
+	<imports>
+		<import>jadex.adapter.fipa.*</import>
+	</imports>
+
+	<beliefs>
+		<beliefref name="ping_receiver" class="AgentIdentifier" exported="true">
+			<abstract required="false"/>
+		</beliefref>
+		<belief name="ping_timeout" class="Long" exported="true">
+			<fact>1000</fact>
+		</belief>
+		<belief name="ping_delay" class="long" exported="true">
+			<fact>1000</fact>
+		</belief>
+		<belief name="ping_content" class="String" exported="true">
+			<fact>"ping"</fact>
+		</belief>
+		<belief name="ping_answer" class="String" exported="true">
+			<fact>"alive"</fact>
+		</belief>
+	</beliefs>
+
+	<goals>
+		<achievegoal name="ping" exported="true">
+			<parameter name="timeout" class="Long">
+				<value>$beliefbase.ping_timeout</value>
+			</parameter>
+			<parameter name="content" class="String">
+				<value>$beliefbase.ping_content</value>
+			</parameter>
+			<parameter name="receiver" class="AgentIdentifier">
+				<value>$beliefbase.getBelief("ping_receiver").isAccessible()? $beliefbase.ping_receiver: null</value>
+			</parameter>
+		</achievegoal>
+	</goals>
+
+	<plans>
+		<!-- This plan sends back an alive on a ping request. -->
+		<plan name="answer_ping">
+			<body class="AnswerPingPlan" />
+			<!-- <body>new AnswerPingPlan()</body> -->
+			<trigger>
+				<messageevent ref="query_ping"/>
+			</trigger>
+		</plan>
+
+		<!-- This plan initiates a ping request. -->
+		<plan name="do_ping">
+			<parameter name="content" class="String">
+				<goalmapping ref="ping.content"/>
+			</parameter>
+			<parameter name="timeout" class="long">
+				<goalmapping ref="ping.timeout"/>
+			</parameter>
+			<parameter name="receiver" class="AgentIdentifier">
+				<goalmapping ref="ping.receiver"/>
+			</parameter>
+			<body class="DoPingPlan" />
+			<!-- <body>new DoPingPlan()</body> -->
+			<trigger>
+				<goal ref="ping"/>
+			</trigger>
+		</plan>
+
+		<!-- Initial plan that continually send ping
+			messages to another agent. -->
+		<plan name="pinging">
+			<body class="PingingPlan" />
+			<!-- <body>new PingingPlan()</body> -->
+		</plan>
+	</plans>
+
+	<events>
+		<!-- Query ping message events must match
+			performative=query_ref and content="ping". -->
+		<messageevent name="query_ping" type="fipa" exported="true" direction="receive">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.QUERY_REF</value>
+			</parameter>
+			<parameter name="content" class="String" direction="fixed">
+				<value>$beliefbase.ping_content</value>
+			</parameter>
+		</messageevent>
+
+		<!-- Custom query ping message events. -->
+		<messageevent name="custom_query_ping" type="fipa" exported="true" direction="send">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.QUERY_REF</value>
+			</parameter>
+			<parameter name="reply-with" class="String">
+				<value>SFipa.createUniqueId($scope.getAgentName())</value>
+			</parameter>
+		</messageevent>
+
+		<!-- Default query ping message events. -->
+		<messageevent name="default_query_ping" type="fipa" exported="true" direction="send">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.QUERY_REF</value>
+			</parameter>
+			<parameter name="reply-with" class="String">
+				<value>SFipa.createUniqueId($scope.getAgentName())</value>
+			</parameter>
+			<parameter name="content" class="String" direction="fixed">
+				<value>$beliefbase.ping_content</value>
+			</parameter>
+		</messageevent>
+
+		<!-- Ping queries are answered with an inform message. -->
+		<messageevent name="inform_alive" type="fipa" exported="true">
+			<parameter name="performative" class="String" direction="fixed">
+				<value>SFipa.INFORM</value>
+			</parameter>
+			<parameter name="content" class="String">
+				<value>$beliefbase.ping_answer</value>
+			</parameter>
+		</messageevent>
+	</events>
+
+	<configurations>
+		<configuration name="ping"/>
+		<configuration name="pinging">
+			<plans>
+				<initialplan ref="pinging"/>
+			</plans>
+		</configuration>
+	</configurations>
+
+</capability>

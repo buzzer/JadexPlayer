@@ -1,0 +1,112 @@
+; Wed Mar 14 16:40:29 GMT+01:00 2007
+; 
+;+ (version "3.1.1")
+;+ (build "Build 216")
+
+([access] of  BEANYNIZER-SLOT
+)
+
+([actions] of  BEANYNIZER-SLOT
+)
+
+([belief_reads] of  BEANYNIZER-SLOT
+)
+
+([belief_writes] of  BEANYNIZER-SLOT
+)
+
+([cause] of  BEANYNIZER-SLOT
+)
+
+([events] of  BEANYNIZER-SLOT
+)
+
+([from] of  BEANYNIZER-SLOT
+)
+
+([goal-kind] of  BEANYNIZER-SLOT
+)
+
+([goal_state] of  BEANYNIZER-SLOT
+)
+
+([goals] of  BEANYNIZER-SLOT
+)
+
+([incoming] of  BEANYNIZER-SLOT
+)
+
+([messages] of  BEANYNIZER-SLOT
+)
+
+([OAction] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-ISINTERFACE FALSE))
+
+([OBelief] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-ISINTERFACE FALSE))
+
+([OEvent] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-ISINTERFACE FALSE))
+
+([OGoal] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-ISINTERFACE FALSE))
+
+([OMessage] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-ISINTERFACE FALSE))
+
+([OPlan] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-ISINTERFACE FALSE))
+
+([OTrace] of  BEANYNIZER-CLASS
+)
+
+([plan_state] of  BEANYNIZER-SLOT
+)
+
+([plans] of  BEANYNIZER-SLOT
+)
+
+([Predicate] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-FILES Fixed)
+	(BEANYNIZER-ISINTERFACE FALSE))
+
+([SendTraces] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-ISINTERFACE FALSE))
+
+([seq] of  BEANYNIZER-SLOT
+)
+
+([stack] of  BEANYNIZER-SLOT
+)
+
+([subscription_time] of  BEANYNIZER-SLOT
+)
+
+([thread] of  BEANYNIZER-SLOT
+)
+
+([time] of  BEANYNIZER-SLOT
+)
+
+([to] of  BEANYNIZER-SLOT
+)
+
+([Tracing] of  BEANYNIZER-CLASS
+
+	(BEANYNIZER-FILES Editable)
+	(BEANYNIZER-ISINTERFACE FALSE))
+
+([tracing] of  BEANYNIZER-SLOT
+)
+
+([value2] of  BEANYNIZER-SLOT
+
+	(BEANYNIZER-NAME "value"))

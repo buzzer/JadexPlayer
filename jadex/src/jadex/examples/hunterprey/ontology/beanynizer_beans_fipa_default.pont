@@ -1,0 +1,374 @@
+; Fri Oct 21 15:30:16 GMT+01:00 2005
+; 
+;+ (version "3.0")
+;+ (build "Build 141")
+
+
+(defclass %3ACLIPS_TOP_LEVEL_SLOT_CLASS "Fake class to save top-level slot information"
+	(is-a USER)
+	(role abstract)
+	(single-slot result
+		(type INSTANCE)
+;+		(allowed-classes AgentDescription)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot lease-time
+		(type INTEGER)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot action
+		(type INSTANCE)
+;+		(allowed-classes AgentAction)
+;+		(cardinality 1 1)
+		(create-accessor read-write))
+	(single-slot state
+		(type SYMBOL)
+		(allowed-values initiated active suspended waiting transit)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot max-results
+		(type INTEGER)
+		(default 1)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot search-id
+		(type STRING)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot type
+		(type STRING)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(multislot results
+		(type INSTANCE)
+;+		(allowed-classes AgentDescription)
+		(create-accessor read-write))
+	(single-slot dfagentdescription
+		(type INSTANCE)
+;+		(allowed-classes AgentDescription)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot value
+		(type INSTANCE)
+;+		(allowed-classes %3ATHING)
+;+		(cardinality 1 1)
+		(create-accessor read-write))
+	(multislot ontologies
+		(type STRING)
+		(create-accessor read-write))
+	(multislot agentdescriptions
+		(type INSTANCE)
+;+		(allowed-classes AMSAgentDescription)
+		(create-accessor read-write))
+	(multislot properties
+		(type INSTANCE)
+;+		(allowed-classes Property)
+		(create-accessor read-write))
+	(multislot services
+		(type INSTANCE)
+;+		(allowed-classes ServiceDescription)
+		(create-accessor read-write))
+	(multislot addresses
+		(type STRING)
+		(create-accessor read-write))
+	(single-slot agentdescription
+		(type INSTANCE)
+;+		(allowed-classes AMSAgentDescription)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot searchconstraints
+		(type INSTANCE)
+;+		(allowed-classes SearchConstraints)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot configuration
+		(type STRING)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot name_
+		(type STRING)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(multislot arguments
+		(type INSTANCE)
+;+		(allowed-classes %3ATHING)
+		(create-accessor read-write))
+	(multislot resolvers
+		(type INSTANCE)
+;+		(allowed-classes AgentIdentifier)
+		(create-accessor read-write))
+	(multislot protocols
+		(type STRING)
+		(create-accessor read-write))
+	(single-slot ownership
+		(type STRING)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(multislot dfagentdescriptions
+		(type INSTANCE)
+;+		(allowed-classes AgentDescription)
+		(create-accessor read-write))
+	(single-slot max-depth
+		(type INTEGER)
+		(default 0)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot agentidentifier
+		(type INSTANCE)
+;+		(allowed-classes AgentIdentifier)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(multislot languages
+		(type STRING)
+		(create-accessor read-write)))
+
+(defclass AgentAction
+	(is-a USER)
+	(role abstract))
+
+(defclass AMSCreateAgent
+	(is-a AgentAction)
+	(role concrete)
+	(single-slot name_
+		(type STRING)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(multislot arguments
+		(type INSTANCE)
+;+		(allowed-classes %3ATHING)
+;+		(user-facet BEANYNIZER-TYPE-FACET "Object")
+		(create-accessor read-write))
+	(single-slot agentidentifier
+		(type INSTANCE)
+;+		(allowed-classes AgentIdentifier)
+;+		(cardinality 0 1)
+;+		(user-facet BEANYNIZER-NAME-FACET "agentidentifier")
+;+		(user-facet BEANYNIZER-GETTERNAME-FACET "getAgentIdentifier")
+;+		(user-facet BEANYNIZER-SETTERNAME-FACET "setAgentIdentifier")
+		(create-accessor read-write))
+	(single-slot configuration
+		(type STRING)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot type
+		(type STRING)
+;+		(cardinality 0 1)
+		(create-accessor read-write)))
+
+(defclass AMSDestroyAgent
+	(is-a AgentAction)
+	(role concrete)
+	(single-slot agentidentifier
+		(type INSTANCE)
+;+		(allowed-classes AgentIdentifier)
+;+		(cardinality 0 1)
+;+		(user-facet BEANYNIZER-NAME-FACET "agentidentifier")
+;+		(user-facet BEANYNIZER-GETTERNAME-FACET "getAgentIdentifier")
+;+		(user-facet BEANYNIZER-SETTERNAME-FACET "setAgentIdentifier")
+		(create-accessor read-write)))
+
+(defclass AMSSearchAgents
+	(is-a AgentAction)
+	(role concrete)
+	(multislot agentdescriptions
+		(type INSTANCE)
+;+		(allowed-classes AMSAgentDescription)
+		(create-accessor read-write))
+	(single-slot agentdescription
+		(type INSTANCE)
+;+		(allowed-classes AMSAgentDescription)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot searchconstraints
+		(type INSTANCE)
+;+		(allowed-classes SearchConstraints)
+;+		(cardinality 0 1)
+		(create-accessor read-write)))
+
+(defclass AMSShutdownPlatform
+	(is-a AgentAction)
+	(role concrete))
+
+(defclass DFRegister
+	(is-a AgentAction)
+	(role concrete)
+	(single-slot dfagentdescription
+		(type INSTANCE)
+;+		(allowed-classes AgentDescription)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot result
+		(type INSTANCE)
+;+		(allowed-classes AgentDescription)
+;+		(cardinality 0 1)
+		(create-accessor read-write)))
+
+(defclass DFModify
+	(is-a AgentAction)
+	(role concrete)
+	(single-slot dfagentdescription
+		(type INSTANCE)
+;+		(allowed-classes AgentDescription)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot result
+		(type INSTANCE)
+;+		(allowed-classes AgentDescription)
+;+		(cardinality 0 1)
+		(create-accessor read-write)))
+
+(defclass DFDeregister
+	(is-a AgentAction)
+	(role concrete)
+	(single-slot dfagentdescription
+		(type INSTANCE)
+;+		(allowed-classes AgentDescription)
+;+		(cardinality 0 1)
+		(create-accessor read-write)))
+
+(defclass DFSearch
+	(is-a AgentAction)
+	(role concrete)
+	(single-slot dfagentdescription
+		(type INSTANCE)
+;+		(allowed-classes AgentDescription)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot searchconstraints
+		(type INSTANCE)
+;+		(allowed-classes SearchConstraints)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(multislot results
+		(type INSTANCE)
+;+		(allowed-classes AgentDescription)
+		(create-accessor read-write)))
+
+(defclass Done
+	(is-a USER)
+	(role concrete)
+	(single-slot action
+		(type INSTANCE)
+;+		(allowed-classes AgentAction)
+;+		(cardinality 1 1)
+		(create-accessor read-write)))
+
+(defclass ServiceDescription "Representation of a FIPA service-description."
+	(is-a USER)
+	(role concrete)
+	(single-slot name_
+		(type STRING)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(multislot protocols
+		(type STRING)
+		(create-accessor read-write))
+	(single-slot ownership
+		(type STRING)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(multislot languages
+		(type STRING)
+		(create-accessor read-write))
+	(multislot properties
+		(type INSTANCE)
+;+		(allowed-classes Property)
+		(create-accessor read-write))
+	(single-slot type
+		(type STRING)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(multislot ontologies
+		(type STRING)
+		(create-accessor read-write)))
+
+(defclass Property "Representation of a FIPA service property."
+	(is-a USER)
+	(role concrete)
+	(single-slot name_
+		(type STRING)
+;+		(cardinality 1 1)
+		(create-accessor read-write))
+	(single-slot value
+		(type INSTANCE)
+;+		(allowed-classes %3ATHING)
+;+		(cardinality 1 1)
+		(create-accessor read-write)))
+
+(defclass AgentDescription "Representation of a FIPA df-agent-descriptiopn."
+	(is-a USER)
+	(role concrete)
+	(multislot protocols
+		(type STRING)
+		(create-accessor read-write))
+	(single-slot agentidentifier
+		(type INSTANCE)
+;+		(allowed-classes AgentIdentifier)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(multislot languages
+		(type STRING)
+		(create-accessor read-write))
+	(single-slot lease-time
+		(type INTEGER)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(multislot services
+		(type INSTANCE)
+;+		(allowed-classes ServiceDescription)
+		(create-accessor read-write))
+	(multislot ontologies
+		(type STRING)
+		(create-accessor read-write)))
+
+(defclass SearchConstraints "Represantation of FIPA search-constraints."
+	(is-a USER)
+	(role concrete)
+	(single-slot max-results
+		(type INTEGER)
+		(default 1)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot max-depth
+		(type INTEGER)
+		(default 0)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot search-id
+		(type STRING)
+;+		(cardinality 0 1)
+		(create-accessor read-write)))
+
+(defclass AMSAgentDescription "Representation of a FIPA ams-agent-descriptiopn."
+	(is-a USER)
+	(role concrete)
+	(single-slot ownership
+		(type STRING)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot agentidentifier
+		(type INSTANCE)
+;+		(allowed-classes AgentIdentifier)
+;+		(cardinality 0 1)
+		(create-accessor read-write))
+	(single-slot state
+		(type SYMBOL)
+		(allowed-values initiated active suspended waiting transit)
+;+		(cardinality 0 1)
+		(create-accessor read-write)))
+
+(defclass AgentIdentifier
+	(is-a USER)
+	(role concrete)
+	(single-slot name_
+		(type STRING)
+;+		(cardinality 1 1)
+;+		(user-facet beanynizer_beans_default_new_Facet_10001 TRUE)
+		(create-accessor read-write))
+	(multislot resolvers
+		(type INSTANCE)
+;+		(allowed-classes AgentIdentifier)
+		(create-accessor read-write))
+	(multislot addresses
+		(type STRING)
+		(create-accessor read-write)))
