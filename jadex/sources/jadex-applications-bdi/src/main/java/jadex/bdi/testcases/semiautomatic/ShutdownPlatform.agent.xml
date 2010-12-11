@@ -1,0 +1,51 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+	<H3>Shutdown an agent platform.</H3>
+
+	Shutdowns an agent platform by contacting
+	the AMS which is stored in the ams belief.
+-->
+<agent xmlns="http://jadex.sourceforge.net/jadex-bdi"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://jadex.sourceforge.net/jadex-bdi
+	                    http://jadex.sourceforge.net/jadex-bdi-2.0.xsd"
+	name="ShutdownPlatform"
+	package="jadex.bdi.testcases.semiautomatic">
+
+	<imports>
+		<import>jadex.base.fipa.*</import>
+		<import>jadex.bridge.*</import>
+	</imports>
+
+	<capabilities>
+		<capability name="cmscap" file="jadex.bdi.planlib.cms.CMS"></capability>
+	</capabilities>
+
+	<beliefs>
+		<belief name="cms" class="IComponentIdentifier">
+			<fact>$scope.getEventbase().createComponentIdentifier("cms@horst", false, new String[]{"nio-mtp://134.100.11.203:8888"})</fact>
+		</belief>
+	</beliefs>
+	
+	<plans>
+		<plan name="tester_plan">
+			<body class="ShutdownTesterPlan"/>
+		</plan>
+	</plans>
+
+	<configurations>
+		<configuration name="default">
+			<!-- <goals>
+				<initialgoal ref="cms_shutdown_platform">
+					<parameter ref="cms">
+						<value>$beliefbase.ams</value>
+					</parameter>
+				</initialgoal>
+			</goals> -->
+			<plans>
+				<initialplan ref="tester_plan"/>
+			</plans>
+		</configuration>
+	</configurations>
+
+</agent>

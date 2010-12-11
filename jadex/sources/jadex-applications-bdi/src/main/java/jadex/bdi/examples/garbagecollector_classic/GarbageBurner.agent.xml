@@ -1,0 +1,82 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  <H3>Garbage burner agent.</H3>
+
+  Sits at a fixed posistion and waits for garbage.
+  If garbage occurs it tries to pick it up and burns it.
+-->
+<agent xmlns="http://jadex.sourceforge.net/jadex-bdi"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://jadex.sourceforge.net/jadex-bdi
+	                    http://jadex.sourceforge.net/jadex-bdi-2.0.xsd"
+	name="GarbageBurner"
+	package="jadex.bdi.examples.garbagecollector_classic">
+
+	<beliefs>
+		<!-- Environment object as singleton.
+ 			Parameters are name and type of agent for adding it
+			No clean solution but avoids registering of agents.-->
+		<belief name="env" class="Environment">
+			<fact>Environment.getInstance(Environment.BURNER, $scope.getAgentName())</fact>
+ 		</belief>
+
+		<!-- The actual position on the grid world. -->
+		<belief name="pos" class="Position" evaluationmode="push">
+			<fact language="jcl">
+				$beliefbase.env.getPosition($scope.getAgentName())
+			</fact>
+ 		</belief>
+
+		<!-- The garbages at the current position. -->
+		<beliefset name="garbages" class="WorldObject" evaluationmode="push">
+			<facts language="jcl">
+				$beliefbase.env.getGarbages($beliefbase.pos)
+			</facts>
+		</beliefset>
+	</beliefs>
+
+	<goals>
+		<!-- The burn waste goal. For every garbage occurring at
+			its position a new goal is craeted (see binding).
+ 			The unique tag avoids creating more than one goal
+ 			per specific piece of garbage. -->
+		<achievegoal name="burn">
+			<parameter name="garbage" class="String">
+				<!-- Bind against variable from creation condition. -->
+				<value>$garbage</value>
+			</parameter>
+			<unique/>
+			<creationcondition language="jcl">
+				WorldObject $garbage
+				&amp;&amp; java.util.Arrays.asList($beliefbase.garbages).contains($garbage)
+			</creationcondition>
+			<deliberation cardinality="1"/>
+		</achievegoal>
+
+		<!-- The goal for picking up waste. Tries endlessly to pick up. -->
+		<achievegoal name="pick" exclude="never"/>
+	</goals>
+
+	<plans>
+		<!-- Plan for burning garbage. -->
+		<plan name="burn_plan">
+			<body class="BurnPlan"/>
+			<trigger>
+				<goal ref="burn"/>
+			</trigger>
+		</plan>
+
+		<!-- Plan for trying to pick up waste. -->
+		<plan name="pickup_plan">
+			<body class="PickUpPlan"/>
+			<trigger>
+				<goal ref="pick"/>
+			</trigger>
+		</plan>
+	</plans>
+
+	<properties>
+		<property name="debugging">false</property>
+    </properties>
+
+</agent>

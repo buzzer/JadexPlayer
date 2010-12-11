@@ -1,5 +1,5 @@
-Jadex - The BDI Reasoning Engine
-Copyright (C) 2002-2006 Lars Braubach, Alexander Pokahr, Andrzej Walczak
+Jadex
+Copyright (C) 2002-2010 Lars Braubach, Alexander Pokahr
 University of Hamburg
 
 This library is free software; you can redistribute it and/or
