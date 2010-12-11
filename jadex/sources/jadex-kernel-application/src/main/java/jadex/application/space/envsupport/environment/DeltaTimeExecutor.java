@@ -3,6 +3,8 @@ package jadex.application.space.envsupport.environment;
 import jadex.application.space.envsupport.dataview.IDataView;
 import jadex.application.space.envsupport.evaluation.ITableDataConsumer;
 import jadex.bridge.ComponentTerminatedException;
+import jadex.bridge.IComponentStep;
+import jadex.bridge.IInternalAccess;
 import jadex.commons.ChangeEvent;
 import jadex.commons.IChangeListener;
 import jadex.commons.SimplePropertyObject;
@@ -92,9 +94,9 @@ public class DeltaTimeExecutor extends SimplePropertyObject implements ISpaceExe
 					process.start(clockservice, space);
 				}
 
-				final Runnable step	= new Runnable()
+				final IComponentStep step = new IComponentStep()
 				{
-					public void run()
+					public Object execute(IInternalAccess ia)
 					{
 						scheduled	= false;
 						long currenttime = clockservice.getTime();
@@ -143,7 +145,7 @@ public class DeltaTimeExecutor extends SimplePropertyObject implements ISpaceExe
 							space.getPerceptList().processPercepts(null);
 						}
 						
-						final Runnable	step	= this;
+						final IComponentStep step = this;
 						if(tick)
 						{
 //							System.out.println("tick");
@@ -165,10 +167,12 @@ public class DeltaTimeExecutor extends SimplePropertyObject implements ISpaceExe
 								}
 							});
 						}
+						
+						return null;
 					}
 				};
 
-				step.run();
+				step.execute(null);
 
 				if(!tick)
 				{

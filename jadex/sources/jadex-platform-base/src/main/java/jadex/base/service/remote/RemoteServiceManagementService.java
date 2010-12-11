@@ -1,16 +1,22 @@
 package jadex.base.service.remote;
 
 import jadex.base.fipa.SFipa;
+import jadex.base.service.remote.commands.RemoteGetExternalAccessCommand;
+import jadex.base.service.remote.commands.RemoteSearchCommand;
+import jadex.base.service.remote.xml.RMIPostProcessor;
+import jadex.base.service.remote.xml.RMIPreProcessor;
 import jadex.bridge.IComponentIdentifier;
 import jadex.bridge.IComponentManagementService;
-import jadex.bridge.IExternalAccess;
+import jadex.bridge.IComponentStep;
+import jadex.bridge.IInternalAccess;
 import jadex.bridge.IMessageService;
 import jadex.bridge.IRemoteServiceManagementService;
 import jadex.commons.Future;
-import jadex.commons.ICommand;
 import jadex.commons.IFuture;
+import jadex.commons.IRemotable;
 import jadex.commons.SUtil;
 import jadex.commons.concurrent.DefaultResultListener;
+import jadex.commons.concurrent.DelegationResultListener;
 import jadex.commons.concurrent.IResultListener;
 import jadex.commons.service.AnyResultSelector;
 import jadex.commons.service.BasicService;
@@ -19,15 +25,27 @@ import jadex.commons.service.ISearchManager;
 import jadex.commons.service.IVisitDecider;
 import jadex.commons.service.SServiceProvider;
 import jadex.commons.service.TypeResultSelector;
+import jadex.commons.service.clock.IClockService;
 import jadex.commons.service.clock.ITimer;
 import jadex.commons.service.library.ILibraryService;
 import jadex.micro.IMicroExternalAccess;
 import jadex.micro.MicroAgent;
+import jadex.xml.ObjectInfo;
+import jadex.xml.SXML;
+import jadex.xml.TypeInfo;
+import jadex.xml.XMLInfo;
+import jadex.xml.bean.BeanObjectReaderHandler;
+import jadex.xml.bean.BeanObjectWriterHandler;
+import jadex.xml.bean.JavaReader;
 import jadex.xml.bean.JavaWriter;
+import jadex.xml.reader.Reader;
+import jadex.xml.writer.Writer;
 
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
+
+import javax.xml.namespace.QName;
 
 /**
  *  The remote service management service is responsible for 
@@ -55,26 +73,51 @@ public class RemoteServiceManagementService extends BasicService implements IRem
 
 	/** The default timeout. */
 	public static long DEFAULT_TIMEOUT = 10000;
-	
+		
 	//-------- attributes --------
 	
 	/** The component. */
 	protected IMicroExternalAccess component;
 	
-	/** The waiting futures. */
+	/** The map of waiting calls (callid -> future). */
 	protected Map waitingcalls;
+
+	/** The remote reference module. */
+	protected RemoteReferenceModule rrm;
 	
+	/** The rmi object to xml writer. */
+	protected Writer writer;
+	
+	/** The rmi xml to object reader. */
+	protected Reader reader;
+		
 	//-------- constructors --------
 	
 	/**
 	 *  Create a new remote service management service.
 	 */
-	public RemoteServiceManagementService(IMicroExternalAccess component)
+	public RemoteServiceManagementService(IMicroExternalAccess component, IClockService clock, ILibraryService libservice)
 	{
 		super(component.getServiceProvider().getId(), IRemoteServiceManagementService.class, null);
 
 		this.component = component;
-		this.waitingcalls = Collections.synchronizedMap(new HashMap());
+		this.rrm = new RemoteReferenceModule(this, clock, libservice);
+		this.waitingcalls = new HashMap();
+		
+		QName[] pr = new QName[]{new QName(SXML.PROTOCOL_TYPEINFO+"jadex.base.service.remote", "ProxyReference")};
+		
+		Set typeinfosread = JavaReader.getTypeInfos();
+		TypeInfo ti_rr = new TypeInfo(new XMLInfo(pr), 
+			new ObjectInfo(ProxyReference.class, new RMIPostProcessor(rrm)));
+		typeinfosread.add(ti_rr);
+		
+		Set typeinfoswrite = JavaWriter.getTypeInfos();
+		TypeInfo ti_proxyable = new TypeInfo(new XMLInfo(pr, null, false, new RMIPreProcessor(rrm)), 
+			new ObjectInfo(IRemotable.class));
+		typeinfoswrite.add(ti_proxyable);
+		
+		this.reader = new Reader(new BeanObjectReaderHandler(typeinfosread));
+		this.writer = new Writer(new BeanObjectWriterHandler(typeinfoswrite, true));
 	}
 	
 	//-------- methods --------
@@ -91,29 +134,38 @@ public class RemoteServiceManagementService extends BasicService implements IRem
 	public IFuture getServiceProxies(final IComponentIdentifier cid, 
 		final ISearchManager manager, final IVisitDecider decider, final IResultSelector selector)
 	{
-		final Future ret = new Future();
+		Future ret = new Future();
 		
-		SServiceProvider.getService(component.getServiceProvider(), IComponentManagementService.class)
-//			.addResultListener(component.createResultListener(new IResultListener()
-			.addResultListener(new IResultListener()
+		component.scheduleStep(new IComponentStep()
 		{
-			public void resultAvailable(Object source, Object result)
+			public Object execute(IInternalAccess ia)
 			{
-				IComponentManagementService cms = (IComponentManagementService)result;
+				RemoteServiceManagementAgent agent = (RemoteServiceManagementAgent)ia;
+				final Future fut = new Future();
+				SServiceProvider.getService(component.getServiceProvider(), IComponentManagementService.class)
+					.addResultListener(agent.createResultListener(new IResultListener()
+				{
+					public void resultAvailable(Object source, Object result)
+					{
+						IComponentManagementService cms = (IComponentManagementService)result;
+						
+						// Hack! create remote rms cid with "rms" assumption.
+						IComponentIdentifier rrms = cms.createComponentIdentifier("rms@"+cid.getPlatformName(), false, cid.getAddresses());
+						final String callid = SUtil.createUniqueId(component.getComponentIdentifier().getLocalName());
+						RemoteSearchCommand content = new RemoteSearchCommand(cid, manager, 
+							decider, selector, callid);
+						
+						sendMessage(rrms, content, callid, -1, fut);
+					}
+					public void exceptionOccurred(Object source, Exception exception)
+					{
+						fut.setException(exception);
+					}
+				}));
 				
-				// Hack! create remote rms cid with "rms" assumption.
-				IComponentIdentifier rrms = cms.createComponentIdentifier("rms@"+cid.getPlatformName(), false, cid.getAddresses());
-				final String callid = SUtil.createUniqueId(component.getComponentIdentifier().getLocalName());
-				RemoteSearchCommand content = new RemoteSearchCommand(cid, manager, 
-					decider, selector, callid);
-				
-				sendMessage(component, rrms, content, callid, -1, waitingcalls, ret);
+				return fut;
 			}
-			public void exceptionOccurred(Object source, Exception exception)
-			{
-				ret.setException(exception);
-			}
-		});
+		}).addResultListener(new DelegationResultListener(ret));
 		
 		return ret;
 	}
@@ -169,168 +221,264 @@ public class RemoteServiceManagementService extends BasicService implements IRem
 	{
 		final Future ret = new Future();
 		
-		SServiceProvider.getService(component.getServiceProvider(), IComponentManagementService.class)
-//			.addResultListener(component.createResultListener(new IResultListener()
-			.addResultListener(new IResultListener()
+		component.scheduleStep(new IComponentStep()
 		{
-			public void resultAvailable(Object source, Object result)
+			public Object execute(IInternalAccess ia)
 			{
-				IComponentManagementService cms = (IComponentManagementService)result;
+				final Future fut = new Future();
+				RemoteServiceManagementAgent agent = (RemoteServiceManagementAgent)ia;
+				SServiceProvider.getService(component.getServiceProvider(), IComponentManagementService.class)
+					.addResultListener(agent.createResultListener(new IResultListener()
+				{
+					public void resultAvailable(Object source, Object result)
+					{
+						IComponentManagementService cms = (IComponentManagementService)result;
+						
+						// Hack! create remote rms cid with "rms" assumption.
+						IComponentIdentifier rrms = cms.createComponentIdentifier("rms@"+cid.getPlatformName(), false, cid.getAddresses());
+						final String callid = SUtil.createUniqueId(component.getComponentIdentifier().getLocalName());
+						RemoteGetExternalAccessCommand content = new RemoteGetExternalAccessCommand(cid, callid);
+						
+						sendMessage(rrms, content, callid, -1, fut);
+					}
+					public void exceptionOccurred(Object source, Exception exception)
+					{
+						fut.setException(exception);
+					}
+				}));
 				
-				// Hack! create remote rms cid with "rms" assumption.
-				IComponentIdentifier rrms = cms.createComponentIdentifier("rms@"+cid.getPlatformName(), false, cid.getAddresses());
-				final String callid = SUtil.createUniqueId(component.getComponentIdentifier().getLocalName());
-				RemoteGetExternalAccessCommand content = new RemoteGetExternalAccessCommand(cid, callid);
-				
-				sendMessage(component, rrms, content, callid, -1, waitingcalls, ret);
+				return fut;
 			}
-			public void exceptionOccurred(Object source, Exception exception)
-			{
-				ret.setException(exception);
-			}
-		});
+		}).addResultListener(new DelegationResultListener(ret));
 		
 		return ret;
 	}
 
-	
 	/**
 	 *  Get the component.
 	 *  @return the component.
 	 */
-	public IExternalAccess getComponent()
+	public IMicroExternalAccess getComponent()
 	{
 		return component;
 	}
 	
 	/**
+	 *  Get the rms component identifier.
+	 *  @return The rms component identifier.
+	 */
+	public IComponentIdentifier getRMSComponentIdentifier()
+	{
+		return component.getComponentIdentifier();
+	}
+	
+	/**
 	 *  Get the waiting calls.
 	 *  @return the waiting calls.
-	 */
+	 * /
 	public Map getWaitingCalls()
 	{
 		return waitingcalls;
+	}*/
+	
+	/**
+	 *  Get the reader.
+	 *  @return The reader.
+	 */
+	public Reader getReader()
+	{
+		return reader;
+	}
+
+	/**
+	 *  Get the writer.
+	 *  @return the writer.
+	 */
+	public Writer getWriter()
+	{
+		return writer;
+	}
+	
+	/**
+	 *  Add a new waiting call.
+	 *  @param callid The callid.
+	 *  @param future The future.
+	 */
+	public void putWaitingCall(String callid, Future future)
+	{
+		getRemoteReferenceModule().checkThread();
+		waitingcalls.put(callid, future);
+	}
+	
+	/**
+	 *  Get a waiting call future.
+	 *  @param callid The callid.
+	 *  @return The future.
+	 */
+	public Future getWaitingCall(String callid)
+	{
+		getRemoteReferenceModule().checkThread();
+		return (Future)waitingcalls.get(callid);
+	}
+	
+	/**
+	 *  Remove a waiting call.
+	 *  @param callid The callid.
+	 *  @return The future.
+	 */
+	public Future removeWaitingCall(String callid)
+	{
+		getRemoteReferenceModule().checkThread();
+		return (Future)waitingcalls.remove(callid);
+	}
+	
+	/**
+	 *  Get the remote reference module.
+	 *  @return the rrm.
+	 */
+	public RemoteReferenceModule getRemoteReferenceModule()
+	{
+		return rrm;
 	}
 	
 //	protected static Map errors = Collections.synchronizedMap(new LRU(200));
-	
+
 	/**
-	 * final IComponentIdentifier sender,
+	 *  Send the request message of a remote method invocation.
+	 *  (Can savely be called from any thread).
 	 */
-	public static void sendMessage(final IMicroExternalAccess component, IComponentIdentifier receiver, final Object content,
-		final String callid, final long to, final Map waitingcalls, final Future future)
+	public void sendMessage(final IComponentIdentifier receiver, final Object content,
+		final String callid, final long to, final Future future)
 	{
-		final long timeout = to<=0? DEFAULT_TIMEOUT: to;
-		
-		waitingcalls.put(callid, future);
-//		System.out.println("Waitingcalls: "+waitingcalls.size());
-		
-		final Map msg = new HashMap();
-		msg.put(SFipa.SENDER, component.getComponentIdentifier());
-		msg.put(SFipa.RECEIVERS, new IComponentIdentifier[]{receiver});
-		msg.put(SFipa.CONVERSATION_ID, callid);
-//		msg.put(SFipa.LANGUAGE, SFipa.JADEX_XML);
-		
-		SServiceProvider.getService(component.getServiceProvider(), ILibraryService.class)
-			.addResultListener(new IResultListener()
-//			.addResultListener(component.createResultListener(new IResultListener()
+		component.scheduleStep(new IComponentStep()
 		{
-			public void resultAvailable(Object source, Object result)
+			public Object execute(IInternalAccess ia)
 			{
-				final ILibraryService ls = (ILibraryService)result;
+				final RemoteServiceManagementAgent agent = (RemoteServiceManagementAgent)ia;
 				
-				SServiceProvider.getService(component.getServiceProvider(), IMessageService.class)
-					.addResultListener(new IResultListener()
-//					.addResultListener(component.createResultListener(new IResultListener()
+				final long timeout = to<=0? DEFAULT_TIMEOUT: to;
+				
+				putWaitingCall(callid, future);
+//				System.out.println("Waitingcalls: "+waitingcalls.size());
+				
+				final Map msg = new HashMap();
+				msg.put(SFipa.SENDER, component.getComponentIdentifier());
+				msg.put(SFipa.RECEIVERS, new IComponentIdentifier[]{receiver});
+				msg.put(SFipa.CONVERSATION_ID, callid);
+//				msg.put(SFipa.LANGUAGE, SFipa.JADEX_XML);
+				
+				SServiceProvider.getService(component.getServiceProvider(), ILibraryService.class)
+					.addResultListener(agent.createResultListener(new IResultListener()
 				{
 					public void resultAvailable(Object source, Object result)
 					{
-						// Hack!!! Manual encoding for using custom class loader at receiver side.
-						msg.put(SFipa.CONTENT, JavaWriter.objectToXML(content, ls.getClassLoader()));
-
-						IMessageService ms = (IMessageService)result;
-						ms.sendMessage(msg, SFipa.FIPA_MESSAGE_TYPE, component.getComponentIdentifier(), ls.getClassLoader())
-							.addResultListener(new IResultListener()
+						final ILibraryService ls = (ILibraryService)result;
+						
+						SServiceProvider.getService(component.getServiceProvider(), IMessageService.class)
+							.addResultListener(agent.createResultListener(new IResultListener()
 						{
 							public void resultAvailable(Object source, Object result)
 							{
-								// ok message could be sent.
-								component.scheduleStep(new ICommand() 
+								// Hack!!! Manual encoding for using custom class loader at receiver side.
+//								msg.put(SFipa.CONTENT, JavaWriter.objectToXML(content, ls.getClassLoader()));
+								
+								msg.put(SFipa.CONTENT, Writer.objectToXML(getWriter(), content, ls.getClassLoader(), receiver));
+								
+								IMessageService ms = (IMessageService)result;
+								ms.sendMessage(msg, SFipa.FIPA_MESSAGE_TYPE, component.getComponentIdentifier(), ls.getClassLoader())
+									.addResultListener(agent.createResultListener(new IResultListener()
 								{
-									public void execute(Object args) 
+									public void resultAvailable(Object source, Object result)
 									{
-//										System.out.println("waitfor");
-										MicroAgent pa = (MicroAgent)args;
-										pa.waitFor(timeout, new ICommand() 
+										// ok message could be sent.
+										component.scheduleStep(new IComponentStep()
 										{
-											public void execute(Object args) 
+											public Object execute(IInternalAccess ia)
 											{
-//												System.out.println("timeout triggered: "+msg);
-												waitingcalls.remove(callid);
-//												System.out.println("Waitingcalls: "+waitingcalls.size());
-												future.setExceptionIfUndone(new RuntimeException("No reply received and timeout occurred: "+callid));
-											}
-										}).addResultListener(new DefaultResultListener()
-//										}).addResultListener(component.createResultListener(new DefaultResultListener()
-										{
-											public void resultAvailable(Object source, Object result)
-											{
-												// cancel timer when future is finished before. 
-												final ITimer timer = (ITimer)result;
-												future.addResultListener(new IResultListener()
+//												System.out.println("waitfor");
+												MicroAgent pa = (MicroAgent)ia;
+												pa.waitFor(timeout, new IComponentStep()
+												{
+													public Object execute(IInternalAccess ia)
+													{
+//														System.out.println("timeout triggered: "+msg);
+														removeWaitingCall(callid);
+//														waitingcalls.remove(callid);
+//														System.out.println("Waitingcalls: "+waitingcalls.size());
+														future.setExceptionIfUndone(new RuntimeException("No reply received and timeout occurred: "+callid));
+														return null;
+													}
+												}).addResultListener(agent.createResultListener(new DefaultResultListener()
 												{
 													public void resultAvailable(Object source, Object result)
 													{
-														waitingcalls.remove(callid);
-//														System.out.println("Waitingcalls: "+waitingcalls.size());
-//														System.out.println("Cancel timeout (res): "+callid+" "+future);
-//														errors.put(callid, new Object[]{"Cancel timeout (res)", result});
-														timer.cancel();
+														// cancel timer when future is finished before. 
+														final ITimer timer = (ITimer)result;
+														future.addResultListener(agent.createResultListener(new IResultListener()
+														{
+															public void resultAvailable(Object source, Object result)
+															{
+																removeWaitingCall(callid);
+//																waitingcalls.remove(callid);
+//																System.out.println("Waitingcalls: "+waitingcalls.size());
+//																System.out.println("Cancel timeout (res): "+callid+" "+future);
+//																errors.put(callid, new Object[]{"Cancel timeout (res)", result});
+																timer.cancel();
+															}
+															
+															public void exceptionOccurred(Object source, Exception exception)
+															{
+																removeWaitingCall(callid);
+//																waitingcalls.remove(callid);
+//																System.out.println("Waitingcalls: "+waitingcalls.size());
+//																System.out.println("Cancel timeout (ex): "+callid+" "+future);
+//																errors.put(callid, new Object[]{"Cancel timeout (ex):", exception});
+																timer.cancel();
+															}
+														}));
 													}
-													
-													public void exceptionOccurred(Object source, Exception exception)
-													{
-														waitingcalls.remove(callid);
-//														System.out.println("Waitingcalls: "+waitingcalls.size());
-//														System.out.println("Cancel timeout (ex): "+callid+" "+future);
-//														errors.put(callid, new Object[]{"Cancel timeout (ex):", exception});
-														timer.cancel();
-													}
-												});
+												}));
+												
+												return null;
 											}
 										});
 									}
-								});
+									
+									public void exceptionOccurred(Object source, Exception exception)
+									{
+										// message could not be sent -> fail immediately.
+//										System.out.println("Callee could not be reached: "+exception);
+//										errors.put(callid, new Object[]{"Callee could not be reached", exception});
+										removeWaitingCall(callid);
+//										waitingcalls.remove(callid);
+//										System.out.println("Waitingcalls: "+waitingcalls.size());
+										future.setException(exception);
+									}
+								}));
 							}
 							
 							public void exceptionOccurred(Object source, Exception exception)
 							{
-								// message could not be sent -> fail immediately.
-//								System.out.println("Callee could not be reached: "+exception);
-//								errors.put(callid, new Object[]{"Callee could not be reached", exception});
-								waitingcalls.remove(callid);
+//								errors.put(callid, new Object[]{"No msg service", exception});
+								removeWaitingCall(callid);
+//								waitingcalls.remove(callid);
 //								System.out.println("Waitingcalls: "+waitingcalls.size());
 								future.setException(exception);
 							}
-						});
+						}));
 					}
 					
 					public void exceptionOccurred(Object source, Exception exception)
 					{
-//						errors.put(callid, new Object[]{"No msg service", exception});
-						waitingcalls.remove(callid);
+//						errors.put(callid, new Object[]{"No lib service", exception});
+						removeWaitingCall(callid);
+//						waitingcalls.remove(callid);
 //						System.out.println("Waitingcalls: "+waitingcalls.size());
 						future.setException(exception);
 					}
-				});
-			}
-			
-			public void exceptionOccurred(Object source, Exception exception)
-			{
-//				errors.put(callid, new Object[]{"No lib service", exception});
-				waitingcalls.remove(callid);
-//				System.out.println("Waitingcalls: "+waitingcalls.size());
-				future.setException(exception);
+				}));
+				
+				return null;
 			}
 		});
 	}

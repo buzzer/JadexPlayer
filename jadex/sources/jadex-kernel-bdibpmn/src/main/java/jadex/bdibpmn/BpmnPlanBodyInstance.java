@@ -20,13 +20,14 @@ import jadex.bdi.runtime.IPropertybase;
 import jadex.bdi.runtime.IWaitqueue;
 import jadex.bdi.runtime.PlanFailureException;
 import jadex.bdi.runtime.impl.SFlyweightFunctionality;
-import jadex.bdi.runtime.impl.eaflyweights.ExternalAccessFlyweight;
 import jadex.bdi.runtime.impl.flyweights.BeliefbaseFlyweight;
 import jadex.bdi.runtime.impl.flyweights.CapabilityFlyweight;
+import jadex.bdi.runtime.impl.flyweights.ElementFlyweight;
 import jadex.bdi.runtime.impl.flyweights.EventbaseFlyweight;
 import jadex.bdi.runtime.impl.flyweights.ExpressionFlyweight;
 import jadex.bdi.runtime.impl.flyweights.ExpressionNoModel;
 import jadex.bdi.runtime.impl.flyweights.ExpressionbaseFlyweight;
+import jadex.bdi.runtime.impl.flyweights.ExternalAccessFlyweight;
 import jadex.bdi.runtime.impl.flyweights.GoalFlyweight;
 import jadex.bdi.runtime.impl.flyweights.GoalbaseFlyweight;
 import jadex.bdi.runtime.impl.flyweights.InternalEventFlyweight;
@@ -55,8 +56,11 @@ import jadex.bpmn.runtime.BpmnInterpreter;
 import jadex.bpmn.runtime.ProcessThread;
 import jadex.bpmn.runtime.handler.AbstractEventIntermediateTimerActivityHandler;
 import jadex.bridge.IComponentIdentifier;
+import jadex.bridge.IComponentListener;
+import jadex.bridge.IComponentStep;
 import jadex.bridge.IExternalAccess;
 import jadex.commons.IFuture;
+import jadex.commons.service.IServiceProvider;
 import jadex.commons.service.clock.IClockService;
 import jadex.javaparser.IExpressionParser;
 import jadex.javaparser.IParsedExpression;
@@ -490,7 +494,7 @@ public class BpmnPlanBodyInstance extends BpmnInterpreter
 		if(elem!=null)
 		{
 			// todo: wrong scope
-			ret = SFlyweightFunctionality.getFlyweight(state, rcapa, elem, false);
+			ret = SFlyweightFunctionality.getFlyweight(state, rcapa, elem);
 		}
 		
 		return ret;
@@ -805,7 +809,7 @@ public class BpmnPlanBodyInstance extends BpmnInterpreter
 	 */
 	public IGoal createGoal(String type)
 	{
-		return (IGoal)SFlyweightFunctionality.createGoal(state, rcapa, false, type);
+		return (IGoal)SFlyweightFunctionality.createGoal(state, rcapa, type);
 	}
 
 	//-------- eventbase shortcut methods --------
@@ -845,7 +849,7 @@ public class BpmnPlanBodyInstance extends BpmnInterpreter
 	 */
 	public IMessageEvent createMessageEvent(String type)
 	{
-		return (IMessageEvent)SFlyweightFunctionality.createMessageEvent(state, rcapa, type, false);
+		return (IMessageEvent)SFlyweightFunctionality.createMessageEvent(state, rcapa, type);
 	}
 
 	/**
@@ -854,7 +858,7 @@ public class BpmnPlanBodyInstance extends BpmnInterpreter
 	 */
 	public IInternalEvent createInternalEvent(String type)
 	{
-		return (IInternalEvent)SFlyweightFunctionality.createInternalEvent(state, rcapa, type, false);
+		return (IInternalEvent)SFlyweightFunctionality.createInternalEvent(state, rcapa, type);
 	}
 
 	/**
@@ -1465,5 +1469,45 @@ public class BpmnPlanBodyInstance extends BpmnInterpreter
 	public boolean isExternalThread()
 	{
 		return interpreter.isExternalThread();
+	}
+	
+	/**
+	 *  Schedule a step of the agent.
+	 *  May safely be called from external threads.
+	 *  @param step	Code to be executed as a step of the agent.
+	 *  @return The result of the step.
+	 */
+	public IFuture scheduleStep(IComponentStep step)
+	{
+		return interpreter.scheduleStep(step, null);
+	}
+	
+	//-------- IInternalAccess interface --------
+	
+	/**
+	 *  Get the service provider.
+	 *  @return The service provider.
+	 */
+	public IServiceProvider getServiceProvider()
+	{
+		return interpreter.getServiceProvider();
+	}
+	
+	/**
+	 *  Add an component listener.
+	 *  @param listener The listener.
+	 */
+	public void addComponentListener(IComponentListener listener)
+	{
+		ElementFlyweight.addEventListener(listener, interpreter.getAgent(), getState(), interpreter.getAgent());
+	}
+	
+	/**
+	 *  Remove a component listener.
+	 *  @param listener The listener.
+	 */
+	public void removeComponentListener(IComponentListener listener)
+	{
+		ElementFlyweight.removeEventListener(listener, interpreter.getAgent(), false, getState(), interpreter.getAgent());
 	}
 }

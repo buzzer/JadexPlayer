@@ -1,8 +1,10 @@
 package jadex.bdi.runtime;
 
 import jadex.bridge.IComponentIdentifier;
+import jadex.bridge.IComponentListener;
 import jadex.bridge.IExternalAccess;
 import jadex.bridge.IModelInfo;
+import jadex.commons.IFuture;
 import jadex.commons.service.IServiceProvider;
 
 import java.util.logging.Logger;
@@ -137,7 +139,7 @@ public interface ICapability	extends IElement
 	/**
 	 *  Kill the agent.
 	 */
-	public void killAgent();
+	public IFuture killAgent();
 	
 //	/**
 //	 *  Get the application context.
@@ -148,13 +150,25 @@ public interface ICapability	extends IElement
 	/**
 	 *  Add an agent listener
 	 *  @param listener The listener.
-	 *  @param async True, if the notification should be done on a separate thread.
 	 */
-	public void addAgentListener(IAgentListener listener);
+	public void addComponentListener(IComponentListener listener);
 	
 	/**
 	 *  Add an agent listener
 	 *  @param listener The listener.
 	 */
-	public void removeAgentListener(IAgentListener listener);
+	public void removeComponentListener(IComponentListener listener);
+	
+	/**
+	 *  Get subcapability names.
+	 *  @return The future with array of subcapability names.
+	 */
+	public String[]	getSubcapabilityNames();
+	
+	/**
+	 *  Get a subcapability.
+	 *  @param name The capability name.
+	 *  @return The capability.
+	 */
+	public ICapability	getSubcapability(String name);
 }

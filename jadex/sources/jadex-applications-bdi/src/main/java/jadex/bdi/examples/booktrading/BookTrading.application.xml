@@ -9,10 +9,11 @@
 	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
 	xsi:schemaLocation="http://jadex.sourceforge.net/jadex-application 
 	                    http://jadex.sourceforge.net/jadex-application-2.0.xsd"
-	name="BookTrading" package="jadex.bdi.examples.booktrading">
+	name="BookTrading" package="jadex.bdi.examples.booktrading"
+	autoshutdown="true">
 	
 	<imports>
-		<import>jadex.bdi.examples.booktrading.common.*</import>
+  		<import>jadex.bdi.examples.booktrading.common.*</import>
 		<import>java.util.*</import>
 		<import>jadex.commons.service.clock.IClockService</import>
 		<import>jadex.commons.service.SServiceProvider</import>
@@ -33,7 +34,7 @@
 	<applications>
 		<application name="One buyer and one seller">
 			<components>
-				<component type="Buyer" >
+				<component type="Buyer">
 					<arguments>
 						<argument name="initial_orders">
 							new Order[]

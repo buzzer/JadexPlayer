@@ -2,6 +2,8 @@ package jadex.bpmn.runtime;
 
 import jadex.bpmn.model.MActivity;
 import jadex.bpmn.model.MBpmnModel;
+import jadex.bpmn.model.MParameter;
+import jadex.bpmn.model.MPool;
 import jadex.bpmn.model.MSequenceEdge;
 import jadex.bpmn.runtime.handler.DefaultActivityHandler;
 import jadex.bpmn.runtime.handler.DefaultStepHandler;
@@ -16,6 +18,7 @@ import jadex.bpmn.runtime.handler.GatewayParallelActivityHandler;
 import jadex.bpmn.runtime.handler.GatewayXORActivityHandler;
 import jadex.bpmn.runtime.handler.SubProcessActivityHandler;
 import jadex.bpmn.runtime.handler.TaskActivityHandler;
+import jadex.bpmn.runtime.task.ExecuteStepTask;
 import jadex.bridge.ComponentResultListener;
 import jadex.bridge.ComponentServiceContainer;
 import jadex.bridge.ComponentTerminatedException;
@@ -25,8 +28,11 @@ import jadex.bridge.IComponentAdapterFactory;
 import jadex.bridge.IComponentDescription;
 import jadex.bridge.IComponentIdentifier;
 import jadex.bridge.IComponentInstance;
+import jadex.bridge.IComponentListener;
 import jadex.bridge.IComponentManagementService;
+import jadex.bridge.IComponentStep;
 import jadex.bridge.IExternalAccess;
+import jadex.bridge.IInternalAccess;
 import jadex.bridge.IMessageAdapter;
 import jadex.bridge.IMessageService;
 import jadex.bridge.IModelInfo;
@@ -46,6 +52,7 @@ import jadex.commons.service.SServiceProvider;
 import jadex.commons.service.clock.IClockService;
 import jadex.javaparser.IParsedExpression;
 import jadex.javaparser.IValueFetcher;
+import jadex.javaparser.SJavaParser;
 
 import java.lang.reflect.Array;
 import java.util.ArrayList;
@@ -63,7 +70,7 @@ import java.util.logging.Logger;
  *  The micro agent interpreter is the connection between the agent platform 
  *  and a user-written micro agent. 
  */
-public class BpmnInterpreter implements IComponentInstance
+public class BpmnInterpreter implements IComponentInstance, IInternalAccess
 {	
 	//-------- static part --------
 
@@ -73,7 +80,9 @@ public class BpmnInterpreter implements IComponentInstance
 	/** The step execution handlers (activity type -> handler). */
 	public static final Map DEFAULT_STEP_HANDLERS;
 
-
+	/** The flag for all pools. */
+	public static final String ALL = "All";
+	
 	static
 	{
 		Map stephandlers = new HashMap();
@@ -182,13 +191,17 @@ public class BpmnInterpreter implements IComponentInstance
 	protected IServiceContainer container;
 	
 	/** The flag if is inited. */
-	protected Boolean initedflag;
+	protected boolean initedflag;
 	
 	/** The inited future. */
 	protected Future inited;
 	
 	/** Listeners for activities. */
 	protected List activitylisteners;
+	
+	/** The component listeners. */
+	protected List componentlisteners;
+
 	
 	//-------- constructors --------
 	
@@ -212,15 +225,15 @@ public class BpmnInterpreter implements IComponentInstance
 		// Assign container
 		this.container = container;
 		
+		initContextVariables();
+		
 		// Create initial thread(s). 
 		List	startevents	= model.getStartActivities();
 		for(int i=0; startevents!=null && i<startevents.size(); i++)
 		{
 			context.addThread(new ProcessThread((MActivity)startevents.get(i), context, BpmnInterpreter.this));
 		}
-		initedflag = Boolean.TRUE;
-		
-		activitylisteners = new ArrayList();
+		initedflag = true;	// No further init for BDI plan.
 	}	
 		
 	/**
@@ -236,8 +249,6 @@ public class BpmnInterpreter implements IComponentInstance
 		this.inited = inited;
 		this.variables	= new HashMap();
 		construct(model, arguments, config, parent, activityhandlers, stephandlers, fetcher);
-		
-		activitylisteners = new ArrayList();
 	}
 	
 	/**
@@ -251,7 +262,7 @@ public class BpmnInterpreter implements IComponentInstance
 		this.config = config;
 		
 		// Extract pool/lane from config.
-		if(config==null || "All".equals(config))
+		if(config==null || ALL.equals(config))
 		{
 			this.pool	= null;
 			this.lane	= null;
@@ -294,30 +305,30 @@ public class BpmnInterpreter implements IComponentInstance
 		}		
 	}
 	
-	//-------- IKernelAgent interface --------
+	//-------- IComponentInstance interface --------
 	
 	/**
-	 *  Can be called on the agent thread only.
+	 *  Can be called on the component thread only.
 	 * 
-	 *  Main method to perform agent execution.
-	 *  Whenever this method is called, the agent performs
+	 *  Main method to perform component execution.
+	 *  Whenever this method is called, the component performs
 	 *  one of its scheduled actions.
-	 *  The platform can provide different execution models for agents
+	 *  The platform can provide different execution models for components
 	 *  (e.g. thread based, or synchronous).
 	 *  To avoid idle waiting, the return value can be checked.
-	 *  The platform guarantees that executeAction() will not be called in parallel. 
+	 *  The platform guarantees that executeStep() will not be called in parallel. 
 	 *  @return True, when there are more actions waiting to be executed. 
 	 */
 	public boolean executeStep()
 	{
 		boolean ret = false;
 		
-		if(initedflag==null)
+		if(!initedflag)
 		{
-			initedflag = Boolean.FALSE;
+			initedflag = true;
 			executeInitStep1();
 		}
-		else if(initedflag.booleanValue())
+		else if(inited.isDone())	// Todo: do we need this?
 		{
 			try
 			{
@@ -346,7 +357,8 @@ public class BpmnInterpreter implements IComponentInstance
 			}
 			catch(ComponentTerminatedException ate)
 			{
-				// Todo: fix microkernel bug.
+				// Todo: fix kernel bug.
+				ate.printStackTrace();
 			}
 		}
 		
@@ -440,6 +452,38 @@ public class BpmnInterpreter implements IComponentInstance
 		// Initialize context variables.
 		variables.put("$interpreter", this);
 		
+		if(getModel().getName().indexOf("AddTargetPlan")!=-1)
+		{
+			System.out.println("debug sdlkhfyg");
+		}
+		
+		initContextVariables();
+
+		// Start the container and notify cms when start has finished.		
+		getServiceContainer().start().addResultListener(createResultListener(new IResultListener()
+		{
+			public void resultAvailable(Object source, Object result)
+			{
+				// Create initial thread(s). 
+				List	startevents	= model.getStartActivities();
+				for(int i=0; startevents!=null && i<startevents.size(); i++)
+				{
+					context.addThread(new ProcessThread((MActivity)startevents.get(i), context, BpmnInterpreter.this));
+				}
+				
+				// Notify cms that init is finished.
+				inited.setResult(new Object[]{BpmnInterpreter.this, adapter});
+			}
+			
+			public void exceptionOccurred(Object source, Exception exception)
+			{
+				inited.setException(exception);
+			}
+		}));
+	}
+
+	protected void initContextVariables()
+	{
 		Set	vars	= model.getContextVariables();
 		for(Iterator it=vars.iterator(); it.hasNext(); )
 		{
@@ -462,29 +506,6 @@ public class BpmnInterpreter implements IComponentInstance
 				variables.put(name, value);
 			}
 		}
-
-		// Start the container and notify cms when start has finished.		
-		getServiceContainer().start().addResultListener(createResultListener(new IResultListener()
-		{
-			public void resultAvailable(Object source, Object result)
-			{
-				// Create initial thread(s). 
-				List	startevents	= model.getStartActivities();
-				for(int i=0; startevents!=null && i<startevents.size(); i++)
-				{
-					context.addThread(new ProcessThread((MActivity)startevents.get(i), context, BpmnInterpreter.this));
-				}
-				
-				// Set inited to true and notify cms.
-				initedflag = Boolean.TRUE;
-				inited.setResult(new Object[]{BpmnInterpreter.this, adapter});
-			}
-			
-			public void exceptionOccurred(Object source, Exception exception)
-			{
-				inited.setException(exception);
-			}
-		}));
 	}
 	
 	/**
@@ -541,6 +562,15 @@ public class BpmnInterpreter implements IComponentInstance
 		final Future ret = new Future();
 		// Todo: cleanup required???
 		
+		if(componentlisteners!=null)
+		{
+			for(int i=0; i<componentlisteners.size(); i++)
+			{
+				IComponentListener lis = (IComponentListener)componentlisteners.get(i);
+				lis.componentTerminating(new ChangeEvent(adapter.getComponentIdentifier()));
+			}
+		}
+		
 		adapter.invokeLater(new Runnable()
 		{
 			public void run()
@@ -553,6 +583,15 @@ public class BpmnInterpreter implements IComponentInstance
 //					System.out.println("Cancelling: "+pt.getActivity()+" "+pt.getId());
 				}
 				ret.setResult(adapter.getComponentIdentifier());
+				
+				if(componentlisteners!=null)
+				{
+					for(int i=0; i<componentlisteners.size(); i++)
+					{
+						IComponentListener lis = (IComponentListener)componentlisteners.get(i);
+						lis.componentTerminated(new ChangeEvent(adapter.getComponentIdentifier()));
+					}
+				}
 			}
 		});
 		
@@ -717,7 +756,7 @@ public class BpmnInterpreter implements IComponentInstance
 	 *  the method will directly fail with a runtime exception.
 	 *  Note: 1.4 compliant code.
 	 *  Problem: Deadlocks cannot be detected and no exception is thrown.
-	 */
+	 * /
 	public void invokeSynchronized(final Runnable code)
 	{
 		if(isExternalThread())
@@ -781,7 +820,7 @@ public class BpmnInterpreter implements IComponentInstance
 			Thread.dumpStack();
 			code.run();
 		}
-	}
+	}*/
 	
 	/**
 	 *  Check if the external thread is accessing.
@@ -832,9 +871,9 @@ public class BpmnInterpreter implements IComponentInstance
 	 *  Get the parent component.
 	 *  @return The parent component.
 	 */
-	public IComponentIdentifier getParent()
+	public IExternalAccess getParent()
 	{
-		return parent.getComponentIdentifier();
+		return parent;
 	}
 	
 	/** 
@@ -926,7 +965,12 @@ public class BpmnInterpreter implements IComponentInstance
 				throw new UnsupportedOperationException("No handler for activity: "+thread);
 			if(history!=null)
 				history.add(new HistoryEntry(stepnumber++, thread.getId(), thread.getActivity()));
-			fireExecutingActivity(thread.getId(), thread.getActivity());
+
+			if(thread.getLastEdge()!=null && thread.getLastEdge().getSource()!=null)
+				fireEndActivity(thread.getId(), thread.getLastEdge().getSource());
+			
+			fireStartActivity(thread.getId(), thread.getActivity());
+
 //			System.out.println("Step: "+this.getComponentAdapter().getComponentIdentifier().getName()+" "+thread.getActivity()+" "+thread);
 			MActivity act = thread.getActivity();
 			handler.execute(act, this, thread);
@@ -1324,19 +1368,21 @@ public class BpmnInterpreter implements IComponentInstance
 	 *  The current subcomponents can be accessed by IComponentAdapter.getSubcomponents().
 	 *  @param comp	The newly created component.
 	 */
-	public void	componentCreated(IComponentDescription desc, IModelInfo model)
+	public IFuture	componentCreated(IComponentDescription desc, IModelInfo model)
 	{
+		return new Future(null);
 	}
-	
+
 	/**
 	 *  Called when a subcomponent of this component has been destroyed.
 	 *  This event may be ignored, if no special reaction  to new or destroyed components is required.
 	 *  The current subcomponents can be accessed by IComponentAdapter.getSubcomponents().
 	 *  @param comp	The destroyed component.
 	 */
-	public void	componentDestroyed(IComponentDescription desc)
+	public IFuture	componentDestroyed(IComponentDescription desc)
 	{
-	}		
+		return new Future(null);
+	}
 	
 	/**
 	 *  Create a component result listener.
@@ -1347,35 +1393,117 @@ public class BpmnInterpreter implements IComponentInstance
 	}
 	
 	/**
+	 *  Fires an activity execution event.
+	 *  @param threadid ID of the executing ProcessThread.
+	 *  @param activity The activity being executed.
+	 */
+	protected void fireStartActivity(String threadid, MActivity activity)
+	{
+//		System.out.println("fire start: "+activity);
+		if(activitylisteners!=null)
+		{
+			for(Iterator it = activitylisteners.iterator(); it.hasNext(); )
+				((IActivityListener)it.next()).activityStarted(new ChangeEvent(threadid, null, activity));
+		}
+	}
+	
+	/**
+	 *  Fires an activity execution event.
+	 *  @param threadid ID of the executing ProcessThread.
+	 *  @param activity The activity being executed.
+	 */
+	protected void fireEndActivity(String threadid, MActivity activity)
+	{
+//		System.out.println("fire end: "+activity);
+		if(activitylisteners!=null)
+		{
+			for(Iterator it = activitylisteners.iterator(); it.hasNext(); )
+				((IActivityListener)it.next()).activityEnded(new ChangeEvent(threadid, null, activity));
+		}
+	}
+	
+	/**
+	 *  Schedule a step of the agent.
+	 *  May safely be called from external threads.
+	 *  @param step	Code to be executed as a step of the agent.
+	 *  @return The result of the step.
+	 */
+	public IFuture scheduleStep(IComponentStep step)
+	{
+		// To schedule a step an implicit activity is created.
+		// In order to put the step parameter value it is necessary
+		// to have an edge with a mapping. Otherwise the parameter
+		// value with be deleted in process thread updateParametersBeforeStep().
+		
+		Future ret = new Future();
+		MActivity act = new MActivity();
+		act.setName("External Step Activity.");
+		act.setClazz(ExecuteStepTask.class);
+		act.addParameter(new MParameter(MParameter.DIRECTION_IN, Object[].class, "step", null));
+		act.setActivityType(MBpmnModel.TASK);
+		MSequenceEdge edge = new MSequenceEdge();
+		edge.setTarget(act);
+		edge.addParameterMapping("step", SJavaParser.parseExpression("step", null, null), null);
+		act.addIncomingSequenceEdge(edge);
+		MPool pl = model.getPool(pool);
+		act.setPool(pl);
+		ProcessThread pt = new ProcessThread(act, context, this);
+		pt.setLastEdge(edge);
+		pt.setParameterValue("step", new Object[]{step, ret});
+		context.addThread(pt);
+		return ret;
+	}
+	
+	/**
+	 *  Get the children (if any).
+	 *  @return The children.
+	 */
+	public IFuture getChildren()
+	{
+		return adapter.getChildrenAccesses();
+	}
+	
+	/**
 	 *  Adds an activity listener. The listener will be called
 	 *  once a process thread executes a new activity.
-	 *  
 	 *  @param listener The activity listener.
 	 */
 	public void addActivityListener(IActivityListener listener)
 	{
+		if(activitylisteners==null)
+			activitylisteners = new ArrayList();
 		activitylisteners.add(listener);
 	}
 	
 	/**
 	 *  Removes an activity listener.
-	 *  
 	 *  @param listener The activity listener.
 	 */
 	public void removeActivityListener(IActivityListener listener)
 	{
-		activitylisteners.remove(listener);
+		if(activitylisteners!=null)
+			activitylisteners.remove(listener);
 	}
 	
 	/**
-	 *  Fires an activity execution event.
-	 *  
-	 *  @param threadid ID of the executing ProcessThread.
-	 *  @param activity The activity being executed.
+	 *  Add an component listener.
+	 *  @param listener The listener.
 	 */
-	protected void fireExecutingActivity(String threadid, MActivity activity)
+	public void addComponentListener(IComponentListener listener)
 	{
-		for (Iterator it = activitylisteners.iterator(); it.hasNext(); )
-			((IActivityListener) it.next()).activityExecuting(new ChangeEvent(threadid, "Activity Execution", activity));
+		if(componentlisteners==null)
+			componentlisteners = new ArrayList();
+		componentlisteners.add(listener);
 	}
+	
+	/**
+	 *  Remove a component listener.
+	 *  @param listener The listener.
+	 */
+	public void removeComponentListener(IComponentListener listener)
+	{
+		if(componentlisteners!=null)
+			componentlisteners.remove(listener);
+	}
+	
 }

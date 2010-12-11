@@ -2,20 +2,20 @@ package jadex.bdi.runtime.interpreter;
 
 import jadex.bdi.model.OAVBDIMetaModel;
 import jadex.bdi.runtime.AgentEvent;
-import jadex.bdi.runtime.IAgentListener;
 import jadex.bdi.runtime.IBeliefListener;
 import jadex.bdi.runtime.IBeliefSetListener;
 import jadex.bdi.runtime.IGoalListener;
 import jadex.bdi.runtime.IInternalEventListener;
 import jadex.bdi.runtime.IMessageEventListener;
 import jadex.bdi.runtime.IPlanListener;
-import jadex.bdi.runtime.impl.eaflyweights.EABeliefFlyweight;
-import jadex.bdi.runtime.impl.eaflyweights.EABeliefSetFlyweight;
-import jadex.bdi.runtime.impl.eaflyweights.EAGoalFlyweight;
-import jadex.bdi.runtime.impl.eaflyweights.EAInternalEventFlyweight;
-import jadex.bdi.runtime.impl.eaflyweights.EAMessageEventFlyweight;
-import jadex.bdi.runtime.impl.eaflyweights.EAPlanFlyweight;
-import jadex.bdi.runtime.impl.eaflyweights.ExternalAccessFlyweight;
+import jadex.bdi.runtime.impl.flyweights.BeliefFlyweight;
+import jadex.bdi.runtime.impl.flyweights.BeliefSetFlyweight;
+import jadex.bdi.runtime.impl.flyweights.GoalFlyweight;
+import jadex.bdi.runtime.impl.flyweights.InternalEventFlyweight;
+import jadex.bdi.runtime.impl.flyweights.MessageEventFlyweight;
+import jadex.bdi.runtime.impl.flyweights.PlanFlyweight;
+import jadex.bridge.IComponentListener;
+import jadex.commons.ChangeEvent;
 import jadex.rules.rulesystem.IAction;
 import jadex.rules.rulesystem.ICondition;
 import jadex.rules.rulesystem.IVariableAssignments;
@@ -72,19 +72,19 @@ public class ListenerRules
 		{
 			public void execute(IOAVState state, IVariableAssignments assignments)
 			{
-				Object ragent = assignments.getVariableValue("?ragent");
+//				Object ragent = assignments.getVariableValue("?ragent");
 				Object le	= assignments.getVariableValue("?listenerentry");
 				Object ce = assignments.getVariableValue("?ce");
 				
-				IAgentListener lis	= (IAgentListener)state.getAttributeValue(le, OAVBDIRuntimeModel.listenerentry_has_listener);
-				AgentEvent	ae	= new AgentEvent(new ExternalAccessFlyweight(state, ragent), 
+				IComponentListener lis	= (IComponentListener)state.getAttributeValue(le, OAVBDIRuntimeModel.listenerentry_has_listener);
+				ChangeEvent	ae	= new ChangeEvent(BDIInterpreter.getInterpreter(state).getAgentAdapter().getChildrenIdentifiers(), null,
 					state.getAttributeValue(ce, OAVBDIRuntimeModel.changeevent_has_value));
 				
 				String cetype = (String)state.getAttributeValue(ce, OAVBDIRuntimeModel.changeevent_has_type);
 				if(OAVBDIRuntimeModel.CHANGEEVENT_AGENTTERMINATING.equals(cetype))
-					lis.agentTerminating(ae);
+					lis.componentTerminating(ae);
 				else //if(OAVBDIRuntimeModel.CHANGEEVENT_AGENTTERMINATED.equals(cetype))
-					lis.agentTerminated(ae);
+					lis.componentTerminated(ae);
 			}
 		};
 		
@@ -129,7 +129,7 @@ public class ListenerRules
 				
 				Object rcapa = state.getAttributeValue(le, OAVBDIRuntimeModel.listenerentry_has_scope);
 				IBeliefListener lis	= (IBeliefListener)state.getAttributeValue(le, OAVBDIRuntimeModel.listenerentry_has_listener);
-				AgentEvent	ae	= new AgentEvent(EABeliefFlyweight.getBeliefFlyweight(state, rcapa, rbelief), 
+				AgentEvent	ae	= new AgentEvent(BeliefFlyweight.getBeliefFlyweight(state, rcapa, rbelief), 
 					state.getAttributeValue(ce, OAVBDIRuntimeModel.changeevent_has_value));
 				lis.beliefChanged(ae);
 			}
@@ -269,7 +269,7 @@ public class ListenerRules
 			
 				Object rcapa = state.getAttributeValue(le, OAVBDIRuntimeModel.listenerentry_has_scope);
 				IBeliefSetListener lis	= (IBeliefSetListener)state.getAttributeValue(le, OAVBDIRuntimeModel.listenerentry_has_listener);
-				AgentEvent	ae	= new AgentEvent(EABeliefSetFlyweight.getBeliefSetFlyweight(state, rcapa, rbeliefset), 
+				AgentEvent	ae	= new AgentEvent(BeliefSetFlyweight.getBeliefSetFlyweight(state, rcapa, rbeliefset), 
 					state.getAttributeValue(ce, OAVBDIRuntimeModel.changeevent_has_value));
 				
 				String cetype = (String)state.getAttributeValue(ce, OAVBDIRuntimeModel.changeevent_has_type);
@@ -336,7 +336,7 @@ public class ListenerRules
 				Object rcapa = state.getAttributeValue(ce, OAVBDIRuntimeModel.changeevent_has_scope);
 				
 				IInternalEventListener lis	= (IInternalEventListener)state.getAttributeValue(le, OAVBDIRuntimeModel.listenerentry_has_listener);
-				AgentEvent	ae	= new AgentEvent(EAInternalEventFlyweight.getInternalEventFlyweight(state, rcapa, revent), 
+				AgentEvent	ae	= new AgentEvent(InternalEventFlyweight.getInternalEventFlyweight(state, rcapa, revent), 
 						state.getAttributeValue(ce, OAVBDIRuntimeModel.changeevent_has_value));
 				
 				lis.internalEventOccurred(ae);
@@ -397,7 +397,7 @@ public class ListenerRules
 				Object rcapa = state.getAttributeValue(ce, OAVBDIRuntimeModel.changeevent_has_scope);
 
 				IMessageEventListener lis	= (IMessageEventListener)state.getAttributeValue(le, OAVBDIRuntimeModel.listenerentry_has_listener);
-				AgentEvent	ae	= new AgentEvent(EAMessageEventFlyweight.getMessageEventFlyweight(state, rcapa, revent), 
+				AgentEvent	ae	= new AgentEvent(MessageEventFlyweight.getMessageEventFlyweight(state, rcapa, revent), 
 						state.getAttributeValue(ce, OAVBDIRuntimeModel.changeevent_has_value));
 
 				String cetype = (String)state.getAttributeValue(ce, OAVBDIRuntimeModel.changeevent_has_type);
@@ -461,7 +461,7 @@ public class ListenerRules
 				Object rcapa = state.getAttributeValue(ce, OAVBDIRuntimeModel.changeevent_has_scope);
 				
 				IGoalListener lis	= (IGoalListener)state.getAttributeValue(le, OAVBDIRuntimeModel.listenerentry_has_listener);
-				AgentEvent	ae	= new AgentEvent(EAGoalFlyweight.getGoalFlyweight(state, rcapa, rgoal), 
+				AgentEvent	ae	= new AgentEvent(GoalFlyweight.getGoalFlyweight(state, rcapa, rgoal), 
 					state.getAttributeValue(ce, OAVBDIRuntimeModel.changeevent_has_value));
 
 				
@@ -548,7 +548,7 @@ public class ListenerRules
 				Object rcapa = state.getAttributeValue(ce, OAVBDIRuntimeModel.changeevent_has_scope);
 				
 				IPlanListener lis	= (IPlanListener)state.getAttributeValue(le, OAVBDIRuntimeModel.listenerentry_has_listener);
-				AgentEvent	ae	= new AgentEvent(EAPlanFlyweight.getPlanFlyweight(state, rcapa, rplan), 
+				AgentEvent	ae	= new AgentEvent(PlanFlyweight.getPlanFlyweight(state, rcapa, rplan), 
 					state.getAttributeValue(ce, OAVBDIRuntimeModel.changeevent_has_value));
 				
 				String cetype = (String)state.getAttributeValue(ce, OAVBDIRuntimeModel.changeevent_has_type);

@@ -6,7 +6,6 @@ import jadex.commons.Future;
 import jadex.commons.IFuture;
 import jadex.commons.Properties;
 import jadex.commons.SGUI;
-import jadex.commons.concurrent.IResultListener;
 import jadex.commons.concurrent.SwingDefaultResultListener;
 import jadex.commons.gui.EditableList;
 import jadex.commons.gui.EditableListEvent;
@@ -24,8 +23,6 @@ import java.awt.event.ActionListener;
 import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
-import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
 import javax.swing.DefaultListModel;
@@ -78,7 +75,7 @@ public class LibServiceBrowser	extends	JTabbedPane	implements IServiceViewerPane
 		// Create class paths view.
 		final JPanel classview = new JPanel(new BorderLayout());
 		this.classpaths = new EditableList("Class Paths", true);
-		fetchManagedClasspathEntries().addResultListener(new SwingDefaultResultListener(LibServiceBrowser.this)
+		libservice.getURLStrings().addResultListener(new SwingDefaultResultListener(LibServiceBrowser.this)
 		{
 			public void customResultAvailable(Object source, Object result)
 			{
@@ -176,7 +173,7 @@ public class LibServiceBrowser	extends	JTabbedPane	implements IServiceViewerPane
 		{
 			public void actionPerformed(ActionEvent e)
 			{
-				fetchManagedClasspathEntries().addResultListener(new SwingDefaultResultListener(LibServiceBrowser.this)
+				libservice.getURLStrings().addResultListener(new SwingDefaultResultListener(LibServiceBrowser.this)
 				{
 					public void customResultAvailable(Object source, Object result)
 					{
@@ -225,7 +222,7 @@ public class LibServiceBrowser	extends	JTabbedPane	implements IServiceViewerPane
 		
 		final JPanel otherview = new JPanel(new BorderLayout());
 		final DefaultListModel dlm = new DefaultListModel();
-		fetchOtherClasspathEntries(libservice).addResultListener(new SwingDefaultResultListener(LibServiceBrowser.this)
+		libservice.getNonManagedURLs().addResultListener(new SwingDefaultResultListener(LibServiceBrowser.this)
 		{
 			public void customResultAvailable(Object source, Object result)
 			{
@@ -245,7 +242,7 @@ public class LibServiceBrowser	extends	JTabbedPane	implements IServiceViewerPane
 		{
 			public void actionPerformed(ActionEvent e)
 			{
-				fetchOtherClasspathEntries(libservice).addResultListener(new SwingDefaultResultListener(LibServiceBrowser.this)
+				libservice.getNonManagedURLs().addResultListener(new SwingDefaultResultListener(LibServiceBrowser.this)
 				{
 					public void customResultAvailable(Object source, Object result)
 					{
@@ -269,27 +266,22 @@ public class LibServiceBrowser	extends	JTabbedPane	implements IServiceViewerPane
 		// Add a library service listener to be informed about library changes.
 		this.listener	= new ILibraryServiceListener()
 		{
-			public void urlAdded(URL url)
+			public IFuture urlAdded(URL url)
 			{
 				// todo: make synchronized
 				if(!classpaths.containsEntry(url.toString()))
 					classpaths.addEntry(url.toString());
+				return new Future(null);
 			}
-			public void urlRemoved(URL url)
+			public IFuture urlRemoved(URL url)
 			{
 				// todo: make synchronized
 				if(classpaths.containsEntry(url.toString()))
 					classpaths.removeEntry(url.toString());
+				return new Future(null);
 			}
 		};
-		try
-		{
-			libservice.addLibraryServiceListener(listener);
-		}
-		catch(Exception e)
-		{
-			System.out.println("Automatic updates not supported for library service.");
-		}
+		libservice.addLibraryServiceListener(listener);
 		
 		// Todo: remove listener, when tool is closed.
 		
@@ -345,131 +337,5 @@ public class LibServiceBrowser	extends	JTabbedPane	implements IServiceViewerPane
 		return null;
 	}
 	
-	/**
-	 *  Fetch the current classpath
-	 *  @return classpath entries as a list of strings.
-	 */
-	protected IFuture fetchManagedClasspathEntries()
-	{
-		final Future ret = new Future();
-		
-		libservice.getURLs().addResultListener(new IResultListener()
-		{
-			public void resultAvailable(Object source, Object result)
-			{
-				List urls = (List)result;
-				// TODO Auto-generated method stub
-				List tmp = new ArrayList();
-				// todo: hack!!!
-				
-				for(Iterator it=urls.iterator(); it.hasNext(); )
-				{
-					URL	url	= (URL)it.next();
-					tmp.add(url.toString());
-					
-//					String file = url.getFile();
-//					File f = new File(file);
-//					
-//					// Hack!!! Above code doesnt handle relative url paths. 
-//					if(!f.exists())
-//					{
-//						File	newfile	= new File(new File("."), file);
-//						if(newfile.exists())
-//						{
-//							f	= newfile;
-//						}
-//					}
-//					ret.add(f.getAbsolutePath());
-				}
-				
-				ret.setResult(tmp);
-			}
-			
-			public void exceptionOccurred(Object source, Exception exception)
-			{
-				ret.setException(exception);
-			}
-		});
-		
-		return ret;
-	}
 	
-	/**
-	 *  Fetch the current classpath
-	 *  @return classpath entries as a list of strings.
-	 */
-	protected IFuture fetchOtherClasspathEntries(ILibraryService ls)
-	{
-		final Future ret = new Future();
-		
-		libservice.getNonManagedURLs().addResultListener(new IResultListener()
-		{
-			public void resultAvailable(Object source, Object result)
-			{
-				List urls = (List)result;
-				// TODO Auto-generated method stub
-				List tmp = new ArrayList();
-				// todo: hack!!!
-				
-				for(Iterator it=urls.iterator(); it.hasNext(); )
-				{
-					URL	url	= (URL)it.next();
-					tmp.add(url.toString());
-					
-//					String file = url.getFile();
-//					File f = new File(file);
-//					
-//					// Hack!!! Above code doesnt handle relative url paths. 
-//					if(!f.exists())
-//					{
-//						File	newfile	= new File(new File("."), file);
-//						if(newfile.exists())
-//						{
-//							f	= newfile;
-//						}
-//					}
-//					ret.add(f.getAbsolutePath());
-				}
-				
-				ret.setResult(tmp);
-			}
-			
-			public void exceptionOccurred(Object source, Exception exception)
-			{
-				ret.setException(exception);
-			}
-		});
-		
-		return ret;
-		
-//		java.util.List	ret	= new ArrayList();
-//
-////		ILibraryService ls = (ILibraryService)getJCC().getServiceContainer().getService(ILibraryService.class);
-//		// todo: hack
-////		ILibraryService ls = (ILibraryService)getJCC().getServiceContainer().getService(ILibraryService.class).get(new ThreadSuspendable());
-//		ClassLoader	cl	= ls.getClassLoader();
-//		
-//		List cps = SUtil.getClasspathURLs(cl!=null ? cl.getParent() : null);	// todo: classpath?
-//		for(int i=0; i<cps.size(); i++)
-//		{
-//			URL	url	= (URL)cps.get(i);
-//			ret.add(url.toString());
-//			
-////			String file = url.getFile();
-////			File f = new File(file);
-////			
-////			// Hack!!! Above code doesnt handle relative url paths. 
-////			if(!f.exists())
-////			{
-////				File	newfile	= new File(new File("."), file);
-////				if(newfile.exists())
-////				{
-////					f	= newfile;
-////				}
-////			}
-////			ret.add(f.getAbsolutePath());
-//		}
-//		
-//		return ret;
-	}
 }

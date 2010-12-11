@@ -4,15 +4,16 @@ import jadex.base.SComponentFactory;
 import jadex.base.gui.ElementPanel;
 import jadex.base.test.Testcase;
 import jadex.bdi.runtime.AgentEvent;
-import jadex.bdi.runtime.IEAGoal;
+import jadex.bdi.runtime.IBDIInternalAccess;
 import jadex.bdi.runtime.IGoal;
 import jadex.bdi.runtime.IGoalListener;
+import jadex.bridge.IComponentStep;
+import jadex.bridge.IInternalAccess;
 import jadex.commons.Properties;
 import jadex.commons.Property;
 import jadex.commons.SGUI;
 import jadex.commons.SUtil;
 import jadex.commons.ThreadSuspendable;
-import jadex.commons.concurrent.IResultListener;
 import jadex.commons.concurrent.SwingDefaultResultListener;
 import jadex.commons.gui.BrowserPane;
 import jadex.commons.gui.EditableList;
@@ -880,31 +881,15 @@ public class TestCenterPanel extends JSplitPane
 		{
 			final Integer to = new Integer(text);
 			
-			((AgentControlCenter)plugin.getJCC()).getAgent().getBeliefbase().setBeliefFact("testcase_timeout", to);
-			
-//			((AgentControlCenter)plugin.getJCC()).getAgent().getBeliefbase().addResultListener(new IResultListener()
-//			{
-//				public void resultAvailable(Object source, Object result)
-//				{
-//					((IEABeliefbase)result).getBelief("testcase_timeout").addResultListener(new IResultListener()
-//					{
-//						public void resultAvailable(Object source, Object result)
-//						{
-//							((IEABelief)result).setFact(to);							
-//						}
-//						
-//						public void exceptionOccurred(Object source, Exception exception)
-//						{
-//							showTimoutValueWarning(exception);
-//						}
-//					});
-//					
-//				}
-//				public void exceptionOccurred(Object source, Exception exception)
-//				{
-//					showTimoutValueWarning(exception);
-//				}
-//			});
+			((AgentControlCenter)plugin.getJCC()).getAgent().scheduleStep(new IComponentStep()
+			{
+				public Object execute(IInternalAccess ia)
+				{
+					IBDIInternalAccess	scope	= (IBDIInternalAccess)ia;
+					scope.getBeliefbase().getBelief("testcase_timeout").setFact(to);
+					return null;
+				}
+			});
 		}
 		catch(Exception e)
 		{
@@ -1007,6 +992,9 @@ public class TestCenterPanel extends JSplitPane
 		/** A set of active goals (to be dropped on abort). */
 		protected Set	goals;
 		
+		/** Flag indicating that the test suite is running. */
+		protected boolean	running;
+		
 		/** Flag indicating that the test suite has been aborted. */
 		protected boolean	aborted;
 		
@@ -1023,6 +1011,7 @@ public class TestCenterPanel extends JSplitPane
 			this.names	= names;
 			this.testcases	= new Testcase[names.length];
 			this.goals	= new HashSet();
+			this.running	= false;
 		}
 		
 		//-------- methods --------
@@ -1032,7 +1021,7 @@ public class TestCenterPanel extends JSplitPane
 		 */
 		public boolean	isRunning()
 		{
-			return !goals.isEmpty();
+			return running;
 		}
 		
 		/**
@@ -1076,8 +1065,6 @@ public class TestCenterPanel extends JSplitPane
 		{
 			this.starttime	= System.currentTimeMillis();
 			startNextTestcases();
-			updateProgress();
-			updateDetails();
 		}
 
 		/**
@@ -1106,30 +1093,37 @@ public class TestCenterPanel extends JSplitPane
 		 */
 		protected void	startNextTestcases()
 		{
-			for(int i=0; i<testcases.length && (concurrency==-1 || goals.size()<concurrency); i++)
+			((AgentControlCenter)plugin.getJCC()).getAgent().scheduleStep(new IComponentStep()
 			{
-				if(testcases[i]==null)
+				public Object execute(IInternalAccess ia)
 				{
-					// Create testcase and dispatch goal.
-					testcases[i]	= new Testcase(names[i]);
-					final int num = i;
-					((AgentControlCenter)plugin.getJCC()).getAgent().createGoal("perform_test").addResultListener(new IResultListener()
+					for(int i=0; i<testcases.length && (concurrency==-1 || goals.size()<concurrency); i++)
 					{
-						public void resultAvailable(Object source, Object result)
+						if(testcases[i]==null)
 						{
-							IEAGoal	pt	= (IEAGoal)result;
-							pt.setParameterValue("testcase", testcases[num]);
+							// Create testcase and dispatch goal.
+							testcases[i]	= new Testcase(names[i]);
+							IGoal	pt	= ((IBDIInternalAccess)ia).getGoalbase().createGoal("perform_test");
+							pt.getParameter("testcase").setValue(testcases[i]);
 							pt.addGoalListener(TestSuite.this);
 							goals.add(pt);
-							((AgentControlCenter)plugin.getJCC()).getAgent().dispatchTopLevelGoal(pt);
-							plugin.getJCC().setStatusText("Performing test "+names[num]);
+							((IBDIInternalAccess)ia).getGoalbase().dispatchTopLevelGoal(pt);
+							plugin.getJCC().setStatusText("Performing test "+names[i]);
 						}
-						public void exceptionOccurred(Object source, Exception exception)
+					}
+
+					running	= !goals.isEmpty();
+					SwingUtilities.invokeLater(new Runnable()
+					{
+						public void run()
 						{
+							updateProgress();
+							updateDetails();
 						}
 					});
+					return null;
 				}
-			}			
+			});					
 		}
 
 		/**
@@ -1137,33 +1131,24 @@ public class TestCenterPanel extends JSplitPane
 		 */
 		public void goalFinished(final AgentEvent ae)
 		{			
-			((IEAGoal)ae.getSource()).removeGoalListener(this);
+			((IGoal)ae.getSource()).removeGoalListener(this);
 			// Handling of finished goal.
-			final IEAGoal goal = (IEAGoal)ae.getSource();
+			final IGoal goal = (IGoal)ae.getSource();
 			
 			// Ignore if goal is leftover from aborted execution.
 			if(goals.remove(goal))
 			{
-				goal.isSucceeded().addResultListener(new SwingDefaultResultListener(TestCenterPanel.this)
+				if(!goal.isSucceeded() && !aborted)
 				{
-					public void customResultAvailable(Object source, Object result)
-					{
-						if(!((Boolean)result).booleanValue() && !aborted)
-						{
-//								String text = SUtil.wrapText("Testcase error: "+goal.getException().getMessage());
-							String text = SUtil.wrapText("Testcase error: "+goal);
-							JOptionPane.showMessageDialog(SGUI.getWindowParent(TestCenterPanel.this),
-								text, "Testcase problem", JOptionPane.INFORMATION_MESSAGE);
-						}
-						
-						startNextTestcases();
-						updateProgress();
-						updateDetails();
-					}
-				});
+//					String text = SUtil.wrapText("Testcase error: "+goal.getException().getMessage());
+					String text = SUtil.wrapText("Testcase error: "+goal);
+					JOptionPane.showMessageDialog(SGUI.getWindowParent(TestCenterPanel.this),
+						text, "Testcase problem", JOptionPane.INFORMATION_MESSAGE);
+				}
 				
-//						System.out.println("Goal finished: "+goal);
+				startNextTestcases();
 			}
+//			System.out.println("Goal finished: "+goal);
 		}
 		
 		/**

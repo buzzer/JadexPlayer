@@ -1,8 +1,11 @@
 package jadex.xml;
 
+import jadex.commons.SUtil;
+
 import java.util.Map;
 
 import javax.xml.namespace.QName;
+import javax.xml.stream.Location;
 
 /**
  *  A struct to represent an element on the stack while parsing.
@@ -28,6 +31,9 @@ public class StackElement
 	/** The type info. */
 	protected TypeInfo typeinfo;
 	
+	/** The location of the start tag. */
+	protected Location	location;
+	
 	//-------- constructors --------
 	
 	/**
@@ -43,18 +49,19 @@ public class StackElement
 	 */
 	public StackElement(QName tag, Object object, Map rawattrs)
 	{
-		this(tag, object, rawattrs, null);
+		this(tag, object, rawattrs, null, null);
 	}
 	
 	/**
 	 *  Create a new stack element.
 	 */
-	public StackElement(QName tag, Object object, Map rawattrs, TypeInfo typeinfo)
+	public StackElement(QName tag, Object object, Map rawattrs, TypeInfo typeinfo, Location location)
 	{
 		this.tag = tag;
 		this.object = object;
 		this.rawattrs = rawattrs;
 		this.typeinfo = typeinfo;
+		this.location	= location;
 	}
 	
 	//-------- methods --------
@@ -112,7 +119,16 @@ public class StackElement
 	{
 		return this.typeinfo;
 	}
-
+	
+	/**
+	 *  Get the location.
+	 *  @return The location.
+	 */
+	public Location getLocation()
+	{
+		return this.location;
+	}
+	
 	/**
 	 *  Add content to the already collected content (if any).
 	 *  @param content	The content to add.
@@ -133,5 +149,38 @@ public class StackElement
 	{
 		return "StackElement(tag="+this.tag+", object=" + this.object + ")";
 	}
+
+	/**
+	 *  Get the hash code.
+	 */
+	public int hashCode()
+	{
+		// Content/object set afterwards, cannot use for hashcode!
+		int result = 31 + ((rawattrs==null) ? 0 : rawattrs.hashCode());
+		result = 31*result + ((tag==null) ? 0 : tag.hashCode());
+		result = 31*result + ((typeinfo==null) ? 0 : typeinfo.hashCode());
+		result = 31*result + ((location==null) ? 0 : location.hashCode());
+		return result;
+	}
+
+	/**
+	 *  Test if two stack elements are equal.
+	 */
+	public boolean equals(Object obj)
+	{
+		boolean	ret	= this==obj;
+		if(!ret && obj instanceof StackElement)
+		{
+			// Content/object set afterwards, cannot use for equals!
+			StackElement other = (StackElement)obj;
+			ret	= SUtil.equals(rawattrs, other.rawattrs)
+				&& SUtil.equals(tag, other.tag)
+				&& SUtil.equals(typeinfo, other.typeinfo)
+				&& SUtil.equals(location, other.location);
+		}
+		return ret;
+	}
+	
+	
 	
 }

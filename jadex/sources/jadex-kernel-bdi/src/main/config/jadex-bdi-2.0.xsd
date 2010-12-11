@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!-- edited with XMLSPY v2004 rel. 3 U (http://www.xmlspy.com) by hans (kill) -->
-<xs:schema targetNamespace="http://jadex.sourceforge.net/jadex-bdi" xmlns="http://jadex.sourceforge.net/jadex-bdi" xmlns:xs="http://www.w3.org/2001/XMLSchema" elementFormDefault="qualified" attributeFormDefault="unqualified" version="2.0">
+<!-- edited with XMLSPY v2004 rel. 3 U (http://www.xmlspy.com) by Lars (RTL) -->
+<xs:schema targetNamespace="http://jadex.sourceforge.net/jadex-bdi" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns="http://jadex.sourceforge.net/jadex-bdi" elementFormDefault="qualified" attributeFormDefault="unqualified" version="2.0">
 	<xs:element name="agent">
 		<xs:annotation>
 			<xs:documentation>Defines a new agent type.</xs:documentation>
@@ -33,6 +33,10 @@
 		<xs:complexContent>
 			<xs:extension base="MCapability">
 				<xs:attribute name="propertyfile" type="xs:string" use="optional" default="jadex.config.runtime"/>
+				<xs:attribute name="suspend" type="xs:boolean" use="optional" default="false"/>
+				<xs:attribute name="master" type="xs:boolean" use="optional" default="false"/>
+				<xs:attribute name="daemon" type="xs:boolean" use="optional" default="false"/>
+				<xs:attribute name="autoshutdown" type="xs:boolean" use="optional" default="false"/>
 			</xs:extension>
 		</xs:complexContent>
 	</xs:complexType>
@@ -101,7 +105,11 @@
 							<xs:documentation>In this section predefined expressions and conditions can be declared.  Also references for both can be declared.</xs:documentation>
 						</xs:annotation>
 					</xs:element>
-					<xs:element name="services" type="MServicebase" minOccurs="0"/>
+					<xs:element name="services" type="MServicebase" minOccurs="0">
+						<xs:annotation>
+							<xs:documentation>In this section the provided and required services can be declared.</xs:documentation>
+						</xs:annotation>
+					</xs:element>
 					<xs:element name="properties" type="MPropertybase" minOccurs="0">
 						<xs:annotation>
 							<xs:documentation>In this section arbitrary properties can be specified.</xs:documentation>
@@ -759,7 +767,7 @@
 						</xs:element>
 					</xs:sequence>
 					<xs:choice>
-						<xs:element name="value" type="MStaticValue" minOccurs="0" maxOccurs="unbounded">
+						<xs:element name="value" type="MInternalExpression" minOccurs="0" maxOccurs="unbounded">
 							<xs:annotation>
 								<xs:documentation>An expression that evaluated to a default value. Only static values are allowed, i.e. it is only evaluated once on creation.</xs:documentation>
 							</xs:annotation>
@@ -804,7 +812,7 @@
 		<xs:complexContent mixed="true">
 			<xs:extension base="MTypedElementSet">
 				<xs:choice>
-					<xs:element name="fact" type="MStaticValue" minOccurs="0" maxOccurs="unbounded">
+					<xs:element name="fact" type="MInternalExpression" minOccurs="0" maxOccurs="unbounded">
 						<xs:annotation>
 							<xs:documentation>An expression that is evaluated to a default value. Only static values are allowed, i.e. it is only evaluated once on agent creation.</xs:documentation>
 						</xs:annotation>
@@ -903,7 +911,7 @@
 		<xs:complexContent mixed="true">
 			<xs:extension base="MTypedElementSet">
 				<xs:choice>
-					<xs:element name="value" type="MStaticValue" minOccurs="0" maxOccurs="unbounded"/>
+					<xs:element name="value" type="MInternalExpression" minOccurs="0" maxOccurs="unbounded"/>
 					<xs:element name="values" type="MInternalExpression" minOccurs="0"/>
 					<xs:sequence>
 						<xs:element name="internaleventmapping" type="MAssign" minOccurs="0" maxOccurs="unbounded"/>
@@ -988,6 +996,7 @@
 		<xs:complexContent mixed="true">
 			<xs:restriction base="MExpression">
 				<xs:attribute name="exported" use="prohibited"/>
+				<xs:attribute name="name" use="prohibited"/>
 			</xs:restriction>
 		</xs:complexContent>
 	</xs:complexType>
@@ -1007,6 +1016,7 @@
 			<xs:restriction base="MCondition">
 				<xs:attribute name="exported" use="prohibited"/>
 				<xs:attribute name="class" use="prohibited"/>
+				<xs:attribute name="name" use="prohibited"/>
 			</xs:restriction>
 		</xs:complexContent>
 	</xs:complexType>
@@ -1028,7 +1038,7 @@
 		<xs:annotation>
 			<xs:documentation>Base type for all model elements.</xs:documentation>
 		</xs:annotation>
-		<xs:attribute name="name" type="xs:string">
+		<xs:attribute name="name" type="xs:string" use="required">
 			<xs:annotation>
 				<xs:documentation>The elements name.</xs:documentation>
 			</xs:annotation>
@@ -1044,7 +1054,7 @@
 			<xs:documentation>Base type for all bases, e.g. beliefbase, planbase, goalbase, etc.</xs:documentation>
 		</xs:annotation>
 		<xs:complexContent>
-			<xs:extension base="MElement"/>
+			<xs:extension base="MElementNoName"/>
 		</xs:complexContent>
 	</xs:complexType>
 	<xs:complexType name="MEvent" abstract="true" mixed="true">
@@ -1133,12 +1143,8 @@
 			<xs:documentation>Used to define a reference to another element.</xs:documentation>
 		</xs:annotation>
 		<xs:complexContent>
-			<xs:extension base="MElement">
-				<xs:attribute name="ref" type="xs:string" use="required">
-					<xs:annotation>
-						<xs:documentation>The name of the referenced element.</xs:documentation>
-					</xs:annotation>
-				</xs:attribute>
+			<xs:extension base="MElementNoName">
+				<xs:attribute name="ref" type="xs:string" use="required"/>
 			</xs:extension>
 		</xs:complexContent>
 	</xs:complexType>
@@ -1147,7 +1153,7 @@
 			<xs:documentation>Base trigger type allows reaction on goals, internal and message events and filters. All declared elements are considered as OR combined.</xs:documentation>
 		</xs:annotation>
 		<xs:complexContent>
-			<xs:extension base="MElement">
+			<xs:extension base="MElementNoName">
 				<xs:sequence>
 					<xs:choice minOccurs="0" maxOccurs="unbounded">
 						<xs:element name="internalevent" type="MReference" minOccurs="0">
@@ -1193,25 +1199,15 @@
 			<xs:documentation>Reference to another element. Used in trigger to match an event or goal.</xs:documentation>
 		</xs:annotation>
 		<xs:complexContent>
-			<xs:extension base="MElement">
+			<xs:extension base="MElementNoName">
 				<xs:sequence>
 					<xs:element name="match" type="MInternalExpression" minOccurs="0">
 						<xs:annotation>
 							<xs:documentation>Match expression to state in which exact cases a match exists.</xs:documentation>
 						</xs:annotation>
 					</xs:element>
-					<!--	<xs:element name="parameter" type="MReferenceParameter" minOccurs="0" maxOccurs="unbounded">
-						<xs:annotation>
-							<xs:documentation>Any number of parameters that are matched against parameters of the event/goal.</xs:documentation>
-						</xs:annotation>
-					</xs:element>
-					<xs:element name="parameterset" type="MReferenceParameterSet" minOccurs="0" maxOccurs="unbounded"/>-->
 				</xs:sequence>
-				<xs:attribute name="ref" type="xs:string" use="required">
-					<xs:annotation>
-						<xs:documentation>The name of the referenced element in the same capability.</xs:documentation>
-					</xs:annotation>
-				</xs:attribute>
+				<xs:attribute name="ref" type="xs:string" use="required"/>
 			</xs:extension>
 		</xs:complexContent>
 	</xs:complexType>
@@ -1267,7 +1263,7 @@
 			<xs:documentation>Uniqueness settings for goals. Excluded parameters will not affect if goals are considered equal.</xs:documentation>
 		</xs:annotation>
 		<xs:complexContent>
-			<xs:extension base="MElement">
+			<xs:extension base="MElementNoName">
 				<xs:sequence>
 					<xs:element name="exclude" minOccurs="0" maxOccurs="unbounded">
 						<xs:annotation>
@@ -1578,6 +1574,10 @@
 						</xs:annotation>
 					</xs:element>
 				</xs:sequence>
+				<xs:attribute name="suspend" type="xs:boolean" use="optional" default="false"/>
+				<xs:attribute name="master" type="xs:boolean" use="optional" default="false"/>
+				<xs:attribute name="daemon" type="xs:boolean" use="optional" default="false"/>
+				<xs:attribute name="autoshutdown" type="xs:boolean" use="optional" default="false"/>
 			</xs:extension>
 		</xs:complexContent>
 	</xs:complexType>
@@ -1586,7 +1586,9 @@
 			<xs:documentation>Base type for configuration elements.</xs:documentation>
 		</xs:annotation>
 		<xs:complexContent>
-			<xs:extension base="MElement"/>
+			<xs:extension base="MElementNoName">
+				<xs:attribute name="name" type="xs:string" use="optional"/>
+			</xs:extension>
 		</xs:complexContent>
 	</xs:complexType>
 	<xs:complexType name="MConfigReferenceableElement" abstract="true">
@@ -1698,7 +1700,7 @@
 			<xs:documentation>Base type for configuration bases.</xs:documentation>
 		</xs:annotation>
 		<xs:complexContent>
-			<xs:extension base="MElement"/>
+			<xs:extension base="MElementNoName"/>
 		</xs:complexContent>
 	</xs:complexType>
 	<xs:complexType name="MConfigBeliefbase">
@@ -1913,8 +1915,15 @@
 			<xs:documentation>For a value that is only once computed.</xs:documentation>
 		</xs:annotation>
 		<xs:complexContent mixed="true">
-			<xs:restriction base="MInternalExpression">
-				<xs:attribute name="evaluationmode" use="prohibited"/>
+			<xs:restriction base="MExpression">
+				<xs:sequence>
+					<xs:element name="assignto" type="MAssign" minOccurs="0" maxOccurs="unbounded">
+						<xs:annotation>
+							<xs:documentation>Assign this element to an abstract element of another capability.</xs:documentation>
+						</xs:annotation>
+					</xs:element>
+				</xs:sequence>
+				<xs:attribute name="exported" use="prohibited"/>
 			</xs:restriction>
 		</xs:complexContent>
 	</xs:complexType>
@@ -1948,7 +1957,7 @@
 			<xs:documentation>Easy deliberation settings for goals (cardinality and inhibitions).</xs:documentation>
 		</xs:annotation>
 		<xs:complexContent>
-			<xs:extension base="MElement">
+			<xs:extension base="MElementNoName">
 				<xs:sequence>
 					<xs:element name="inhibits" type="MInhibits" minOccurs="0" maxOccurs="unbounded">
 						<xs:annotation>
@@ -1956,17 +1965,42 @@
 						</xs:annotation>
 					</xs:element>
 				</xs:sequence>
-				<xs:attribute name="cardinality" type="xs:int" use="optional" default="-1">
-					<xs:annotation>
-						<xs:documentation>The cardinality specifies how many active goal instances of the given type can exist. The default is -1 meaning that a unlimited number of goals are permitted being active.</xs:documentation>
-					</xs:annotation>
-				</xs:attribute>
+				<xs:attribute name="cardinality" type="xs:int" use="optional" default="-1"/>
 			</xs:extension>
 		</xs:complexContent>
 	</xs:complexType>
 	<xs:complexType name="MServicebase">
-		<xs:sequence>
-			<xs:element name="service" type="MExpression" minOccurs="0" maxOccurs="unbounded"/>
-		</xs:sequence>
+		<xs:annotation>
+			<xs:documentation>Container for service declarations.</xs:documentation>
+		</xs:annotation>
+		<xs:complexContent>
+			<xs:extension base="MElementNoName">
+				<xs:sequence>
+					<xs:element name="providedservice" type="MProvidedService" minOccurs="0" maxOccurs="unbounded"/>
+					<xs:element name="requiredservice" type="MRequiredService" minOccurs="0" maxOccurs="unbounded"/>
+				</xs:sequence>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:complexType name="MProvidedService">
+		<xs:annotation>
+			<xs:documentation>A provided service definition.</xs:documentation>
+		</xs:annotation>
+		<xs:complexContent>
+			<xs:extension base="MInternalExpression">
+				<xs:attribute name="direct" type="xs:boolean" use="optional" default="false"/>
+			</xs:extension>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:complexType name="MRequiredService">
+		<xs:annotation>
+			<xs:documentation>A required service definition.</xs:documentation>
+		</xs:annotation>
+		<xs:complexContent>
+			<xs:extension base="MInternalExpression"/>
+		</xs:complexContent>
+	</xs:complexType>
+	<xs:complexType name="MElementNoName" abstract="true">
+		<xs:attribute name="description" type="xs:string" use="optional"/>
 	</xs:complexType>
 </xs:schema>

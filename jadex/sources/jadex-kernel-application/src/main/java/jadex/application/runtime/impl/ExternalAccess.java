@@ -5,6 +5,7 @@ import jadex.application.runtime.ISpace;
 import jadex.bridge.ComponentResultListener;
 import jadex.bridge.IComponentAdapter;
 import jadex.bridge.IComponentIdentifier;
+import jadex.bridge.IComponentStep;
 import jadex.bridge.IModelInfo;
 import jadex.commons.Future;
 import jadex.commons.IFuture;
@@ -19,10 +20,10 @@ public class ExternalAccess implements IApplicationExternalAccess
 {
 	//-------- attributes --------
 
-	/** The agent. */
+	/** The application component. */
 	protected ApplicationInterpreter application;
 
-	/** The agent adapter. */
+	/** The component adapter. */
 	protected IComponentAdapter adapter;
 	
 	/** The toString value. */
@@ -98,7 +99,7 @@ public class ExternalAccess implements IApplicationExternalAccess
 	 */
 	public IComponentIdentifier getParent()
 	{
-		return application.getParent().getComponentIdentifier();
+		return application.getParent()!=null ? application.getParent().getComponentIdentifier() : null;
 	}
 	
 	/**
@@ -107,7 +108,7 @@ public class ExternalAccess implements IApplicationExternalAccess
 	 */
 	public IFuture getChildren()
 	{
-		return adapter.getChildren();
+		return adapter.getChildrenIdentifiers();
 	}
 	
 	/**
@@ -159,6 +160,108 @@ public class ExternalAccess implements IApplicationExternalAccess
 	public IResultListener createResultListener(IResultListener listener)
 	{
 		return new ComponentResultListener(listener, adapter);
+	}
+	
+	/**
+	 *  Get the children (if any).
+	 *  @return The children.
+	 */
+	public IFuture getChildren(final String type)
+	{
+		final Future ret = new Future();
+		
+		if(adapter.isExternalThread())
+		{
+			try
+			{
+				adapter.invokeLater(new Runnable() 
+				{
+					public void run() 
+					{
+						ret.setResult(application.getChildren(type));
+					}
+				});
+			}
+			catch(Exception e)
+			{
+				ret.setException(e);
+			}
+		}
+		else
+		{
+			ret.setResult(application.getChildren(type));
+		}
+		
+		return ret;
+	}
+	
+	/**
+	 *  Get the file name of a component type.
+	 *  @param ctype The component type.
+	 *  @return The file name of this component type.
+	 */
+	public IFuture getFileName(final String ctype)
+	{
+		final Future ret = new Future();
+		
+		if(adapter.isExternalThread())
+		{
+			try
+			{
+				adapter.invokeLater(new Runnable() 
+				{
+					public void run() 
+					{
+						ret.setResult(application.getFileName(ctype));
+					}
+				});
+			}
+			catch(Exception e)
+			{
+				ret.setException(e);
+			}
+		}
+		else
+		{
+			ret.setResult(application.getFileName(ctype));
+		}
+		
+		return ret;
+	}
+	
+	/**
+	 *  Schedule a step of the agent.
+	 *  May safely be called from external threads.
+	 *  @param step	Code to be executed as a step of the agent.
+	 *  @return The result of the step.
+	 */
+	public IFuture scheduleStep(final IComponentStep step)
+	{
+		final Future ret = new Future();
+		
+		if(adapter.isExternalThread())
+		{
+			try
+			{
+				adapter.invokeLater(new Runnable() 
+				{
+					public void run() 
+					{
+						application.scheduleStep(step).addResultListener(new DelegationResultListener(ret));
+					}
+				});
+			}
+			catch(Exception e)
+			{
+				ret.setException(e);
+			}
+		}
+		else
+		{
+			application.scheduleStep(step).addResultListener(new DelegationResultListener(ret));
+		}
+		
+		return ret;
 	}
 	
 	/**

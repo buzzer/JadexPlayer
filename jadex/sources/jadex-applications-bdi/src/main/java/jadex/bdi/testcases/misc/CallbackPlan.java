@@ -4,7 +4,6 @@ import jadex.base.fipa.SFipa;
 import jadex.base.test.TestReport;
 import jadex.bdi.runtime.AgentEvent;
 import jadex.bdi.runtime.GoalFailureException;
-import jadex.bdi.runtime.IAgentListener;
 import jadex.bdi.runtime.IBeliefListener;
 import jadex.bdi.runtime.IBeliefSetListener;
 import jadex.bdi.runtime.IGoal;
@@ -15,6 +14,8 @@ import jadex.bdi.runtime.IMessageEvent;
 import jadex.bdi.runtime.IMessageEventListener;
 import jadex.bdi.runtime.IPlanListener;
 import jadex.bdi.runtime.Plan;
+import jadex.bridge.IComponentListener;
+import jadex.commons.ChangeEvent;
 
 import java.util.logging.Logger;
 
@@ -139,7 +140,7 @@ public class CallbackPlan extends Plan
 		final TestReport tr4 = new TestReport("#4", "Test if goal added can be observed in a listener.");
 		final TestReport tr5 = new TestReport("#5", "Test if goal finished can be observed in a listener.");
 		// todo: rename tr6
-		final TestReport tr5b = new TestReport("#5b", "Test if waitFor can be called in async listener.");
+//		final TestReport tr5b = new TestReport("#5b", "Test if waitFor can be called in async listener.");
 		getGoalbase().addGoalListener("goal", new IGoalListener()
 		{
 			public void goalAdded(AgentEvent ae)
@@ -151,49 +152,49 @@ public class CallbackPlan extends Plan
 			public void goalFinished(AgentEvent ae)
 			{
 				final IGoalListener t = this;
-				final boolean[]	started	= new boolean[1];
-				new Thread(new Runnable()
-				{
-					public void run()
-					{
-						// Hack!!! Make sure that thread has started before continuing.
-						// (Doesn't solve threading issue, but increases chances of success ;-( )
-						synchronized(started)
-						{
-							started[0]	= true;
-							started.notify();
-						}
+//				final boolean[]	started	= new boolean[1];
+//				new Thread(new Runnable()
+//				{
+//					public void run()
+//					{
+//						// Hack!!! Make sure that thread has started before continuing.
+//						// (Doesn't solve threading issue, but increases chances of success ;-( )
+//						synchronized(started)
+//						{
+//							started[0]	= true;
+//							started.notify();
+//						}
 
 						logger.info("Goal finished called");
 						getGoalbase().removeGoalListener("goal", t);
 						tr5.setSucceeded(true);
-						try
-						{
-							getExternalAccess().waitFor(100);
-							tr5b.setSucceeded(true);
-						}
-						catch(Exception e)
-						{
-							e.printStackTrace();
-						}
-					}
-				}).start();
-				
-				// Hack!!! Make sure that thread has started before continuing.
-				// (Doesn't solve threading issue, but increases chances of success ;-( )
-				synchronized(started)
-				{
-					if(!started[0])
-					{
-						try
-						{
-							started.wait();
-						}
-						catch(InterruptedException e)
-						{
-						}
-					}
-				}
+//						try
+//						{
+//							getExternalAccess().waitFor(100);
+//							tr5b.setSucceeded(true);
+//						}
+//						catch(Exception e)
+//						{
+//							e.printStackTrace();
+//						}
+//					}
+//				}).start();
+//				
+//				// Hack!!! Make sure that thread has started before continuing.
+//				// (Doesn't solve threading issue, but increases chances of success ;-( )
+//				synchronized(started)
+//				{
+//					if(!started[0])
+//					{
+//						try
+//						{
+//							started.wait();
+//						}
+//						catch(InterruptedException e)
+//						{
+//						}
+//					}
+//				}
 			}
 		}); // todo: async was true 
 		// Create a goal by setting "bel" to 2
@@ -205,9 +206,9 @@ public class CallbackPlan extends Plan
 		if(!tr5.isSucceeded())
 			tr5.setReason("Listener was not notified.");
 		getBeliefbase().getBeliefSet("testcap.reports").addFact(tr5);
-		if(!tr5b.isSucceeded())
-			tr5b.setReason("Could not call waitFor() in listener");
-		getBeliefbase().getBeliefSet("testcap.reports").addFact(tr5b);
+//		if(!tr5b.isSucceeded())
+//			tr5b.setReason("Could not call waitFor() in listener");
+//		getBeliefbase().getBeliefSet("testcap.reports").addFact(tr5b);
 			
 		// Internal event tests
 		
@@ -378,9 +379,9 @@ public class CallbackPlan extends Plan
 		});
 			
 		final TestReport tr16 = new TestReport("#16", "Test if agent killed can be observed in a listener.");
-		getScope().addAgentListener(new IAgentListener()
+		getScope().addComponentListener(new IComponentListener()
 		{
-			public void agentTerminating(AgentEvent ae)
+			public void componentTerminating(ChangeEvent ae)
 			{
 				logger.info("Agent terminating invoked");
 //				getExternalAccess().removeAgentListener(this);
@@ -389,7 +390,7 @@ public class CallbackPlan extends Plan
 				getBeliefbase().getBeliefSet("testcap.reports").addFact(tr16);
 			}
 			
-			public void agentTerminated(AgentEvent ae)
+			public void componentTerminated(ChangeEvent ae)
 			{
 				logger.info("Agent terminated invoked");
 			}

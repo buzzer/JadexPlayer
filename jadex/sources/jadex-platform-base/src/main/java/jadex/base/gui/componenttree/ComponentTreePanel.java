@@ -3,7 +3,7 @@ package jadex.base.gui.componenttree;
 import jadex.base.gui.ObjectInspectorPanel;
 import jadex.bridge.IComponentDescription;
 import jadex.bridge.IComponentIdentifier;
-import jadex.bridge.IComponentListener;
+import jadex.bridge.ICMSComponentListener;
 import jadex.bridge.IComponentManagementService;
 import jadex.bridge.IExternalAccess;
 import jadex.bridge.IRemoteServiceManagementService;
@@ -120,7 +120,7 @@ public class ComponentTreePanel extends JSplitPane
 	private final Action removeservice;
 
 	/** The component listener. */
-	private final IComponentListener	listener;
+	private final ICMSComponentListener	listener;
 	
 	/** The properties panel. */
 	private final JScrollPane	proppanel;
@@ -164,7 +164,7 @@ public class ComponentTreePanel extends JSplitPane
 		this.add(proppanel);
 		this.setResizeWeight(1.0);
 				
-		listener	= new IComponentListener()
+		listener	= new ICMSComponentListener()
 		{
 			public void componentRemoved(final IComponentDescription desc, Map results)
 			{
@@ -253,6 +253,7 @@ public class ComponentTreePanel extends JSplitPane
 					TreePath[]	paths	= tree.getSelectionPaths();
 					for(int i=0; paths!=null && i<paths.length; i++)
 					{
+						// note: cannot use getComponentIdenfier() due to proxy components return their remote cid
 						final IComponentIdentifier cid = ((IActiveComponentTreeNode)paths[i].getLastPathComponent()).getDescription().getName();
 						final IComponentTreeNode sel = (IComponentTreeNode)paths[i].getLastPathComponent();
 						cms.resumeComponent(cid).addResultListener(new SwingDefaultResultListener(ComponentTreePanel.this)
@@ -267,6 +268,11 @@ public class ComponentTreePanel extends JSplitPane
 										{
 											((AbstractComponentTreeNode)sel.getParent()).removeChild(sel);
 										}
+									}
+									
+									public void customExceptionOccurred(Object source, Exception exception)
+									{
+										super.customExceptionOccurred(source, new RuntimeException("Could not kill component: "+cid, exception));
 									}
 								});
 							}
@@ -306,6 +312,11 @@ public class ComponentTreePanel extends JSplitPane
 											{
 												final IComponentManagementService rcms = (IComponentManagementService)result;
 												rcms.destroyComponent(cid);
+												if(sel.getParent()!=null)
+												{
+													((AbstractComponentTreeNode)sel.getParent()).removeChild(sel);
+												}
+												
 												// Hack!!! Result will not be received when remote comp is platform. 
 //													.addResultListener(new SwingDefaultResultListener(ComponentTreePanel.this)
 //												{
@@ -479,8 +490,9 @@ public class ComponentTreePanel extends JSplitPane
 					}
 					else if(node instanceof IActiveComponentTreeNode)
 					{
-						IComponentDescription desc = ((IActiveComponentTreeNode)node).getDescription();
-						cms.getExternalAccess(desc.getName()).addResultListener(new SwingDefaultResultListener((Component)null)
+						//IComponentDescription desc = ((IActiveComponentTreeNode)node).getDescription();
+						IComponentIdentifier cid = ((IActiveComponentTreeNode)node).getDescription().getName();
+						cms.getExternalAccess(cid).addResultListener(new SwingDefaultResultListener((Component)null)
 						{
 							public void customResultAvailable(Object source, Object result)
 							{
@@ -728,18 +740,21 @@ public class ComponentTreePanel extends JSplitPane
 					public void customResultAvailable(Object source, Object result)
 					{
 						IComponentDescription[]	descriptions	= (IComponentDescription[])result;
-						IComponentDescription	root	= null;
-						for(int i=0; root==null && i<descriptions.length; i++)
+						if(descriptions.length!=0)
 						{
-							if(descriptions[i].getParent()==null)
+							IComponentDescription	root	= null;
+							for(int i=0; root==null && i<descriptions.length; i++)
 							{
-								root	= descriptions[i];
+								if(descriptions[i].getParent()==null)
+								{
+									root	= descriptions[i];
+								}
 							}
+							model.setRoot(new ComponentTreeNode(null, model, tree, root, cms, cic));
+							// Expand root node.
+							TreeExpansionHandler	teh	= new TreeExpansionHandler(tree);
+							teh.treeExpanded(new TreeExpansionEvent(tree, new TreePath(model.getRoot())));
 						}
-						model.setRoot(new ComponentTreeNode(null, model, tree, root, cms, cic));
-						// Expand root node.
-						TreeExpansionHandler	teh	= new TreeExpansionHandler(tree);
-						teh.treeExpanded(new TreeExpansionEvent(tree, new TreePath(model.getRoot())));
 					}
 				});
 				

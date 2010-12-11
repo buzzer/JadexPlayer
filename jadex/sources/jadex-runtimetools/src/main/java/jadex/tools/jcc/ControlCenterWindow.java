@@ -2,13 +2,13 @@ package jadex.tools.jcc;
 
 import jadex.base.gui.AboutDialog;
 import jadex.base.gui.JadexLogoButton;
+import jadex.base.gui.StatusBar;
 import jadex.base.gui.plugin.IControlCenterPlugin;
 import jadex.commons.BrowserLauncher;
 import jadex.commons.SUtil;
 import jadex.commons.concurrent.SwingDefaultResultListener;
 import jadex.commons.service.SServiceProvider;
 import jadex.commons.service.library.ILibraryService;
-import jadex.tools.help.SHelp;
 
 import java.awt.BorderLayout;
 import java.awt.CardLayout;
@@ -26,13 +26,10 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-import javax.help.CSH;
-import javax.help.HelpBroker;
 import javax.swing.AbstractAction;
 import javax.swing.Action;
 import javax.swing.Box;
 import javax.swing.Icon;
-import javax.swing.ImageIcon;
 import javax.swing.JButton;
 import javax.swing.JComponent;
 import javax.swing.JFileChooser;
@@ -201,8 +198,8 @@ public class ControlCenterWindow extends JFrame
 	            		button.setIcon(plugin.getToolIcon(button.isSelected()));
 	            	}
 	            });
-	            if(plugins[i].getHelpID()!=null)
-	            	SHelp.setupHelp(button, plugins[i].getHelpID());
+//	            if(plugins[i].getHelpID()!=null)
+//	            	SHelp.setupHelp(button, plugins[i].getHelpID());
 	            
 	            //bg.add(button);
 	     	    toolbar.add(button);
@@ -276,20 +273,20 @@ public class ControlCenterWindow extends JFrame
 		
 		// Help menu.
 		JMenu help = new JMenu("Help");
-		HelpBroker hb = SHelp.setupHelp(this.getContentPane(), "tools.controlcenter");
-		if(hb!=null)
-		{
-			JMenuItem helptopics = new JMenuItem("Help Topics");
-			helptopics.addActionListener(new CSH.DisplayHelpFromSource(hb));
-
-			JMenuItem helptrack = new JMenuItem(new ImageIcon(ControlCenter.class
-				.getResource("/jadex/tools/common/images/help.png"), "Help cursor"));
-
-			helptrack.addActionListener(new CSH.DisplayHelpAfterTracking(hb));
-
-			help.add(helptopics);
-			help.add(helptrack);
-		}
+//		HelpBroker hb = SHelp.setupHelp(this.getContentPane(), "tools.controlcenter");
+//		if(hb!=null)
+//		{
+//			JMenuItem helptopics = new JMenuItem("Help Topics");
+//			helptopics.addActionListener(new CSH.DisplayHelpFromSource(hb));
+//
+//			JMenuItem helptrack = new JMenuItem(new ImageIcon(ControlCenter.class
+//				.getResource("/jadex/tools/common/images/help.png"), "Help cursor"));
+//
+//			helptrack.addActionListener(new CSH.DisplayHelpAfterTracking(hb));
+//
+//			help.add(helptopics);
+//			help.add(helptrack);
+//		}
 		help.add(new JMenuItem(ONLINE_DOC));
 		help.add(new JMenuItem(ABOUT));
 		menubar.add(help);
@@ -728,7 +725,7 @@ public class ControlCenterWindow extends JFrame
 		{
 			try
 			{
-				BrowserLauncher.openURL("http://vsis-www.informatik.uni-hamburg.de/projects/jadex/");
+				BrowserLauncher.openURL("http://jadex-agents.informatik.uni-hamburg.de/xwiki/bin/view/Resources/Online+Documentation");
 			}
 			catch(IOException e)
 			{

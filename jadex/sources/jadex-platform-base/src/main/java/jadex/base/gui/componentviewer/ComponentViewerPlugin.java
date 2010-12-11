@@ -289,6 +289,7 @@ public class ComponentViewerPlugin extends AbstractJCCPlugin
 				if(panels.containsKey(nodeid))
 				{
 					storeCurrentPanelSettings();
+//					System.out.println("removeing: "+nodeid+" "+cards.getComponent(nodeid));
 					detail.remove(cards.getComponent(nodeid));
 					IAbstractViewerPanel panel = (IAbstractViewerPanel)panels.remove(nodeid);
 					panel.shutdown();
@@ -362,7 +363,7 @@ public class ComponentViewerPlugin extends AbstractJCCPlugin
 					else if(tmp instanceof IActiveComponentTreeNode)
 					{
 						final IActiveComponentTreeNode node = (IActiveComponentTreeNode)tmp;
-						final IComponentIdentifier cid = node.getDescription().getName();
+						final IComponentIdentifier cid = node.getComponentIdentifier();
 						
 						SServiceProvider.getService(getJCC().getServiceProvider(), IComponentManagementService.class)
 							.addResultListener(new SwingDefaultResultListener(comptree)
@@ -410,8 +411,8 @@ public class ComponentViewerPlugin extends AbstractJCCPlugin
 													}
 													catch(Exception e)
 													{
-//														e.printStackTrace();
-														getJCC().displayError("Error initializing service viewer panel.", "Component viewer panel class: "+classname, e);
+														e.printStackTrace();
+														getJCC().displayError("Error initializing component viewer panel.", "Component viewer panel class: "+classname, e);
 													}
 												}
 											});
@@ -475,36 +476,48 @@ public class ComponentViewerPlugin extends AbstractJCCPlugin
 		}
 		else if(node instanceof IActiveComponentTreeNode)
 		{
-			final IComponentIdentifier cid = ((IActiveComponentTreeNode)node).getDescription().getName();
-
-			Boolean viewable = (Boolean)viewables.get(cid);
-			if(viewable!=null)
+			final IComponentIdentifier cid = ((IActiveComponentTreeNode)node).getComponentIdentifier();
+			
+			// For proxy components the cid could be null if the remote cid has not yet been retrieved
+			// Using a IFuture as return value in not very helpful because this method can't directly
+			// return a result, even if known.
+			// todo: how to initiate a repaint in case the the cid is null
+			if(cid!=null)
 			{
-				ret = viewable.booleanValue();
-			}
-			else
-			{
-				// Unknown -> start search to find out synchronously
-				SServiceProvider.getService(getJCC().getServiceProvider(), IComponentManagementService.class)
-					.addResultListener(new SwingDefaultResultListener(comptree)
+				Boolean viewable = (Boolean)viewables.get(cid);
+				if(viewable!=null)
 				{
-					public void customResultAvailable(Object source, Object result)
+					ret = viewable.booleanValue();
+				}
+				else
+				{
+					// Unknown -> start search to find out asynchronously
+					SServiceProvider.getService(getJCC().getServiceProvider(), IComponentManagementService.class)
+						.addResultListener(new SwingDefaultResultListener(comptree)
 					{
-						final IComponentManagementService cms = (IComponentManagementService)result;
-						
-						cms.getExternalAccess(cid).addResultListener(new SwingDefaultResultListener(comptree)
+						public void customResultAvailable(Object source, Object result)
 						{
-							public void customResultAvailable(Object source, Object result)
+							final IComponentManagementService cms = (IComponentManagementService)result;
+							
+							cms.getExternalAccess(cid).addResultListener(new SwingDefaultResultListener(comptree)
 							{
-								final IExternalAccess exta = (IExternalAccess)result;
-								final String classname = (String)exta.getModel().getProperties().get(IAbstractViewerPanel.PROPERTY_VIEWERCLASS);
-								viewables.put(cid, classname==null? Boolean.FALSE: Boolean.TRUE);
-//								System.out.println("node: "+viewables.get(cid));
-								node.refresh(false, false);
-							}
-						});
-					}
-				});
+								public void customResultAvailable(Object source, Object result)
+								{
+									final IExternalAccess exta = (IExternalAccess)result;
+									final String classname = (String)exta.getModel().getProperties().get(IAbstractViewerPanel.PROPERTY_VIEWERCLASS);
+									viewables.put(cid, classname==null? Boolean.FALSE: Boolean.TRUE);
+	//								System.out.println("node: "+viewables.get(cid));
+									node.refresh(false, false);
+								}
+								
+								public void customExceptionOccurred(Object source, Exception exception)
+								{
+									exception.printStackTrace();
+								}
+							});
+						}
+					});
+				}
 			}
 		}
 		return ret;

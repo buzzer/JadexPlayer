@@ -14,7 +14,6 @@ import jadex.commons.concurrent.SwingDefaultResultListener;
 import jadex.commons.service.IServiceProvider;
 import jadex.commons.service.SServiceProvider;
 import jadex.commons.service.library.ILibraryService;
-import jadex.tools.help.SHelp;
 import jadex.xml.PropertiesXMLHelper;
 
 import java.awt.Cursor;
@@ -611,8 +610,8 @@ public class ControlCenter implements IControlCenter
 					setPluginProperties(plugin);
 
 				// Todo: move this code to controlcenterwindow!?
-				if(plugin.getHelpID() != null)
-					SHelp.setupHelp(comp, plugin.getHelpID());
+//				if(plugin.getHelpID() != null)
+//					SHelp.setupHelp(comp, plugin.getHelpID());
 
 				window.content.add(comp, plugin.getName());
 //				window.setPerspective(plugin);

@@ -3,6 +3,7 @@ package jadex.base.gui.componenttree;
 import jadex.bridge.IComponentDescription;
 import jadex.commons.SGUI;
 import jadex.commons.SUtil;
+import jadex.commons.gui.PropertiesPanel;
 
 import javax.swing.JLabel;
 import javax.swing.JTable;
@@ -51,9 +52,9 @@ public class ComponentProperties	extends	PropertiesPanel
 		getTextField("Ownership").setText(desc.getOwnership());
 		getTextField("State").setText(desc.getState());
 		getTextField("Processing state").setText(desc.getProcessingState());
-		getCheckBox("Master").setSelected(desc.isMaster());
-		getCheckBox("Daemon").setSelected(desc.isDaemon());
-		getCheckBox("Auto shutdown").setSelected(desc.isAutoShutdown());
+		getCheckBox("Master").setSelected(desc.getMaster()==null? false: desc.getMaster().booleanValue());
+		getCheckBox("Daemon").setSelected(desc.getDaemon()==null? false: desc.getDaemon().booleanValue());
+		getCheckBox("Auto shutdown").setSelected(desc.getAutoShutdown()==null? false: desc.getAutoShutdown().booleanValue());
 		
 		JTable	list	= (JTable)getComponent("Addresses");
 		String[]	addresses	= desc.getName().getAddresses();

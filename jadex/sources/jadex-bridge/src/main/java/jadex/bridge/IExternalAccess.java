@@ -1,13 +1,14 @@
 package jadex.bridge;
 
 import jadex.commons.IFuture;
+import jadex.commons.IRemotable;
 import jadex.commons.service.IServiceProvider;
 
 /**
  *  The interface for accessing components from the outside.
  *  To be specialized for concrete component types.
  */
-public interface IExternalAccess
+public interface IExternalAccess extends IRemotable
 {
 	//-------- cache --------
 	
@@ -29,6 +30,20 @@ public interface IExternalAccess
 	 */
 	public IComponentIdentifier	getComponentIdentifier();
 	
+	/**
+	 *  Get the service provider.
+	 *  @return The service provider.
+	 */
+	public IServiceProvider getServiceProvider();
+	
+	/**
+	 *  Schedule a step of the agent.
+	 *  May safely be called from external threads.
+	 *  @param step	Code to be executed as a step of the agent.
+	 *  @return The result of the step.
+	 */
+	public IFuture scheduleStep(IComponentStep step);
+	
 	//-------- normal --------
 	
 	/**
@@ -44,23 +59,9 @@ public interface IExternalAccess
 	
 	//-------- exclude --------
 	
-	/**
-	 *  Get the service provider.
-	 *  @return The service provider.
-	 */
-	public IServiceProvider getServiceProvider();
-	
-	/**
-	 *  Create a result listener that will be 
-	 *  executed on the component thread.
-	 *  @param listener The result listener.
-	 *  @return A result listener that is called on component thread.
-	 * /
-	public IResultListener createResultListener(IResultListener listener);*/
-	
-	
 	// todo: do we want this? should getArg() deliver only args supplied from
 	// outside or also values that are default/initial values in the model.
+	// problem: this would require to store the arguments for the whole lifetime of the component.
 	/**
 	 *  Get argument value.
 	 *  @param name The argument name.

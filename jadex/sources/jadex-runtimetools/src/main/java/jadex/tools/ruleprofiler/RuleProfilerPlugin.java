@@ -7,7 +7,7 @@ import jadex.base.gui.componenttree.INodeHandler;
 import jadex.base.gui.plugin.AbstractJCCPlugin;
 import jadex.bdi.BDIAgentFactory;
 import jadex.bridge.IComponentDescription;
-import jadex.bridge.IComponentListener;
+import jadex.bridge.ICMSComponentListener;
 import jadex.bridge.IComponentManagementService;
 import jadex.commons.SGUI;
 import jadex.commons.concurrent.SwingDefaultResultListener;
@@ -40,7 +40,7 @@ import javax.swing.tree.TreePath;
  *  The rule profiler allows to browse through
  *  profiling information gathered in the rule system.
  */
-public class RuleProfilerPlugin extends AbstractJCCPlugin	implements IComponentListener
+public class RuleProfilerPlugin extends AbstractJCCPlugin	implements ICMSComponentListener
 {
 	// -------- constants --------
 
@@ -254,7 +254,7 @@ public class RuleProfilerPlugin extends AbstractJCCPlugin	implements IComponentL
 		split.add(detail);
 		//split.setResizeWeight(1.0);
 
-		SHelp.setupHelp(split, getHelpID());
+//		SHelp.setupHelp(split, getHelpID());
 
 		split.setDividerLocation(150);
 
@@ -343,7 +343,7 @@ public class RuleProfilerPlugin extends AbstractJCCPlugin	implements IComponentL
 					IActiveComponentTreeNode node = (IActiveComponentTreeNode)paths[i].getLastPathComponent();
 					IComponentDescription desc = node.getDescription();
 					RuleProfilerPanel	panel = new RuleProfilerPanel(getJCC().getServiceProvider(), desc.getName());
-					SHelp.setupHelp(panel, getHelpID());
+//					SHelp.setupHelp(panel, getHelpID());
 					detail.add(panel, desc);
 					comptree.getModel().fireNodeChanged(node);
 				}

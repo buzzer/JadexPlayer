@@ -307,14 +307,25 @@ public class OAVBDIMetaModel
 	/** Expression has variable. */
 	public static OAVAttributeType expression_has_variable;
 
-	/** Expression has content attribute. */
-	public static OAVAttributeType expression_has_content;
+	/** Expression has text attribute. */
+	public static OAVAttributeType expression_has_text;
+	
+	/** Expression has parsed expression attribute. */
+	public static OAVAttributeType expression_has_parsed;
 
 	/** Expression has classname attribute. */
 	public static OAVAttributeType expression_has_classname;
 
 	/** Expression has class attribute. */
 	public static OAVAttributeType expression_has_class;	
+
+	//-------- service --------
+	
+	/** The expression type. */
+	public static OAVObjectType providedservice_type;
+	
+	/** Service has direct attribute. */
+	public static OAVAttributeType providedservice_has_direct;
 
 	
 //	/** Expression has parameters attribute. */
@@ -372,6 +383,19 @@ public class OAVBDIMetaModel
 
 	/** The agent has a service container type. */
 	public static OAVAttributeType agent_has_servicecontainer;
+	
+	/** The agent has a suspend attribute. */
+	public static OAVAttributeType agent_has_suspend;
+
+	/** The agent has a master attribute. */
+	public static OAVAttributeType agent_has_master;
+
+	/** The agent has a daemon attribute. */
+	public static OAVAttributeType agent_has_daemon;
+
+	/** The agent has a daemon attribute. */
+	public static OAVAttributeType agent_has_autoshutdown;
+
 	
 //	/** Agent has propertyfile attribute. */
 //	public static OAVAttributeType agent_has_propertyfile;
@@ -436,7 +460,8 @@ public class OAVBDIMetaModel
 	public static OAVAttributeType capability_has_conditions;
 				
 	/** Capability has expressions attribute. */
-	public static OAVAttributeType capability_has_services;
+	public static OAVAttributeType capability_has_requiredservices;
+	public static OAVAttributeType capability_has_providedservices;
 	// todo: servicerefs
 	
 	/** Capability has properties attribute. */
@@ -751,6 +776,18 @@ public class OAVBDIMetaModel
 	/** The configuration type. */
 	public static OAVObjectType configuration_type;
 	
+	/** The agent has a suspend attribute. */
+	public static OAVAttributeType configuration_has_suspend;
+
+	/** The agent has a master attribute. */
+	public static OAVAttributeType configuration_has_master;
+
+	/** The agent has a daemon attribute. */
+	public static OAVAttributeType configuration_has_daemon;
+
+	/** The agent has a daemon attribute. */
+	public static OAVAttributeType configuration_has_autoshutdown;
+	
 	/** Configuration has initial capabilities attribute. */
 	public static OAVAttributeType configuration_has_initialcapabilities;
 	
@@ -864,6 +901,7 @@ public class OAVBDIMetaModel
 		expression_type = bdimm_type_model.createType("mexpression", referenceableelement_type);
 		expressionreference_type = bdimm_type_model.createType("mexpressionreference", elementreference_type);
 		condition_type = bdimm_type_model.createType("mcondition", expression_type);
+		providedservice_type = bdimm_type_model.createType("mservice", expression_type);
 //		relevantbelief_type = bdimm_type_model.createType("mrelevantbelief", expressionrelevant_type);
 //		relevantbeliefset_type = bdimm_type_model.createType("mrelevantbeliefset", expressionrelevant_type);
 //		relevantgoal_type = bdimm_type_model.createType("mrelevantgoal", expressionrelevant_type);
@@ -946,10 +984,14 @@ public class OAVBDIMetaModel
 
 		expression_has_language = expression_type.createAttributeType("mexpression_has_language", OAVJavaType.java_string_type, OAVAttributeType.NONE);//, "java");
 		expression_has_variable = expression_type.createAttributeType("mexpression_has_variable", OAVJavaType.java_string_type, OAVAttributeType.NONE);
-		expression_has_content = expression_type.createAttributeType("mexpression_has_content", OAVJavaType.java_object_type);// java_parsedexpression_type)
+		expression_has_text = expression_type.createAttributeType("expression_has_text", OAVJavaType.java_string_type);
+		expression_has_parsed = expression_type.createAttributeType("expression_has_parsed", OAVJavaType.java_object_type);// java_parsedexpression_type)
 		expression_has_classname = expression_type.createAttributeType("mexpression_has_classname", OAVJavaType.java_string_type, OAVAttributeType.NONE);
 		expression_has_class = expression_type.createAttributeType("mexpression_has_class", OAVJavaType.java_class_type, OAVAttributeType.NONE, Object.class);
 
+		providedservice_has_direct = providedservice_type.createAttributeType("mservice_has_direct", OAVJavaType.java_boolean_type, OAVAttributeType.NONE, Boolean.FALSE);
+
+		
 //		expression_has_class = expression_type.createAttributeType("mexpression_has_class", OAVJavaType.java_class_type);
 //		expression_has_parameters = expression_type.createAttributeType("mexpression_has_parameters",  expressionparameter_type, OAVAttributeType.LIST);
 //		expression_has_relevants = expression_type.createAttributeType("mexpression_has_relevants",  expressionrelevant_type, OAVAttributeType.LIST);
@@ -1054,7 +1096,7 @@ public class OAVBDIMetaModel
 //		goal_has_cardinality = goal_type.createAttributeType("mgoal_has_cardinality", OAVJavaType.java_integer_type, OAVAttributeType.NONE, new Integer(-1));
 		goal_has_cardinality = goal_type.createAttributeType("mgoal_has_cardinality", OAVJavaType.java_integer_type, OAVAttributeType.NONE, new Integer(Integer.MAX_VALUE));
 		goal_has_unique = goal_type.createAttributeType("mgoal_has_unique", OAVJavaType.java_boolean_type);
-		goal_has_excludedparameter = goal_type.createAttributeType("mgoal_has_excludedparameter", parameter_type, OAVAttributeType.LIST);	// Todo: parameter sets?
+		goal_has_excludedparameter = goal_type.createAttributeType("mgoal_has_excludedparameter", OAVJavaType.java_string_type, OAVAttributeType.LIST);	// Todo: parameter sets?
 		
 		// perform goal
 		
@@ -1142,7 +1184,11 @@ public class OAVBDIMetaModel
 		configuration_has_initialmessageevents = configuration_type.createAttributeType("mconfiguration_has_initialmessageevents", configelement_type, OAVAttributeType.LIST);
 		configuration_has_endinternalevents = configuration_type.createAttributeType("mconfiguration_has_endinternalevents", configelement_type, OAVAttributeType.LIST);
 		configuration_has_endmessageevents = configuration_type.createAttributeType("mconfiguration_has_endmessageevents", configelement_type, OAVAttributeType.LIST);
-				
+		configuration_has_suspend = configuration_type.createAttributeType("mconfiguration_has_suspend", OAVJavaType.java_boolean_type);
+		configuration_has_master = configuration_type.createAttributeType("mconfiguration_has_master", OAVJavaType.java_boolean_type);
+		configuration_has_daemon = configuration_type.createAttributeType("mconfiguration_has_daemon", OAVJavaType.java_boolean_type);
+		configuration_has_autoshutdown = configuration_type.createAttributeType("mconfiguration_has_autoshutdown", OAVJavaType.java_boolean_type);
+		
 		// capability
 		capability_has_package = capability_type.createAttributeType("mcapability_has_package", OAVJavaType.java_string_type);
 		capability_has_abstract = capability_type.createAttributeType("mcapability_has_abstract", OAVJavaType.java_boolean_type);
@@ -1162,7 +1208,8 @@ public class OAVBDIMetaModel
 		capability_has_expressionrefs = capability_type.createAttributeType("mcapability_has_mexpressionrefs", expressionreference_type, OAVAttributeType.ORDEREDMAP, null, modelelement_has_name);
 		capability_has_expressions = capability_type.createAttributeType("mcapability_has_mexpressions", expression_type, OAVAttributeType.ORDEREDMAP, null, modelelement_has_name);
 		capability_has_conditions = capability_type.createAttributeType("mcapability_has_mconditions", condition_type, OAVAttributeType.ORDEREDMAP, null, modelelement_has_name);
-		capability_has_services = capability_type.createAttributeType("mcapability_has_mservices", expression_type, OAVAttributeType.LIST);
+		capability_has_requiredservices = capability_type.createAttributeType("mcapability_has_mrequiredservices", expression_type, OAVAttributeType.LIST);
+		capability_has_providedservices = capability_type.createAttributeType("mcapability_has_mprovidedservices", providedservice_type, OAVAttributeType.LIST);
 		capability_has_properties = capability_type.createAttributeType("mcapability_has_mproperties", expression_type, OAVAttributeType.ORDEREDMAP, null, modelelement_has_name);
 		capability_has_defaultconfiguration = capability_type.createAttributeType("mcapability_has_defaultconfiguration", OAVJavaType.java_string_type);
 		capability_has_configurations = capability_type.createAttributeType("mcapability_has_mconfigurations", configuration_type, OAVAttributeType.ORDEREDMAP, null, modelelement_has_name);
@@ -1170,6 +1217,10 @@ public class OAVBDIMetaModel
 		// agent
 //		agent_has_propertyfile	= agent_type.createAttributeType("magent_has_propertyfile", OAVJavaType.java_string_type);
 		agent_has_servicecontainer = agent_type.createAttributeType("magent_has_servicecontainer", expression_type);
+		agent_has_suspend = agent_type.createAttributeType("magent_has_suspend", OAVJavaType.java_boolean_type);
+		agent_has_master = agent_type.createAttributeType("magent_has_master", OAVJavaType.java_boolean_type);
+		agent_has_daemon = agent_type.createAttributeType("magent_has_daemon", OAVJavaType.java_boolean_type);
+		agent_has_autoshutdown = agent_type.createAttributeType("magent_has_autoshutdown", OAVJavaType.java_boolean_type);
 		
 		// propertybase
 		properties_has_properties	= properties_type.createAttributeType("properties_has_properties", properties_type, OAVAttributeType.LIST);

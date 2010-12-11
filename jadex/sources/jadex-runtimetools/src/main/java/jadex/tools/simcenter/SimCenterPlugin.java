@@ -2,7 +2,6 @@ package jadex.tools.simcenter;
 
 import jadex.base.gui.plugin.AbstractJCCPlugin;
 import jadex.commons.SGUI;
-import jadex.tools.help.SHelp;
 
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
@@ -103,7 +102,7 @@ public class SimCenterPlugin extends AbstractJCCPlugin
 		ButtonGroup group = new ButtonGroup();
 		
 		JMenu menu = new JMenu("Time Settings");
-		SHelp.setupHelp(menu, "tools.simcenter");
+//		SHelp.setupHelp(menu, "tools.simcenter");
 
 		JRadioButtonMenuItem time_long = new JRadioButtonMenuItem(new AbstractAction("Long value")
 		{

@@ -9,9 +9,10 @@ import jadex.base.test.Testcase;
 import jadex.bridge.Argument;
 import jadex.bridge.IArgument;
 import jadex.bridge.IComponentIdentifier;
+import jadex.bridge.IComponentStep;
+import jadex.bridge.IInternalAccess;
 import jadex.bridge.ISearchConstraints;
 import jadex.bridge.MessageType;
-import jadex.commons.ICommand;
 import jadex.commons.IFuture;
 import jadex.commons.concurrent.DefaultResultListener;
 import jadex.commons.concurrent.IResultListener;
@@ -169,13 +170,14 @@ public class DFTestAgent extends MicroAgent
 		
 		sendMessage(hlefMessage, SFipa.FIPA_MESSAGE_TYPE);
 		
-		waitFor(1000, new ICommand()
+		waitFor(1000, new IComponentStep()
 		{
-			public void execute(Object args)
+			public Object execute(IInternalAccess ia)
 			{
 				// Set test failure and kill agent.
 				tr.setFailed("No message received.");
 				killAgent();
+				return null;
 			}
 		});
 	}
@@ -204,6 +206,6 @@ public class DFTestAgent extends MicroAgent
 	public static Object getMetaInfo()
 	{
 		return new MicroAgentMetaInfo("Test DF usage from micro agent.", 
-			null, null, new IArgument[]{new Argument("testresults", null, "Testcase")}, null, null);
+			null, null, new IArgument[]{new Argument("testresults", null, "Testcase")});
 	}
 }

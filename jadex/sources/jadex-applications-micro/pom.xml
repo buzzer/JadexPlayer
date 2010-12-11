@@ -4,7 +4,7 @@
 	<groupId>net.sourceforge.jadex</groupId>
 	<artifactId>jadex-applications-micro</artifactId>
 	<packaging>jar</packaging>
-	<version>2.0-rc5</version>
+	<version>2.0-rc6</version>
 	<name>jadex-applications-micro</name>
 	<url>http://jadex.sourceforge.net</url>
 
@@ -84,7 +84,6 @@
 					<exclude>**/*.java</exclude>
 					<exclude>**/.svn/*</exclude>
 					<exclude>**/dungeonkeeper/</exclude>
-					<exclude>**/helpline/</exclude>
 				</excludes>
 			</resource>
 		</resources>
@@ -93,12 +92,12 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
+        		<version>2.3.2</version>
 				<configuration>
 					<source>1.4</source>
 					<target>1.4</target>
 					<excludes>
 						<exclude>**/dungeonkeeper/</exclude>
-						<exclude>**/helpline/</exclude>
 					</excludes>
 				</configuration>
 			</plugin>
@@ -106,7 +105,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-source-plugin</artifactId>
-				<version>2.1</version>
+        		<version>2.1.2</version>
 				<executions>
 					<execution>
 						<id>attach-sources</id>
@@ -119,7 +118,6 @@
 				<configuration>
 					<excludes>
 						<exclude>**/dungeonkeeper/</exclude>
-						<exclude>**/helpline/</exclude>
 					</excludes>
 				</configuration>
 			</plugin>
@@ -127,7 +125,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-javadoc-plugin</artifactId>
-				<!-- <version>2.7</version> -->
+        		<version>2.7</version>
 				<executions>
 					<execution>
 						<id>attach-javadoc</id>
@@ -139,7 +137,6 @@
 				</executions>
 				<configuration>
 					<excludePackageNames>*.dungeonkeeper.*</excludePackageNames>
-					<excludePackageNames>*.helpline.*</excludePackageNames>
 				</configuration>
 			</plugin>
 
@@ -171,25 +168,25 @@
 		<dependency>
 			<groupId>net.sourceforge.jadex</groupId>
 			<artifactId>jadex-bridge</artifactId>
-			<version>2.0-rc5</version>
+			<version>2.0-rc6</version>
 		</dependency>
 
 		<dependency>
 			<groupId>net.sourceforge.jadex</groupId>
 			<artifactId>jadex-platform-base</artifactId>
-			<version>2.0-rc5</version>
+			<version>2.0-rc6</version>
 		</dependency>
 
 		<dependency>
 			<groupId>net.sourceforge.jadex</groupId>
 			<artifactId>jadex-kernel-micro</artifactId>
-			<version>2.0-rc5</version>
+			<version>2.0-rc6</version>
 		</dependency>
 
 		<dependency>
 			<groupId>net.sourceforge.jadex</groupId>
 			<artifactId>jadex-kernel-application</artifactId>
-			<version>2.0-rc5</version>
+			<version>2.0-rc6</version>
 		</dependency>
 	</dependencies>
 </project>

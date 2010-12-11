@@ -48,6 +48,24 @@ public class ModelInfo implements IModelInfo
 	/** The classloader. */
 	protected ClassLoader classloader;
 	
+	/** The required services. */
+	protected Class[] requiredservices;
+	
+	/** The provided services. */
+	protected Class[] providedservices;
+	
+	/** The suspend flag. */
+	protected IModelValueProvider suspend;
+	
+	/** The master flag. */
+	protected IModelValueProvider master;
+	
+	/** The daemon flag. */
+	protected IModelValueProvider daemon;
+
+	/** The autoshutdown flag. */
+	protected IModelValueProvider autoshutdown;
+	
 	//-------- constructors --------
 	
 	/**
@@ -55,16 +73,19 @@ public class ModelInfo implements IModelInfo
 	 */
 	public ModelInfo()
 	{
-		this(null, null, null, null, null, null, null, false, null, null, null);
+		this(null, null, null, null, null, null, null, 
+			false, null, null, null, null, null, null, null, null);
 	}
 	
 	/**
 	 *  Create a new model info.
 	 */
 	public ModelInfo(String name, String packagename,
-			String description, IErrorReport report, String[] configurations,
-			IArgument[] arguments, IArgument[] results, boolean startable,
-			String filename, Map properties, ClassLoader classloader)
+		String description, IErrorReport report, String[] configurations,
+		IArgument[] arguments, IArgument[] results, boolean startable,
+		String filename, Map properties, ClassLoader classloader, 
+		Class[] requiredservices, Class[] providedservices, 
+		IModelValueProvider master, IModelValueProvider daemon, IModelValueProvider autoshutdown)
 	{
 		this.name = name;
 		this.packagename = packagename;
@@ -77,6 +98,11 @@ public class ModelInfo implements IModelInfo
 		this.filename = filename;
 		this.properties = properties!=null? properties: new HashMap();
 		this.classloader = classloader;
+		this.requiredservices = requiredservices;
+		this.providedservices = providedservices;
+		this.master = master;
+		this.daemon = daemon;
+		this.autoshutdown = autoshutdown;
 	}
 
 	//-------- methods --------
@@ -368,5 +394,117 @@ public class ModelInfo implements IModelInfo
 	public void setClassloader(ClassLoader classloader)
 	{
 		this.classloader = classloader;
+	}
+
+	/**
+	 *  Get the required services.
+	 *  @return The required services.
+	 */
+	public Class[] getRequiredServices()
+	{
+		return requiredservices==null? SUtil.EMPTY_CLASS_ARRAY: requiredservices;
+	}
+
+	/**
+	 *  Set the required services.
+	 *  @param required services The required services to set.
+	 */
+	public void setRequiredServices(Class[] requiredservices)
+	{
+		this.requiredservices = requiredservices;
+	}
+
+	/**
+	 *  Get the provided services.
+	 *  @return The provided services.
+	 */
+	public Class[] getProvidedServices()
+	{
+		return providedservices==null? SUtil.EMPTY_CLASS_ARRAY: providedservices;
+	}
+
+	/**
+	 *  Set the provided services.
+	 *  @param provided services The provided services to set.
+	 */
+	public void setProvidedServices(Class[] providedservices)
+	{
+		this.providedservices = providedservices;
+	}
+	
+	/**
+	 *  Get the master flag.
+	 *  @param configname The configname.
+	 *  @return The master flag value.
+	 */
+	public Boolean getMaster(String configname)
+	{
+		return master==null? null: (Boolean)master.getValue(configname);
+	}
+	
+	/**
+	 *  Get the daemon flag.
+	 *  @param configname The configname.
+	 *  @return The daemon flag value.
+	 */
+	public Boolean getDaemon(String configname)
+	{
+		return daemon==null? null: (Boolean)daemon.getValue(configname);
+	}
+	
+	/**
+	 *  Get the autoshutdown flag.
+	 *  @param configname The configname.
+	 *  @return The autoshutdown flag value.
+	 */
+	public Boolean getAutoShutdown(String configname)
+	{
+		return autoshutdown==null? null: (Boolean)autoshutdown.getValue(configname);
+	}
+
+	/**
+	 *  Get the suspend flag.
+	 *  @param configname The configname.
+	 *  @return The suspend flag value.
+	 */
+	public Boolean getSuspend(String configname)
+	{
+		return suspend==null? null: (Boolean)suspend.getValue(configname);
+	}
+	
+	/**
+	 *  Set the master.
+	 *  @param master The master to set.
+	 */
+	public void setMaster(IModelValueProvider master)
+	{
+		this.master = master;
+	}
+
+	/**
+	 *  Set the daemon.
+	 *  @param daemon The daemon to set.
+	 */
+	public void setDaemon(IModelValueProvider daemon)
+	{
+		this.daemon = daemon;
+	}
+
+	/**
+	 *  Set the autoshutdown.
+	 *  @param autoshutdown The autoshutdown to set.
+	 */
+	public void setAutoShutdown(IModelValueProvider autoshutdown)
+	{
+		this.autoshutdown = autoshutdown;
+	}
+
+	/**
+	 *  Set the suspend flag.
+	 *  @param suspend The suspend to set.
+	 */
+	public void setSuspend(IModelValueProvider suspend)
+	{
+		this.suspend = suspend;
 	}
 }

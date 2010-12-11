@@ -151,6 +151,12 @@ public class PlanRules
 		// todo: this code is not finished
 		// - must allow multiple goal mapping specifications -> metamodel
 		// - add support for other mappings, internal event, message event
+		
+		
+		boolean iem = reason!=null && state.getType(reason).isSubtype(OAVBDIRuntimeModel.internalevent_type);
+		boolean mem = reason!=null && state.getType(reason).isSubtype(OAVBDIRuntimeModel.messageevent_type);
+		boolean gom = reason!=null && state.getType(reason).isSubtype(OAVBDIRuntimeModel.goal_type);
+		
 		Collection coll = state.getAttributeValues(mplan, OAVBDIMetaModel.parameterelement_has_parameters);
 		if(coll!=null)
 		{
@@ -158,31 +164,38 @@ public class PlanRules
 			{
 				Object mparam = it.next();
 				
-				String	paramref	= (String)state.getAttributeValue(mparam, OAVBDIMetaModel.planparameter_has_goalmapping);
-				if(paramref!=null)
+				if(gom)
 				{
-					int pidx = paramref.lastIndexOf('.');
-					String paramname = paramref.substring(pidx+1);
-					generateParameterMapping(state, rplan, mparam, paramname, reason, rcap);
-					continue;
+					String	paramref	= (String)state.getAttributeValue(mparam, OAVBDIMetaModel.planparameter_has_goalmapping);
+					if(paramref!=null)
+					{
+						int pidx = paramref.lastIndexOf('.');
+						String paramname = paramref.substring(pidx+1);
+						generateParameterMapping(state, rplan, mparam, paramname, reason, rcap);
+						continue;
+					}
 				}
-				
-				paramref	= (String)state.getAttributeValue(mparam, OAVBDIMetaModel.planparameter_has_messageeventmapping);
-				if(paramref!=null)
+				else if(mem)
 				{
-					int pidx = paramref.lastIndexOf('.');
-					String paramname = paramref.substring(pidx+1);
-					generateParameterMapping(state, rplan, mparam, paramname, reason, rcap);
-					continue;
+					String paramref	= (String)state.getAttributeValue(mparam, OAVBDIMetaModel.planparameter_has_messageeventmapping);
+					if(paramref!=null)
+					{
+						int pidx = paramref.lastIndexOf('.');
+						String paramname = paramref.substring(pidx+1);
+						generateParameterMapping(state, rplan, mparam, paramname, reason, rcap);
+						continue;
+					}
 				}
-
-				paramref	= (String)state.getAttributeValue(mparam, OAVBDIMetaModel.planparameter_has_internaleventmapping);
-				if(paramref!=null)
+				else if(iem)
 				{
-					int pidx = paramref.lastIndexOf('.');
-					String paramname = paramref.substring(pidx+1);
-					generateParameterMapping(state, rplan, mparam, paramname, reason, rcap);
-					continue;
+					String paramref	= (String)state.getAttributeValue(mparam, OAVBDIMetaModel.planparameter_has_internaleventmapping);
+					if(paramref!=null)
+					{
+						int pidx = paramref.lastIndexOf('.');
+						String paramname = paramref.substring(pidx+1);
+						generateParameterMapping(state, rplan, mparam, paramname, reason, rcap);
+						continue;
+					}
 				}
 			}
 		}
@@ -546,6 +559,13 @@ public class PlanRules
 				catch(Exception e)
 				{
 					state.setAttributeValue(rplan, OAVBDIRuntimeModel.plan_has_exception, e);
+					
+					// todo: currently only remembers last plan exception in goal
+					Object reason = state.getAttributeValue(rplan, OAVBDIRuntimeModel.plan_has_reason);
+					if(reason!=null && state.getType(reason).isSubtype(OAVBDIRuntimeModel.goal_type))
+					{
+						state.setAttributeValue(reason, OAVBDIRuntimeModel.goal_has_exception, e);
+					}
 					StringWriter sw	= new StringWriter();
 					e.printStackTrace(new PrintWriter(sw));
 					//System.out.println(cap.getAgent().getName()+": Exception while executing: "+this);
@@ -557,7 +577,7 @@ public class PlanRules
 //						Level level = (Level)cap.getPropertybase().getProperty(PROPERTY_LOGGING_LEVEL_EXCEPTIONS);
 //						AgentRules.BDIInterpreter.getInterpreter(state).getLogger(rcapa).log(level, ip.getAgentAdapter().getComponentIdentifier()+
 //							": Exception while executing: "+rplan+"\n"+sw);
-						BDIInterpreter.getInterpreter(state).getLogger(rcapa).severe(ip.getAgentAdapter().getComponentIdentifier()+
+						BDIInterpreter.getInterpreter(state).getLogger(rcapa).warning(ip.getAgentAdapter().getComponentIdentifier()+
 							": Exception while executing: "+rplan+" "+state.getAttributeValue(state.getAttributeValue(rplan, OAVBDIRuntimeModel.element_has_model), OAVBDIMetaModel.modelelement_has_name)+"\n"+sw);
 					}
 					else

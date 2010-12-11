@@ -49,9 +49,16 @@ public class LocalSearchManager implements ISearchManager
 		// problem: first gsm searches a node, then lsm searches the same node = double visit
 		if(!selector.isFinished(results))// && decider.searchNode(null, provider, results))
 		{
-			selector.selectServices(services, results);
+			try
+			{
+				selector.selectServices(services, results);
+			}
+			catch(Exception e)
+			{
+				e.printStackTrace();
+			}
 		}
-//		if(selector instanceof TypeResultSelector && results.toString().indexOf("Directory")!=-1)
+//		if(selector instanceof TypeResultSelector && results.toString().indexOf("Add")!=-1)
 //			System.out.println("lsm: "+provider+" "+results);
 		return new Future(selector.getResult(results));
 	}

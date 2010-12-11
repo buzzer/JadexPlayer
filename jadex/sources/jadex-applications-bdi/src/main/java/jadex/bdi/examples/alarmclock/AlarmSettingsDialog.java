@@ -1,9 +1,13 @@
 package jadex.bdi.examples.alarmclock;
 
+import jadex.bdi.runtime.AgentEvent;
 import jadex.bdi.runtime.IBDIExternalAccess;
-import jadex.bdi.runtime.IEAGoal;
+import jadex.bdi.runtime.IBDIInternalAccess;
+import jadex.bdi.runtime.IGoal;
+import jadex.bdi.runtime.IGoalListener;
+import jadex.bridge.IComponentStep;
+import jadex.bridge.IInternalAccess;
 import jadex.commons.SGUI;
-import jadex.commons.concurrent.DefaultResultListener;
 import jadex.commons.concurrent.SwingDefaultResultListener;
 import jadex.commons.service.SServiceProvider;
 import jadex.commons.service.clock.IClockService;
@@ -30,6 +34,7 @@ import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
+import javax.swing.SwingUtilities;
 import javax.swing.UIDefaults;
 
 import com.toedter.calendar.JDateChooser;
@@ -73,7 +78,7 @@ public class AlarmSettingsDialog extends JDialog
 	protected boolean state_ok;
 
 	/** Playing state. */
-	protected IEAGoal playing;
+	protected IGoal playing;
 	
 	/** The agent. */
 	protected IBDIExternalAccess	agent;
@@ -176,15 +181,32 @@ public class AlarmSettingsDialog extends JDialog
 		{
 			public void actionPerformed(ActionEvent e)
 			{
-				agent.getTime().addResultListener(new SwingDefaultResultListener(AlarmSettingsDialog.this)
+				agent.scheduleStep(new IComponentStep()
 				{
-					public void customResultAvailable(Object source, Object result) 
+					public Object execute(IInternalAccess ia)
 					{
-						Date now = new Date(((Long)result).longValue());
-						date.setDate(now);
-						time.setValue(now);
+						IBDIInternalAccess bia = (IBDIInternalAccess)ia;
+						final Date now = new Date(bia.getTime());
+						SwingUtilities.invokeLater(new Runnable()
+						{
+							public void run()
+							{
+								date.setDate(now);
+								time.setValue(now);								
+							}
+						});
+						return null;
 					}
 				});
+//				agent.getTime().addResultListener(new SwingDefaultResultListener(AlarmSettingsDialog.this)
+//				{
+//					public void customResultAvailable(Object source, Object result) 
+//					{
+//						Date now = new Date(((Long)result).longValue());
+//						date.setDate(now);
+//						time.setValue(now);
+//					}
+//				});
 //				Date now = new Date(agent.getTime());
 //				date.setDate(now);
 //				time.setValue(now);
@@ -218,49 +240,73 @@ public class AlarmSettingsDialog extends JDialog
 						play.setIcon(icons.getIcon("Stop"));
 						final URL song = new URL("file:///"+alarmtf.getText());
 						//System.out.println("Song is: "+song);
-						agent.createGoal("play_song").addResultListener(new DefaultResultListener()
+						
+						agent.scheduleStep(new IComponentStep()
 						{
-							public void resultAvailable(Object source, Object result)
+							public Object execute(IInternalAccess ia)
 							{
-								playing = (IEAGoal)result;
-								playing.setParameterValue("song", song);
-								
-								agent.dispatchTopLevelGoalAndWait(playing).addResultListener(new DefaultResultListener()
+								IBDIInternalAccess bia = (IBDIInternalAccess)ia;
+								playing = bia.getGoalbase().createGoal("play_song");
+								playing.getParameter("song").setValue(song);
+								playing.addGoalListener(new IGoalListener()
 								{
-									public void resultAvailable(Object source, Object result)
+									public void goalFinished(AgentEvent ae)
 									{
 										play.setIcon(icons.getIcon("Play"));
 										stopPlaying();
 									}
 									
-									public void exceptionOccurred(Object source, Exception exception)
+									public void goalAdded(AgentEvent ae)
 									{
-										play.setIcon(icons.getIcon("Play"));
-										stopPlaying();
 									}
 								});
-								
-								// todo: can this be done without a thread?
-								// todo: use a call back
-//								Thread t = new Thread(new Runnable()
+								bia.getGoalbase().dispatchTopLevelGoal(playing);
+								return null;
+							}
+						});
+//						agent.createGoal("play_song").addResultListener(new DefaultResultListener()
+//						{
+//							public void resultAvailable(Object source, Object result)
+//							{
+//								playing = (IEAGoal)result;
+//								playing.setParameterValue("song", song);
+//								
+//								agent.dispatchTopLevelGoalAndWait(playing).addResultListener(new DefaultResultListener()
 //								{
-//									public void run()
+//									public void resultAvailable(Object source, Object result)
 //									{
-//										try
-//										{
-//											agent.dispatchTopLevelGoalAndWait(playing);
-//										}
-//										catch(Exception e)
-//										{
-//											System.out.println("Song could not be played: "+e);
-//										}
+//										play.setIcon(icons.getIcon("Play"));
+//										stopPlaying();
+//									}
+//									
+//									public void exceptionOccurred(Object source, Exception exception)
+//									{
 //										play.setIcon(icons.getIcon("Play"));
 //										stopPlaying();
 //									}
 //								});
-//								t.start();
-							}
-						});
+//								
+//								// todo: can this be done without a thread?
+//								// todo: use a call back
+////								Thread t = new Thread(new Runnable()
+////								{
+////									public void run()
+////									{
+////										try
+////										{
+////											agent.dispatchTopLevelGoalAndWait(playing);
+////										}
+////										catch(Exception e)
+////										{
+////											System.out.println("Song could not be played: "+e);
+////										}
+////										play.setIcon(icons.getIcon("Play"));
+////										stopPlaying();
+////									}
+////								});
+////								t.start();
+//							}
+//						});
 					}
 					catch(Exception ex)
 					{

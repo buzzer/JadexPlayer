@@ -222,7 +222,7 @@ public abstract class AbstractChartDataConsumer extends SimplePropertyObject imp
 		}
 
 		if(ret==null || ret.getInputStream()==null)
-			throw new IOException("File "+name+" not found in imports: "+SUtil.arrayToString(imports));
+			throw new IOException("File "+name+" not found in imports");//: "+SUtil.arrayToString(imports));
 
 		return ret;
 	}
@@ -233,7 +233,7 @@ public abstract class AbstractChartDataConsumer extends SimplePropertyObject imp
 	 */
 	public JPanel getChartPanel()
 	{
-		ChartPanel panel = new ChartPanel(getChart());
+		ChartPanel panel = new ChartPanel(getChart(), false, false, false, false, false);
         panel.setFillZoomRectangle(true);
         return panel;
 	}

@@ -2,23 +2,25 @@ package jadex.application;
 
 import jadex.application.model.MApplicationInstance;
 import jadex.application.model.MApplicationType;
-import jadex.application.model.MExpressionType;
 import jadex.application.runtime.impl.ApplicationInterpreter;
+import jadex.application.space.agr.MAGRSpaceType;
+import jadex.application.space.envsupport.MEnvSpaceType;
 import jadex.bridge.IComponentAdapterFactory;
 import jadex.bridge.IComponentDescription;
 import jadex.bridge.IComponentFactory;
 import jadex.bridge.IExternalAccess;
 import jadex.bridge.IModelInfo;
 import jadex.commons.Future;
+import jadex.commons.IFuture;
 import jadex.commons.SGUI;
-import jadex.commons.SReflect;
+import jadex.commons.concurrent.DefaultResultListener;
 import jadex.commons.service.BasicService;
-import jadex.javaparser.IExpressionParser;
-import jadex.javaparser.IParsedExpression;
-import jadex.javaparser.javaccimpl.JavaCCExpressionParser;
-import jadex.xml.IContext;
-import jadex.xml.IPostProcessor;
+import jadex.commons.service.IServiceProvider;
+import jadex.commons.service.SServiceProvider;
+import jadex.commons.service.library.ILibraryService;
+import jadex.commons.service.library.ILibraryServiceListener;
 
+import java.net.URL;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -35,7 +37,7 @@ public class ApplicationComponentFactory extends BasicService implements ICompon
 {
 	//-------- constants --------
 	
-	/** The application agent file type. */
+	/** The application component file type. */
 	public static final String	FILETYPE_APPLICATION = "Application";
 	
 //	/** The application file extension. */
@@ -54,25 +56,72 @@ public class ApplicationComponentFactory extends BasicService implements ICompon
 	/** The application model loader. */
 	protected ApplicationModelLoader loader;
 	
+	/** The provider. */
+	protected IServiceProvider provider;
+	
+	/** The library service listener */
+	protected ILibraryServiceListener libservicelistener;
+	
 	//-------- constructors --------
 	
 	/**
 	 *  Create a new application factory.
 	 */
-	public ApplicationComponentFactory(Object providerid)
+	public ApplicationComponentFactory(IServiceProvider provider)
 	{
-		this(null, providerid);
+		this(null, provider);
+	}
+	
+	/**
+	 *  Create a new application factory for startup.
+	 *  @param platform	The platform.
+	 *  @param mappings	The XML reader mappings of supported spaces (if any).
+	 */
+	// This constructor is used by the Starter class and the ADFChecker plugin. 
+	public ApplicationComponentFactory(String providerid)
+	{
+		super(providerid, IComponentFactory.class, null);
+		
+		// Todo: hack!!! make mappings configurable also for reflective constructor (how?)
+		this.loader = new ApplicationModelLoader(new Set[]
+		{
+			MEnvSpaceType.getXMLMapping(),
+			MAGRSpaceType.getXMLMapping()
+		});
 	}
 	
 	/**
 	 *  Create a new application factory.
-	 *  @param platform	The agent platform.
+	 *  @param platform	The platform.
 	 *  @param mappings	The XML reader mappings of supported spaces (if any).
 	 */
-	public ApplicationComponentFactory(Set[] mappings, Object providerid)
+	public ApplicationComponentFactory(Set[] mappings, IServiceProvider provider)
 	{
-		super(providerid, IComponentFactory.class, null);
+		super(provider.getId(), IComponentFactory.class, null);
 		this.loader = new ApplicationModelLoader(mappings);
+		this.provider = provider;
+		this.libservicelistener = new ILibraryServiceListener()
+		{
+			public IFuture urlRemoved(URL url)
+			{
+				loader.clearModelCache();
+				return new Future(null);
+			}
+			
+			public IFuture urlAdded(URL url)
+			{
+				loader.clearModelCache();
+				return new Future(null);
+			}
+		};
+		SServiceProvider.getService(provider, ILibraryService.class).addResultListener(new DefaultResultListener()
+		{
+			public void resultAvailable(Object source, Object result)
+			{
+				ILibraryService libService = (ILibraryService) result;
+				libService.addLibraryServiceListener(libservicelistener);
+			}
+		});
 	}
 	
 	/**
@@ -86,11 +135,19 @@ public class ApplicationComponentFactory extends BasicService implements ICompon
 	/**
 	 *  Shutdown the service.
 	 *  @param listener The listener.
-	 * /
+	 */
 	public synchronized IFuture	shutdownService()
 	{
+		SServiceProvider.getService(provider, ILibraryService.class).addResultListener(new DefaultResultListener()
+		{
+			public void resultAvailable(Object source, Object result)
+			{
+				ILibraryService libService = (ILibraryService) result;
+				libService.removeLibraryServiceListener(libservicelistener);
+			}
+		});
 		return super.shutdownService();
-	}*/
+	}
 	
 	//-------- IComponentFactory interface --------
 	
@@ -108,6 +165,10 @@ public class ApplicationComponentFactory extends BasicService implements ICompon
 		{
 			ret = loader.loadApplicationModel(model, imports, classloader);
 		}
+		catch(RuntimeException e)
+		{
+			throw e;
+		}
 		catch(Exception e)
 		{
 			throw new RuntimeException(e);
@@ -121,7 +182,7 @@ public class ApplicationComponentFactory extends BasicService implements ICompon
 	 * @param adapter The component adapter.
 	 * @param model The component model.
 	 * @param config The name of the configuration (or null for default configuration) 
-	 * @param arguments The arguments for the agent as name/value pairs.
+	 * @param arguments The arguments for the component as name/value pairs.
 	 * @param parent The parent component (if any).
 	 * @return An instance of a component.
 	 */
@@ -135,26 +196,30 @@ public class ApplicationComponentFactory extends BasicService implements ICompon
 					
 			// Select application instance according to configuration.
 			MApplicationInstance app = null;
-			if(config==null && apps.size()>0)
-				app = (MApplicationInstance)apps.get(0);
-			
-			for(int i=0; app==null && i<apps.size(); i++)
+				
+			if(config!=null)
 			{
-				MApplicationInstance tmp = (MApplicationInstance)apps.get(i);
-				if(config.equals(tmp.getName()))
-					app = tmp;
+				for(int i=0; app==null && i<apps.size(); i++)
+				{
+					MApplicationInstance tmp = (MApplicationInstance)apps.get(i);
+					if(config.equals(tmp.getName()))
+						app = tmp;
+				}
 			}
-			
+			if(app==null && apps.size()>0)
+			{
+				app = (MApplicationInstance)apps.get(0);
+			}
 			if(app==null)
 				app = new MApplicationInstance("default");
 	
 			// Create context for application.
-			ApplicationInterpreter context = new ApplicationInterpreter(desc, apptype, app, factory, parent, arguments, ret);
+			ApplicationInterpreter interpreter = new ApplicationInterpreter(desc, apptype, app, factory, parent, arguments, ret);
 			
 			// todo: result listener?
 			// todo: create application context as return value?!
 					
-			return new Object[]{context, context.getComponentAdapter()};
+			return new Object[]{interpreter, interpreter.getComponentAdapter()};
 		}
 		catch(Exception e)
 		{
@@ -279,77 +344,8 @@ public class ApplicationComponentFactory extends BasicService implements ICompon
 		}
 
 		if(ret==null || ret.getInputStream()==null)
-			throw new IOException("File "+xml+" not found in imports: "+SUtil.arrayToString(imports));
+			throw new IOException("File "+xml+" not found in imports");//: "+SUtil.arrayToString(imports));
 
 		return ret;
-	}	*/
-	
-	//-------- helper classes --------
-	
-	/**
-	 *  Parse expression text.
-	 */
-	public static class ExpressionProcessor	implements IPostProcessor
-	{
-		// Hack!!! Should be configurable.
-		protected static IExpressionParser	exp_parser	= new JavaCCExpressionParser();
-		
-		/**
-		 *  Parse expression text.
-		 */
-		public Object postProcess(IContext context, Object object)
-		{
-			MApplicationType app = (MApplicationType)context.getRootObject();
-			MExpressionType exp = (MExpressionType)object;
-			
-			String classname = exp.getClassName();
-			if(classname!=null)
-			{
-				try
-				{
-					Class clazz = SReflect.findClass(classname, app.getAllImports(), context.getClassLoader());
-					exp.setClazz(clazz);
-				}
-				catch(Exception e)
-				{
-	//					report.put(se, e.toString());
-					e.printStackTrace();
-				}
-			}
-			
-			String lang = exp.getLanguage();
-			String value = exp.getValue(); 
-			if(value!=null)
-			{
-				if(lang==null || "java".equals(lang))
-				{
-					try
-					{
-						IParsedExpression pexp = exp_parser.parseExpression(value, app.getAllImports(), null, context.getClassLoader());
-						exp.setParsedValue(pexp);
-					}
-					catch(Exception e)
-					{
-	//					report.put(se, e.toString());
-						e.printStackTrace();
-					}
-				}	
-				else
-				{
-					throw new RuntimeException("Unknown condition language: "+lang);
-				}
-			}
-			
-			return null;
-		}
-		
-		/**
-		 *  Get the pass number.
-		 *  @return The pass number.
-		 */
-		public int getPass()
-		{
-			return 0;
-		}
-	}
+	}	*/	
 }

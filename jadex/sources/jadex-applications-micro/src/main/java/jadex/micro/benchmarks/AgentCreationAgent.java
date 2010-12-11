@@ -6,7 +6,8 @@ import jadex.bridge.CreationInfo;
 import jadex.bridge.IArgument;
 import jadex.bridge.IComponentIdentifier;
 import jadex.bridge.IComponentManagementService;
-import jadex.commons.ICommand;
+import jadex.bridge.IComponentStep;
+import jadex.bridge.IInternalAccess;
 import jadex.commons.IFuture;
 import jadex.commons.concurrent.DefaultResultListener;
 import jadex.commons.concurrent.IResultListener;
@@ -105,7 +106,7 @@ public class AgentCreationAgent extends MicroAgent
 					// Delete prior agents.
 					if(!nested)
 					{
-						deletePeers(max-1, end, dur, pera, omem, upera, max, getExternalAccess(), nested);
+						deletePeers(max-1, end, dur, pera, omem, upera, max, (IMicroExternalAccess)getExternalAccess(), nested);
 					}
 					
 					// If nested, use initial component to kill others
@@ -166,9 +167,9 @@ public class AgentCreationAgent extends MicroAgent
 		{
 			public void resultAvailable(Object source, final Object result)
 			{
-				exta.scheduleStep(new ICommand()
+				exta.scheduleStep(new IComponentStep()
 				{
-					public void execute(Object args)
+					public Object execute(IInternalAccess ia)
 					{
 						IComponentManagementService cms = (IComponentManagementService)result;
 						IComponentIdentifier aid = cms.createComponentIdentifier(name, true, null);
@@ -176,9 +177,9 @@ public class AgentCreationAgent extends MicroAgent
 						{
 							public void resultAvailable(Object source, Object result)
 							{
-								exta.scheduleStep(new ICommand()
+								exta.scheduleStep(new IComponentStep()
 								{
-									public void execute(Object args)
+									public Object execute(IInternalAccess ia)
 									{
 										System.out.println("Successfully destroyed peer: "+name);
 										
@@ -190,6 +191,8 @@ public class AgentCreationAgent extends MicroAgent
 										{
 											killLastPeer(max, killstarttime, dur, pera, omem, upera, exta);
 										}
+										
+										return null;
 									}
 								});
 							}
@@ -200,6 +203,8 @@ public class AgentCreationAgent extends MicroAgent
 						};
 						IFuture ret = cms.destroyComponent(aid);
 						ret.addResultListener(lis);
+						
+						return null;
 					}
 				});
 			}
@@ -217,9 +222,9 @@ public class AgentCreationAgent extends MicroAgent
 		{
 			public void resultAvailable(Object source, final Object result)
 			{
-				exta.scheduleStep(new ICommand()
+				exta.scheduleStep(new IComponentStep()
 				{
-					public void execute(Object args)
+					public Object execute(IInternalAccess ia)
 					{
 						IClockService cs = (IClockService)result;
 						long killend = cs.getTime();
@@ -241,16 +246,19 @@ public class AgentCreationAgent extends MicroAgent
 						{
 							public void resultAvailable(Object source, final Object result)
 							{
-								exta.scheduleStep(new ICommand()
+								exta.scheduleStep(new IComponentStep()
 								{
-									public void execute(Object args)
+									public Object execute(IInternalAccess ia)
 									{
 										IComponentManagementService cms = (IComponentManagementService)result;
 										cms.destroyComponent(exta.getComponentIdentifier());
+										return null;
 									}
 								});
 							}
 						});
+						
+						return null;
 					}
 				});
 			}
@@ -268,7 +276,7 @@ public class AgentCreationAgent extends MicroAgent
 		{
 			public Object getDefaultValue(String configname)
 			{
-				return new Integer(10000);
+				return new Integer(5000);	// Todo: support 10000 with gui.
 			}
 			public String getDescription()
 			{

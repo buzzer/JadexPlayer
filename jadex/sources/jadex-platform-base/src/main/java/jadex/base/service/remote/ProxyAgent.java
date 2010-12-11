@@ -53,6 +53,7 @@ public class ProxyAgent extends MicroAgent
 //			+", "+delay+", "+cachesize);
 		return new CacheServiceContainer(new RemoteServiceContainer(
 			getRemotePlatformIdentifier(), getAgentAdapter()), 25, 1*30*1000); // 30 secs cache expire
+//		return new RemoteServiceContainer(getRemotePlatformIdentifier(), getAgentAdapter());
 	}
 	
 	/**
@@ -163,6 +164,15 @@ public class ProxyAgent extends MicroAgent
 				{
 					public void resultAvailable(Object source, Object result)
 					{
+//						try
+//						{
+//							IComponentManagementService rcms = (IComponentManagementService)result;
+//						}
+//						catch(Exception e)
+//						{
+//							System.out.println("heer: "+SUtil.arrayToString(result.getClass().getInterfaces()));
+//						}
+						
 						final IComponentManagementService rcms = (IComponentManagementService)result;
 						rcms.getChildren(cid).addResultListener(createResultListener(new IResultListener()
 						{

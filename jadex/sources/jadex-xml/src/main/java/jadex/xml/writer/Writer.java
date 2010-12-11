@@ -2,6 +2,7 @@ package jadex.xml.writer;
 
 import jadex.commons.collection.Tree;
 import jadex.commons.collection.TreeNode;
+import jadex.xml.IPreProcessor;
 import jadex.xml.SXML;
 import jadex.xml.StackElement;
 import jadex.xml.TypeInfo;
@@ -114,7 +115,7 @@ public class Writer
 		writer.writeCharacters(lf);
 		
 		WriteContext wc = new WriteContext(writer, context, object, classloader);
-		writeObject(wc, object, null);
+		writeObject(wc, object);
 		writer.writeEndDocument();
 		writer.close();
 	}
@@ -122,7 +123,7 @@ public class Writer
 	/**
 	 *  Write an object to xml.
 	 */
-	public void writeObject(WriteContext wc, Object object, QName tag) throws Exception
+	public void writeObject(WriteContext wc, Object object) throws Exception
 	{
 		XMLStreamWriter writer = wc.getWriter();
 		List stack = wc.getStack();
@@ -130,7 +131,8 @@ public class Writer
 		// Special case null
 		if(object==null)
 		{
-			writeStartObject(writer, tag==null? SXML.NULL: tag, stack.size());
+//			writeStartObject(writer, tag==null? SXML.NULL: tag, stack.size());
+			writeStartObject(writer, SXML.NULL, stack.size());
 			writeEndObject(writer, stack.size());
 			return;
 		}
@@ -140,9 +142,19 @@ public class Writer
 		TypeInfo typeinfo = handler.getTypeInfo(object, getXMLPath(stack), wc); 
 		QName[] path = new QName[0];
 		
+		// Preprocess object.
+		IPreProcessor preproc = typeinfo==null? null: (IPreProcessor)typeinfo.getPreProcessor();
+		if(preproc!=null)
+		{
+//			System.out.println("found: "+object);
+			object = preproc.preProcess(wc, object);
+		}
+
+		QName tag = null;
 		// Only use typeinfo for getting tag (path) when not set in method call (subobject)
 		// Generated tag names (that start with 'protocol typeinfo' are overruled by typeinfo spec.
-		if((tag==null || tag.getNamespaceURI().startsWith(SXML.PROTOCOL_TYPEINFO)) && typeinfo!=null)
+//		if((tag==null || tag.getNamespaceURI().startsWith(SXML.PROTOCOL_TYPEINFO)) && typeinfo!=null)
+		if(typeinfo!=null)
 		{
 			tag = typeinfo.getXMLTag();
 			if(typeinfo.getXMLInfo()!=null)
@@ -157,16 +169,22 @@ public class Writer
 				}
 			}
 		}
-		
+
 		if(tag==null)
-		{
 			tag = handler.getTagName(object, wc);
-		}
+
 		
 		// Create tag with prefix if it has a namespace but no prefix.
+		try{
+			
 		if(!XMLConstants.NULL_NS_URI.equals(tag.getNamespaceURI()) && XMLConstants.DEFAULT_NS_PREFIX.equals(tag.getPrefix()))
 		{
 			tag = handler.getTagWithPrefix(tag, wc);
+		}
+		}
+		catch(Exception e)
+		{
+			e.printStackTrace();
 		}
 		
 		if(genids && wc.getWrittenObjects().containsKey(object))
@@ -310,7 +328,7 @@ public class Writer
 			if(tmp instanceof QName)
 			{
 				QName subtag = (QName)tmp; 
- 
+				
 				writeStartObject(writer, subtag, stack.size());
 				writer.writeCharacters(lf);
 				stack.add(new StackElement(subtag, null));
@@ -322,7 +340,8 @@ public class Writer
 			}
 			else
 			{
-				writeObject(wc, ((Object[])tmp)[1], (QName)((Object[])tmp)[0]);
+//				writeObject(wc, ((Object[])tmp)[1], (QName)((Object[])tmp)[0]);
+				writeObject(wc, ((Object[])tmp)[1]);
 			}
 		}
 	}
@@ -472,20 +491,37 @@ public class Writer
 	}
 	
 	/**
+	 *  Convert to a string.
+	 */
+	public static String objectToXML(Writer writer, Object val, ClassLoader classloader, Object context)
+	{
+		return new String(objectToByteArray(writer, val, classloader, context));
+	}
+	
+	/**
 	 *  Convert to a byte array.
 	 */
 	public static byte[] objectToByteArray(Writer writer, Object val, ClassLoader classloader)
 	{
+		return objectToByteArray(writer, val, classloader, null);
+	}
+	
+	/**
+	 *  Convert to a byte array.
+	 */
+	public static byte[] objectToByteArray(Writer writer, Object val, ClassLoader classloader, Object context)
+	{
 		try
 		{
 			ByteArrayOutputStream bos = new ByteArrayOutputStream();
-			writer.write(val, bos, classloader, null);
+			writer.write(val, bos, classloader, context);
 			byte[] ret = bos.toByteArray();
 			bos.close();
 			return ret;
 		}
 		catch(Exception e)
 		{
+			e.printStackTrace();
 //			System.out.println("Exception writing: "+val);
 			throw new RuntimeException(e);
 		}

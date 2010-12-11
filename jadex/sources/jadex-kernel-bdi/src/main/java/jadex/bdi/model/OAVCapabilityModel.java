@@ -1,15 +1,15 @@
 package jadex.bdi.model;
 
 import jadex.bdi.runtime.interpreter.AgentRules;
+import jadex.bridge.AbstractErrorReportBuilder;
 import jadex.bridge.Argument;
-import jadex.bridge.ErrorReport;
 import jadex.bridge.IArgument;
-import jadex.bridge.IErrorReport;
 import jadex.bridge.ModelInfo;
 import jadex.commons.ICacheableModel;
 import jadex.commons.IFuture;
 import jadex.commons.SReflect;
 import jadex.commons.SUtil;
+import jadex.commons.Tuple;
 import jadex.commons.collection.IndexMap;
 import jadex.commons.collection.MultiCollection;
 import jadex.commons.collection.SCollection;
@@ -19,14 +19,18 @@ import jadex.rules.rulesystem.Rulebase;
 import jadex.rules.state.IOAVState;
 import jadex.xml.StackElement;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+
+import javax.xml.namespace.QName;
 
 /**
  *  The capability model contains the OAV capability model in a state
@@ -45,6 +49,9 @@ public class OAVCapabilityModel implements ICacheableModel//, IModelInfo
 	/** The (actual) object types contained in the state. */
 	protected Set	types;
 	
+	/** The filename. */
+	protected String filename;
+	
 	/** The rulebase of the capability (includes type-specific rules, if any). */
 	protected Rulebase rulebase;
 	
@@ -58,8 +65,7 @@ public class OAVCapabilityModel implements ICacheableModel//, IModelInfo
 	protected ModelInfo modelinfo;
 	
 	// todo: use some internal report for collecting error stuff?!
-	
-	/** The multicollection holding the report messages. */
+	/** The multi-collection holding the report messages. */
 	protected MultiCollection	entries;
 	
 	/** The documents for external elements (e.g. capabilities). */
@@ -70,19 +76,100 @@ public class OAVCapabilityModel implements ICacheableModel//, IModelInfo
 	/**
 	 *  Create a model.
 	 */
-	public OAVCapabilityModel(IOAVState state, Object handle, Set types, String filename, long lastmod)//, IErrorReport report)
+	public OAVCapabilityModel(IOAVState state, Object handle, Set types, String filename, long lastmod, MultiCollection entries)
 	{
 		this.state	= state;
 		this.handle	= handle;
 		this.types	= types;
+		this.filename = filename;
 		this.rulebase	= new Rulebase();
 		this.lastmod	= lastmod;
+		this.entries	= entries;
+	}
 	
-		IErrorReport report = entries==null? null: new ErrorReport(generateErrorText(), generateErrorHTML(), externals);
+	/**
+	 *  Init the model info.
+	 */
+	public void initModelInfo()
+	{
 		boolean startable = !this.getClass().equals(OAVCapabilityModel.class);
+		this.modelinfo = new ModelInfo(getName(), getPackage(), getDescription(), null, getConfigurations(), getArguments(), 
+			getResults(), startable, filename, getProperties(), getClassLoader(), getRequiredServices(), getProvidedServices(),
+			null, null, null);
 		
-		this.modelinfo = new ModelInfo(getName(), getPackage(), getDescription(), report, getConfigurations(), getArguments(), 
-			getResults(), startable, filename, getProperties(), getClassLoader());
+		// Build error report.
+		getModelInfo().setReport(new AbstractErrorReportBuilder(getModelInfo().getName(), getModelInfo().getFilename(),
+			new String[]{"XML", "Capability", "Belief", "Goal", "Plan", "Event"}, entries, getDocuments())
+		{
+			public boolean isInCategory(Object obj, String category)
+			{
+				boolean	ret	= false;
+				if("XML".equals(category))
+				{
+					ret	= obj instanceof String;
+				}
+				else if("Capability".equals(category))
+				{
+					ret	= state.getType(obj).isSubtype(OAVBDIMetaModel.capabilityref_type);
+				}
+				else if("Belief".equals(category))
+				{
+					ret	= state.getType(obj).isSubtype(OAVBDIMetaModel.belief_type)
+						|| state.getType(obj).isSubtype(OAVBDIMetaModel.beliefset_type)
+						|| state.getType(obj).isSubtype(OAVBDIMetaModel.beliefreference_type)
+						|| state.getType(obj).isSubtype(OAVBDIMetaModel.beliefsetreference_type);
+				}
+				else if("Goal".equals(category))
+				{
+					ret	= state.getType(obj).isSubtype(OAVBDIMetaModel.goal_type)
+						|| state.getType(obj).isSubtype(OAVBDIMetaModel.goalreference_type);
+				}
+				else if("Plan".equals(category))
+				{
+					ret	= state.getType(obj).isSubtype(OAVBDIMetaModel.plan_type);
+				}
+				else if("Event".equals(category))
+				{
+					ret	= state.getType(obj).isSubtype(OAVBDIMetaModel.event_type)
+						|| state.getType(obj).isSubtype(OAVBDIMetaModel.internaleventreference_type)
+						|| state.getType(obj).isSubtype(OAVBDIMetaModel.messageeventreference_type);
+				}
+				return ret;
+			}
+			
+			public Object getPathElementObject(Object element)
+			{
+				return ((StackElement)element).getObject();
+			}
+			
+			public String getObjectName(Object obj)
+			{
+				String	name	= null;
+				if(state.getType(obj).isSubtype(OAVBDIMetaModel.modelelement_type))
+				{
+					name	= (String)state.getAttributeValue(obj, OAVBDIMetaModel.modelelement_has_name);
+				}
+				
+				if(name==null && state.getType(obj).isSubtype(OAVBDIMetaModel.elementreference_type))
+				{
+					name	= (String)state.getAttributeValue(obj, OAVBDIMetaModel.elementreference_has_concrete);
+				}
+				
+				if(name==null && state.getType(obj).isSubtype(OAVBDIMetaModel.expression_type))
+				{
+					IParsedExpression	exp	=(IParsedExpression)state.getAttributeValue(obj, OAVBDIMetaModel.expression_has_parsed);
+					String	text	= (String)state.getAttributeValue(obj, OAVBDIMetaModel.expression_has_text);
+					name	= exp!=null ? exp.getExpressionText() : text!=null ? text.trim() : null;
+				}
+				
+				if(name==null)
+				{
+					name	= ""+obj;
+				}
+				
+				return obj instanceof String ? (String)obj : state.getType(obj).getName().substring(1) + " " + name;
+			}
+		}.buildErrorReport());
 	}
 	
 	//-------- IAgentModel methods --------
@@ -93,7 +180,26 @@ public class OAVCapabilityModel implements ICacheableModel//, IModelInfo
 	 */
 	public String getName()
 	{
-		return (String)state.getAttributeValue(handle, OAVBDIMetaModel.modelelement_has_name);
+		String	ret;
+		if(handle!=null)
+		{
+			ret	= (String)state.getAttributeValue(handle, OAVBDIMetaModel.modelelement_has_name);
+		}
+		
+		// For broken XMLs (no handle) try to generate name from filename.
+		else
+		{
+			int idx	= Math.max(filename.lastIndexOf(File.separator), filename.lastIndexOf("/"));
+			if(idx!=-1)
+			{
+				ret	= filename.substring(idx+1);
+			}
+			else
+			{
+				ret	= filename;
+			}
+		}
+		return ret;
 	}
 	
 	/**
@@ -102,7 +208,7 @@ public class OAVCapabilityModel implements ICacheableModel//, IModelInfo
 	 */
 	public String getPackage()
 	{
-		return (String)state.getAttributeValue(handle, OAVBDIMetaModel.capability_has_package);
+		return handle!=null ? (String)state.getAttributeValue(handle, OAVBDIMetaModel.capability_has_package) : null;
 	}
 	
 	/**
@@ -121,7 +227,7 @@ public class OAVCapabilityModel implements ICacheableModel//, IModelInfo
 	 */
 	public String getDescription()
 	{
-		String ret = (String)state.getAttributeValue(handle, OAVBDIMetaModel.modelelement_has_description);
+		String ret = handle!=null ? (String)state.getAttributeValue(handle, OAVBDIMetaModel.modelelement_has_description) : null;
 		return ret!=null? ret: "No description available."; 
 	}
 	
@@ -142,7 +248,7 @@ public class OAVCapabilityModel implements ICacheableModel//, IModelInfo
 	{
 		String[] ret = SUtil.EMPTY_STRING_ARRAY;
 		
-		Collection configs = state.getAttributeValues(handle, OAVBDIMetaModel.capability_has_configurations);
+		Collection configs = handle!=null ? state.getAttributeValues(handle, OAVBDIMetaModel.capability_has_configurations) : null;
 		if(configs!=null)
 		{
 			List tmp = new ArrayList();
@@ -171,7 +277,7 @@ public class OAVCapabilityModel implements ICacheableModel//, IModelInfo
 	{
 		List ret = new ArrayList();
 		
-		Collection bels = state.getAttributeValues(handle, OAVBDIMetaModel.capability_has_beliefs);
+		Collection bels = handle!=null ? state.getAttributeValues(handle, OAVBDIMetaModel.capability_has_beliefs) : null;
 		if(bels!=null)
 		{
 			for(Iterator it=bels.iterator(); it.hasNext(); )
@@ -186,7 +292,7 @@ public class OAVCapabilityModel implements ICacheableModel//, IModelInfo
 			}
 		}
 		
-		Collection belrefs = state.getAttributeValues(handle, OAVBDIMetaModel.capability_has_beliefrefs);
+		Collection belrefs = handle!=null ? state.getAttributeValues(handle, OAVBDIMetaModel.capability_has_beliefrefs) : null;
 		if(belrefs!=null)
 		{
 			for(Iterator it=belrefs.iterator(); it.hasNext(); )
@@ -201,7 +307,7 @@ public class OAVCapabilityModel implements ICacheableModel//, IModelInfo
 			}
 		}
 		
-		Collection belsets = state.getAttributeValues(handle, OAVBDIMetaModel.capability_has_beliefsets);
+		Collection belsets = handle!=null ? state.getAttributeValues(handle, OAVBDIMetaModel.capability_has_beliefsets) : null;
 		if(belsets!=null)
 		{
 			for(Iterator it=belsets.iterator(); it.hasNext(); )
@@ -216,7 +322,7 @@ public class OAVCapabilityModel implements ICacheableModel//, IModelInfo
 			}
 		}
 		
-		Collection belsetrefs = state.getAttributeValues(handle, OAVBDIMetaModel.capability_has_beliefsetrefs);
+		Collection belsetrefs = handle!=null ? state.getAttributeValues(handle, OAVBDIMetaModel.capability_has_beliefsetrefs) : null;
 		if(belsetrefs!=null)
 		{
 			for(Iterator it=belsetrefs.iterator(); it.hasNext(); )
@@ -242,7 +348,7 @@ public class OAVCapabilityModel implements ICacheableModel//, IModelInfo
 	{
 		List ret = new ArrayList();
 		
-		Collection bels = state.getAttributeValues(handle, OAVBDIMetaModel.capability_has_beliefs);
+		Collection bels = handle!=null ? state.getAttributeValues(handle, OAVBDIMetaModel.capability_has_beliefs) : null;
 		if(bels!=null)
 		{
 			for(Iterator it=bels.iterator(); it.hasNext(); )
@@ -255,7 +361,7 @@ public class OAVCapabilityModel implements ICacheableModel//, IModelInfo
 			}
 		}
 		
-		Collection belrefs = state.getAttributeValues(handle, OAVBDIMetaModel.capability_has_beliefrefs);
+		Collection belrefs = handle!=null ? state.getAttributeValues(handle, OAVBDIMetaModel.capability_has_beliefrefs) : null;
 		if(belrefs!=null)
 		{
 			for(Iterator it=belrefs.iterator(); it.hasNext(); )
@@ -268,7 +374,7 @@ public class OAVCapabilityModel implements ICacheableModel//, IModelInfo
 			}
 		}
 		
-		Collection belsets = state.getAttributeValues(handle, OAVBDIMetaModel.capability_has_beliefsets);
+		Collection belsets = handle!=null ? state.getAttributeValues(handle, OAVBDIMetaModel.capability_has_beliefsets) : null;
 		if(belsets!=null)
 		{
 			for(Iterator it=belsets.iterator(); it.hasNext(); )
@@ -281,7 +387,7 @@ public class OAVCapabilityModel implements ICacheableModel//, IModelInfo
 			}
 		}
 		
-		Collection belsetrefs = state.getAttributeValues(handle, OAVBDIMetaModel.capability_has_beliefsetrefs);
+		Collection belsetrefs = handle!=null ? state.getAttributeValues(handle, OAVBDIMetaModel.capability_has_beliefsetrefs) : null;
 		if(belsetrefs!=null)
 		{
 			for(Iterator it=belsetrefs.iterator(); it.hasNext(); )
@@ -371,7 +477,8 @@ public class OAVCapabilityModel implements ICacheableModel//, IModelInfo
 	public Map	getProperties()
 	{
 		Map ret = new HashMap();
-		addCapabilityProperties(ret, handle);
+		if(handle!=null)
+			addCapabilityProperties(ret, handle);
 		return ret;
 	}
 	
@@ -394,17 +501,23 @@ public class OAVCapabilityModel implements ICacheableModel//, IModelInfo
 				// Ignore future properties, which are evaluated at component instance startup time.
 				if(clazz==null || !SReflect.isSupertype(IFuture.class, clazz))
 				{
-					IParsedExpression	pex = (IParsedExpression)state.getAttributeValue(mexp, OAVBDIMetaModel.expression_has_content);
-					try
+					IParsedExpression	pex = (IParsedExpression)state.getAttributeValue(mexp, OAVBDIMetaModel.expression_has_parsed);
+					if(pex!=null)
 					{
-						Object	value	= pex.getValue(null);
-						props.put(key, value);
-					}
-					catch(Exception e)
-					{
-						// Hack!!! Exception should be propagated.
-						System.err.println(pex.getExpressionText());
-						e.printStackTrace();
+						try
+						{
+							Object	value	= pex.getValue(null);
+							props.put(key, value);
+						}
+						catch(Exception e)
+						{
+							Tuple	se;
+							se	= new Tuple(new Object[]{
+								new StackElement(new QName(state.getType(capa).isSubtype(OAVBDIMetaModel.agent_type) ? "agent" : "capability"), capa, null),
+								new StackElement(new QName("properties"), null, null),				
+								new StackElement(new QName("property"), mexp, null)});				
+							addEntry(se, "Error in property: "+e);
+						}
 					}
 				}
 			}
@@ -515,306 +628,21 @@ public class OAVCapabilityModel implements ICacheableModel//, IModelInfo
 		return modelinfo;
 	}
 	
-	//-------- error stuff -> move somewhere?! --------
-	
-	/**
-	 *  Get the error entries.
-	 */
-	public Map getErrorEntries()
-	{
-		return entries;
-	}
+	//-------- error stuff --------
 	
 	/**
 	 *  Add an entry to the report.
-	 *  @param element	The element to which the entry applies.
+	 *  @param stack	The path to the element to which the entry applies.
 	 *  @param message	The problem description. 
 	 */
-	public void	addEntry(StackElement element, String message)
+	public void	addEntry(Tuple stack, String message)
 	{
 		if(entries==null)
 			// Use index map to keep insertion order for elements.
-			this.entries	= new MultiCollection(new IndexMap().getAsMap(), ArrayList.class);
+			this.entries	= new MultiCollection(new IndexMap().getAsMap(), LinkedHashSet.class);
 
-		entries.put(element, message);
-	}
-
-	/**
-	 *  Get all invalid elements.
-	 */
-	public StackElement[]	getElements()
-	{
-		if(entries==null)
-			return new StackElement[0];
-		else
-			return (StackElement[])entries.getKeys(StackElement.class);
-	}
-
-	/**
-	 *  Get the messages for a given element.
-	 */
-	public String[]	getMessages(StackElement element)
-	{
-		if(entries==null)
-		{
-			return new String[0];
-		}
-		else
-		{
-			Collection	ret	= entries.getCollection(element);
-			return (String[])ret.toArray(new String[ret.size()]);
-		}
-	}
-
-	/**
-	 *  Generate a string representation of the report.
-	 */
-	public String generateErrorText()
-	{
-		StringBuffer buf = new StringBuffer();
-
-		buf.append("Report for ");
-		buf.append(getModelInfo().getName());
-		buf.append("\n");
-		if(getModelInfo().getFilename()!=null)
-		{
-			buf.append("File: ");
-			buf.append(getModelInfo().getFilename());
-			buf.append("\n");
-		}
-		
-		buf.append("\n");
-
-		StackElement[]	elements	= getElements();
-		for(int i=0; i<elements.length; i++)
-		{
-//				buf.append(elements[i].path);
-			buf.append(":\n");
-			String[]	messages	= 	getMessages(elements[i]);
-			for(int j=0; j<messages.length; j++)
-			{
-				buf.append("\t");
-				buf.append(messages[j]);
-				buf.append("\n");
-			}
-		}
-		
-		return SUtil.stripTags(buf.toString());
-	}
-
-	/**
-	 *  Generate an html representation of the report.
-	 */
-	public String generateErrorHTML()
-	{
-		StringBuffer	buf	= new StringBuffer();
-
-		buf.append("<h3>Report for ");
-		buf.append(getModelInfo().getName());
-		buf.append("</h3>\n");
-		if(getModelInfo().getFilename()!=null)
-		{
-			buf.append("File: ");
-			buf.append(getModelInfo().getFilename());
-			buf.append("\n");
-		}
-
-//		StackElement[]	capabilities	= getCapabilityErrors();
-		StackElement[]	capabilities	= getOwnedElementErrors("capabilities");
-		StackElement[]	beliefs	= getOwnedElementErrors("beliefs");
-		StackElement[]	goals	= getOwnedElementErrors("goals");
-		StackElement[]	plans	= getOwnedElementErrors("plans");
-		StackElement[]	events	= getOwnedElementErrors("events");
-//		StackElement[]	configs	= getOwnedElementErrors(IMConfigBase.class);
-		StackElement[]	others	= getOtherErrors(new String[]{"capabilities", "beliefs", "goals", "plans", "events"});
-
-		
-		// Summaries.
-		buf.append("<h4>Summary</h4>\n<ul>\n");
-		generateOverview(buf, "Capability", capabilities);
-		generateOverview(buf, "Belief", beliefs);
-		generateOverview(buf, "Goal", goals);
-		generateOverview(buf, "Plan", plans);
-		generateOverview(buf, "Event", events);
-//		generateOverview(buf, "Configuration", configs);
-		generateOverview(buf, "Other element", others);
-		buf.append("</ul>\n");
-
-
-		// Details.
-		generateDetails(buf, "Capability", capabilities);
-		generateDetails(buf, "Belief", beliefs);
-		generateDetails(buf, "Goal", goals);
-		generateDetails(buf, "Plan", plans);
-		generateDetails(buf, "Event", events);
-//		generateDetails(buf, "Configuration", configs);
-		generateDetails(buf, "Other element", others);
-		
-		return buf.toString();
-	}
-
-	/**
-	 *  Get capability references which have errors, or contain elements with errors.
-	 * /
-	public StackElement[]	getCapabilityErrors()
-	{
-		List	errors	= SCollection.createArrayList();
-		StackElement[]	elements	= getElements();
-		for(int i=0; i<elements.length; i++)
-		{
-			MElement	element	= (MElement)elements[i];
-			while(element!=null && !errors.contains(element))
-			{
-				if(element instanceof IMCapabilityReference)
-				{
-					errors.add(element);
-					break;
-				}
-				element	= element.getOwner();
-			}
-		}
-		return (StackElement[])errors.toArray(new StackElement[errors.size()]);
-	}*/
-
-	/**
-	 *  Get elements contained in an element of the given ownertag, which have errors, or contain elements with errors.
-	 */
-	public StackElement[]	getOwnedElementErrors(String basetag)
-	{
-		List	errors	= SCollection.createArrayList();
-		StackElement[]	elements	= getElements();			
-		for(int i=0; i<elements.length; i++)
-		{
-//			if(elements[i].path.indexOf(basetag)!=-1)
-//			{
-//				errors.add(elements[i]);
-//			}
-		}
-		return (StackElement[])errors.toArray(new StackElement[errors.size()]);
-	}
-
-	/**
-	 *  Get other errors, not in the given tags.
-	 */
-	public StackElement[]	getOtherErrors(String[] excludes)
-	{
-		List	errors	= SCollection.createArrayList();
-		StackElement[]	elements	= getElements();			
-		for(int i=0; i<elements.length; i++)
-		{
-			boolean	add	= true;
-			for(int j=0; add && j<excludes.length; j++)
-			{
-//				add	= elements[i].path.indexOf(excludes[j])==-1;
-			}
-			if(add)
-				errors.add(elements[i]);
-		}
-		return (StackElement[])errors.toArray(new StackElement[errors.size()]);
-	}
-
-	/**
-	 *  Get all elements which have errors and are contained in the given element.
-	 */
-	public StackElement[]	getElementErrors(StackElement ancestor)
-	{
-		List	errors	= SCollection.createArrayList();
-		StackElement[]	elements	= getElements();			
-		for(int i=0; i<elements.length; i++)
-		{
-//			if(elements[i].path.startsWith(ancestor.path))
-//			{
-//				errors.add(elements[i]);
-//			}
-		}
-		return (StackElement[])errors.toArray(new StackElement[errors.size()]);
-	}
-	
-	//-------- helper methods --------
-
-	/**
-	 *  Generate overview HTML code for the given elements.
-	 */
-	protected void	generateOverview(StringBuffer buf, String type, StackElement[] elements)
-	{
-		if(elements.length>0)
-		{
-			buf.append("<li>");
-			buf.append(type);
-			buf.append(" errors\n<ul>\n");
-			for(int i=0; i<elements.length; i++)
-			{
-				buf.append("<li><a href=\"#");
-//				buf.append(SUtil.makeConform(""+elements[i].path));
-				buf.append("\">");
-//				buf.append(SUtil.makeConform(""+elements[i].path));
-				buf.append("</a> has errors.</li>\n");
-			}
-			buf.append("</ul>\n</li>\n");
-		}
-	}
-
-	/**
-	 *  Generate detail HTML code for the given elements.
-	 */
-	protected void	generateDetails(StringBuffer buf, String type, StackElement[] elements)
-	{
-		if(elements.length>0)
-		{
-			buf.append("<h4>");
-			buf.append(type);
-			buf.append(" details</h4>\n<ul>\n");
-			for(int i=0; i<elements.length; i++)
-			{
-				buf.append("<li><a name=\"");
-//				buf.append(SUtil.makeConform(""+elements[i].path));
-				buf.append("\">");
-//				buf.append(SUtil.makeConform(""+elements[i].path));
-				// Add name of configuration (hack???)
-//				if(elements[i] instanceof IMConfigElement)
-//				{
-//					MElement	owner	= (MElement)elements[i];
-//					while(owner!=null && !(owner instanceof IMConfiguration))
-//						owner	= owner.getOwner();
-//					if(owner!=null)
-//					buf.append(" in ");
-//					buf.append(SUtil.makeConform(""+owner));
-//				}
-				buf.append("</a> errors:\n");
-
-				StackElement[]	errors	= getElementErrors(elements[i]);
-				buf.append("<dl>\n");
-				for(int j=0; j<errors.length; j++)
-				{
-					buf.append("<dt>");
-//					buf.append(errors[j].path);
-//					SourceLocation	loc	= errors[j].getSourceLocation();
-//					if(loc!=null)
-//					{
-//						buf.append(" (");
-//						buf.append(loc.getFilename());
-//						buf.append(": line ");
-//						buf.append(loc.getLineNumber());
-//						buf.append(", column ");
-//						buf.append(loc.getColumnNumber());
-//						buf.append(")");
-//					}
-					
-					String[]	msgs	= getMessages(errors[j]);
-					buf.append("\n<dd>");
-					for(int k=0; k<msgs.length; k++)
-					{
-						buf.append(msgs[k]);
-						buf.append("\n");
-						if(msgs.length>1 && k!=msgs.length-1)
-							buf.append("<br>");
-					}
-					buf.append("</dd>\n");
-				}
-				buf.append("</dl>\n</li>\n");
-			}
-			buf.append("</ul>\n");
-		}
+		if(!entries.getCollection(stack).contains(message))
+			entries.put(stack, message);
 	}
 	
 	/**
@@ -836,6 +664,78 @@ public class OAVCapabilityModel implements ICacheableModel//, IModelInfo
 	public Map	getDocuments()
 	{
 		return externals;//==null ? Collections.EMPTY_MAP : externals;
+	}
+	
+	/**
+	 *  Get the required services.
+	 */
+	public Class[] getRequiredServices()
+	{
+		List ret = new ArrayList();
+		Collection own = handle!=null ? state.getAttributeValues(handle, OAVBDIMetaModel.capability_has_requiredservices) : null;
+		if(own!=null)
+		{
+			for(Iterator it=own.iterator(); it.hasNext(); )
+			{
+				ret.add(state.getAttributeValue(it.next(), OAVBDIMetaModel.expression_has_class));
+			}
+		}
+		
+		Collection subcapas = handle!=null ? state.getAttributeValues(handle, OAVBDIMetaModel.capability_has_capabilityrefs) : null;
+		if(subcapas!=null)
+		{
+			for(Iterator it=subcapas.iterator(); it.hasNext(); )
+			{
+				Object subcaparef = it.next();
+				Object subcapa  = state.getAttributeValue(subcaparef, OAVBDIMetaModel.capabilityref_has_capability);
+				Collection sub = state.getAttributeValues(subcapa, OAVBDIMetaModel.capability_has_requiredservices);
+				if(sub!=null)
+				{
+					for(Iterator it2=sub.iterator(); it2.hasNext(); )
+					{
+						ret.add(state.getAttributeValue(it2.next(), OAVBDIMetaModel.expression_has_class));
+					}
+				}
+			}
+		}
+		
+		return (Class[])ret.toArray(new Class[ret.size()]);
+	}
+	
+	/**
+	 *  Get the provided services.
+	 */
+	public Class[] getProvidedServices()
+	{
+		List ret = new ArrayList();
+		Collection own = handle!=null ? state.getAttributeValues(handle, OAVBDIMetaModel.capability_has_providedservices) : null;
+		if(own!=null)
+		{
+			for(Iterator it=own.iterator(); it.hasNext(); )
+			{
+				ret.add(state.getAttributeValue(it.next(), OAVBDIMetaModel.expression_has_class));
+			}
+		}
+		
+		Collection subcapas = handle!=null ? state.getAttributeValues(handle, OAVBDIMetaModel.capability_has_capabilityrefs) : null;
+		if(subcapas!=null)
+		{
+			for(Iterator it=subcapas.iterator(); it.hasNext(); )
+			{
+				Object subcaparef = it.next();
+				Object subcapa  = state.getAttributeValue(subcaparef, OAVBDIMetaModel.capabilityref_has_capability);
+				Collection sub = state.getAttributeValues(subcapa, OAVBDIMetaModel.capability_has_providedservices);
+				if(sub!=null)
+				{
+					for(Iterator it2=sub.iterator(); it2.hasNext(); )
+					{
+						ret.add(state.getAttributeValue(it2.next(), OAVBDIMetaModel.expression_has_class));
+					}
+				}
+			}
+		}
+		
+		return (Class[])ret.toArray(new Class[ret.size()]);
 	}
 	
 	//-------- helpers --------
@@ -943,10 +843,12 @@ public class OAVCapabilityModel implements ICacheableModel//, IModelInfo
 	
 	/**
 	 *  Find the belief/ref value.
+	 *  Returns the expression text of the default value.
 	 */
-	protected static Object findBeliefDefaultValue(IOAVState state, Object mcapa, Object handle, String configname, String elemname)
+	// Todo: other kernels provide object values!? 
+	protected static String	findBeliefDefaultValue(IOAVState state, Object mcapa, Object handle, String configname, String elemname)
 	{
-		Object ret = null;
+		String ret = null;
 		boolean found = false;
 		
 		// Search initial value in configurations.
@@ -986,10 +888,22 @@ public class OAVCapabilityModel implements ICacheableModel//, IModelInfo
 					if(Arrays.equals(inibelres, belres))
 					{	
 						Object exp = state.getAttributeValue(inibel, OAVBDIMetaModel.belief_has_fact);
-						// todo: string rep?
-						IParsedExpression parsedexp = (IParsedExpression)state.getAttributeValue(exp, OAVBDIMetaModel.expression_has_content);
-						ret = parsedexp.getExpressionText();
-						found = true;
+						if(exp!=null)
+						{
+							// todo: evaluate expression?
+							IParsedExpression parsedexp = (IParsedExpression)state.getAttributeValue(exp, OAVBDIMetaModel.expression_has_parsed);
+							if(parsedexp!=null)
+							{
+								ret = parsedexp.getExpressionText();
+							}
+							else
+							{
+								ret	= (String)state.getAttributeValue(exp, OAVBDIMetaModel.expression_has_text);
+								if(ret!=null)
+									ret	= ret.trim();
+							}
+							found = true;
+						}
 					}
 				}
 			}
@@ -1006,8 +920,18 @@ public class OAVCapabilityModel implements ICacheableModel//, IModelInfo
 				Object exp = state.getAttributeValue(handle, OAVBDIMetaModel.belief_has_fact);
 				if(exp!=null)
 				{
-					IParsedExpression parsedexp = (IParsedExpression)state.getAttributeValue(exp, OAVBDIMetaModel.expression_has_content);
-					ret = parsedexp.getExpressionText();
+					// todo: evaluate expression?
+					IParsedExpression parsedexp = (IParsedExpression)state.getAttributeValue(exp, OAVBDIMetaModel.expression_has_parsed);
+					if(parsedexp!=null)
+					{
+						ret = parsedexp.getExpressionText();
+					}
+					else
+					{
+						ret	= (String)state.getAttributeValue(exp, OAVBDIMetaModel.expression_has_text);
+						if(ret!=null)
+							ret	= ret.trim();
+					}
 				}
 			}
 			else
@@ -1095,9 +1019,9 @@ public class OAVCapabilityModel implements ICacheableModel//, IModelInfo
 	/**
 	 *  Find the beliefset/ref value.
 	 */
-	protected static Object findBeliefSetDefaultValue(IOAVState state, Object mcapa, Object handle, String configname, String elemname)
+	protected static String	findBeliefSetDefaultValue(IOAVState state, Object mcapa, Object handle, String configname, String elemname)
 	{
-		Object ret = null;
+		String ret = null;
 		boolean found = false;
 		
 		// Search initial value in configurations.
@@ -1114,10 +1038,10 @@ public class OAVCapabilityModel implements ICacheableModel//, IModelInfo
 		if(config!=null)
 		{
 			Object[] belsetres;
-			if(OAVBDIMetaModel.beliefreference_type.equals(state.getType(handle)))
+			if(OAVBDIMetaModel.beliefsetreference_type.equals(state.getType(handle)))
 			{
 				String ref = (String)state.getAttributeValue(handle, OAVBDIMetaModel.elementreference_has_concrete);
-				belsetres = AgentRules.resolveMCapability(ref, OAVBDIMetaModel.belief_type, mcapa, state);
+				belsetres = AgentRules.resolveMCapability(ref, OAVBDIMetaModel.beliefset_type, mcapa, state);
 			}
 			else
 			{
@@ -1139,14 +1063,49 @@ public class OAVCapabilityModel implements ICacheableModel//, IModelInfo
 						if(vals==null)
 						{
 							Object exp = state.getAttributeValue(inibelset, OAVBDIMetaModel.beliefset_has_factsexpression);
-							IParsedExpression parsedexp = (IParsedExpression)state.getAttributeValue(exp, OAVBDIMetaModel.expression_has_content);
-							ret = parsedexp.getExpressionText();
+							if(exp!=null)
+							{
+								// todo: evaluate expression?
+								IParsedExpression parsedexp = (IParsedExpression)state.getAttributeValue(exp, OAVBDIMetaModel.expression_has_parsed);
+								if(parsedexp!=null)
+								{
+									ret = parsedexp.getExpressionText();
+								}
+								else
+								{
+									ret	= (String)state.getAttributeValue(exp, OAVBDIMetaModel.expression_has_text);
+									if(ret!=null)
+										ret	= ret.trim();
+								}
+								found = true;
+							}
 						}
 						else
 						{
-							ret = vals.toString();
+							List	rets	= new ArrayList();
+							for(Iterator vit=vals.iterator(); vit.hasNext(); )
+							{
+								Object exp = state.getAttributeValue(inibelset, OAVBDIMetaModel.beliefset_has_factsexpression);
+								if(exp!=null)
+								{
+									// todo: evaluate expression?
+									IParsedExpression parsedexp = (IParsedExpression)state.getAttributeValue(exp, OAVBDIMetaModel.expression_has_parsed);
+									if(parsedexp!=null)
+									{
+										rets.add(parsedexp.getExpressionText());
+									}
+									else
+									{
+										String	text	= (String)state.getAttributeValue(exp, OAVBDIMetaModel.expression_has_text);
+										if(text!=null)
+											text	= text.trim();
+										rets.add(text);
+									}
+								}
+							}
+							found = true;
+							ret	= rets.toString();
 						}
-						found = true;
 					}
 				}
 			}
@@ -1166,13 +1125,46 @@ public class OAVCapabilityModel implements ICacheableModel//, IModelInfo
 					Object exp = state.getAttributeValue(handle, OAVBDIMetaModel.beliefset_has_factsexpression);
 					if(exp!=null)
 					{
-						IParsedExpression parsedexp = (IParsedExpression)state.getAttributeValue(exp, OAVBDIMetaModel.expression_has_content);
-						ret = parsedexp.getExpressionText();
+						// todo: evaluate expression?
+						IParsedExpression parsedexp = (IParsedExpression)state.getAttributeValue(exp, OAVBDIMetaModel.expression_has_parsed);
+						if(parsedexp!=null)
+						{
+							ret = parsedexp.getExpressionText();
+						}
+						else
+						{
+							ret	= (String)state.getAttributeValue(exp, OAVBDIMetaModel.expression_has_text);
+							if(ret!=null)
+								ret	= ret.trim();
+						}
+						found = true;
 					}
 				}
 				else
 				{
-					ret = vals.toString();
+					List	rets	= new ArrayList();
+					for(Iterator vit=vals.iterator(); vit.hasNext(); )
+					{
+						Object exp = state.getAttributeValue(handle, OAVBDIMetaModel.beliefset_has_factsexpression);
+						if(exp!=null)
+						{
+							// todo: evaluate expression?
+							IParsedExpression parsedexp = (IParsedExpression)state.getAttributeValue(exp, OAVBDIMetaModel.expression_has_parsed);
+							if(parsedexp!=null)
+							{
+								rets.add(parsedexp.getExpressionText());
+							}
+							else
+							{
+								String	text	= (String)state.getAttributeValue(exp, OAVBDIMetaModel.expression_has_text);
+								if(text!=null)
+									text	= text.trim();
+								rets.add(text);
+							}
+						}
+					}
+					found = true;
+					ret	= rets.toString();
 				}
 			}
 			else

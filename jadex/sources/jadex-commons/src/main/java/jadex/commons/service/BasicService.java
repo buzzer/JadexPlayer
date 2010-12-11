@@ -2,6 +2,7 @@ package jadex.commons.service;
 
 import jadex.commons.Future;
 import jadex.commons.IFuture;
+import jadex.commons.SReflect;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -12,7 +13,7 @@ import java.util.Map;
  *  Basic service provide a simple default isValid() implementation
  *  that returns true after start service and false afterwards.
  */
-public class BasicService implements IService
+public class BasicService implements IInternalService
 {	
 	//-------- attributes --------
 
@@ -57,6 +58,8 @@ public class BasicService implements IService
 	 */
 	public BasicService(Object providerid, Class type, Map properties)
 	{
+		if(!SReflect.isSupertype(type, getClass()))
+			throw new RuntimeException("Service must implement provided interface: "+getClass().getName()+", "+type.getName());
 		this.sid = createServiceIdentifier(providerid, type, getClass());
 		this.properties	= properties;
 	}
@@ -193,7 +196,7 @@ public class BasicService implements IService
 	 *  @param servicename The service name.
 	 *  @return A service identifier.
 	 */
-	protected static IServiceIdentifier createServiceIdentifier(Object providerid, Class servicetype, Class serviceimpl)
+	public static IServiceIdentifier createServiceIdentifier(Object providerid, Class servicetype, Class serviceimpl)
 	{
 		return new ServiceIdentifier(providerid, servicetype, generateServiceName(serviceimpl));
 	}

@@ -1,11 +1,12 @@
 package jadex.base.service.remote;
 
-import jadex.bridge.IComponentIdentifier;
-import jadex.commons.service.IServiceIdentifier;
+import jadex.commons.SUtil;
 
 import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -19,15 +20,9 @@ public class ProxyInfo
 {
 	//-------- attributes --------
 	
-	/** The rms. */
-	protected IComponentIdentifier rms;
-	
-	/** The service identifier. */
-	protected IServiceIdentifier sid; 
-	
-	/** The value cache. */
-	protected Map cache;
-	
+	/** The target class. */
+	protected List targetinterfaces;
+		
 	/** The excluded methods. */
 	protected Set excluded;
 	
@@ -39,14 +34,6 @@ public class ProxyInfo
 	
 	/** The replacements for methods (method-info -> replacement method). */
 	protected Map replacements;
-	
-	// alternaltively to sid we may have cid and targetclass
-	
-	/** The component identifier. */
-	protected IComponentIdentifier cid; 
-	
-	/** The target class. */
-	protected Class targetclass;
 	
 	//-------- constructors --------
 	
@@ -60,89 +47,33 @@ public class ProxyInfo
 	/**
 	 *  Create a new proxy info.
 	 */
-	public ProxyInfo(IComponentIdentifier rms, IServiceIdentifier sid)
+	public ProxyInfo(Class[] targetinterfaces)
 	{
-		this.rms = rms;
-		this.sid = sid;
+		setTargetInterfaces(targetinterfaces);
+		
+//		System.out.println("proxy with: "+SUtil.arrayToString(targetinterfaces));
 	}
 	
-	/**
-	 *  Create a new proxy info.
-	 */
-	public ProxyInfo(IComponentIdentifier rms, IComponentIdentifier cid, Class targetclass)
-	{
-		this.rms = rms;
-		this.cid = cid;
-		this.targetclass = targetclass;
-	}
-
 	//-------- methods --------
 	
-	/**
-	 *  Get the rms.
-	 *  @return the rms.
-	 */
-	public IComponentIdentifier getRemoteManagementServiceIdentifier()
-	{
-		return rms;
-	}
-
-	/**
-	 *  Set the rms.
-	 *  @param rms The rms to set.
-	 */
-	public void setRemoteManagementServiceIdentifier(IComponentIdentifier rms)
-	{
-		this.rms = rms;
-	}
-
-	/**
-	 *  Get the sid.
-	 *  @return the sid.
-	 */
-	public IServiceIdentifier getServiceIdentifier()
-	{
-		return sid;
-	}
-
-	/**
-	 *  Set the sid.
-	 *  @param sid The sid to set.
-	 */
-	public void setServiceIdentifier(IServiceIdentifier sid)
-	{
-		this.sid = sid;
-	}
-	
-	/**
-	 *  Get the cached values.
-	 *  @return The cached values. 
-	 */
-	public Map getCache()
-	{
-		return cache;
-	}
-	
-	/**
-	 *  Set the cached values.
-	 *  @param cache The cached values. 
-	 */
-	public void setCache(Map cache)
-	{
-		this.cache = cache;
-	}
-	
-	/**
-	 *  Get the cached values.
-	 *  @return The cached values. 
-	 */
-	public void putCache(Object key, Object value)
-	{
-		if(cache==null)
-			cache = new HashMap();
-		cache.put(key, value);
-	}
-	
+//	/**
+//	 *  Get the remote reference.
+//	 *  @return the remote reference.
+//	 */
+//	public RemoteReference getRemoteReference()
+//	{
+//		return rr;
+//	}
+//
+//	/**
+//	 *  Set the rr.
+//	 *  @param rr The rr to set.
+//	 */
+//	public void setRemoteReference(RemoteReference rr)
+//	{
+//		this.rr = rr;
+//	}
+		
 	/**
 	 *  Get the replacements
 	 *  @return The replacements.
@@ -194,40 +125,43 @@ public class ProxyInfo
 		return replacements!=null && replacements.containsKey(new MethodInfo(m));
 	}
 	
+	
+	
 	/**
-	 *  Get the cid.
-	 *  @return the cid.
+	 *  Get the target remote interfaces.
+	 *  @return the target remote interfaces.
 	 */
-	public IComponentIdentifier getComponentIdentifier()
+	public Class[] getTargetInterfaces()
 	{
-		return cid;
+		return targetinterfaces==null? SUtil.EMPTY_CLASS_ARRAY: (Class[])targetinterfaces.toArray(new Class[targetinterfaces.size()]);
 	}
 
 	/**
-	 *  Set the cid.
-	 *  @param cid The cid to set.
+	 *  Set the target remote interfaces.
+	 *  @param targetinterfaces The targetinterfaces to set.
 	 */
-	public void setComponentIdentifier(IComponentIdentifier cid)
+	public void setTargetInterfaces(Class[] targetinterfaces)
 	{
-		this.cid = cid;
+		if(this.targetinterfaces!=null)
+			this.targetinterfaces.clear();
+		if(targetinterfaces!=null)
+		{
+			for(int i=0; i<targetinterfaces.length; i++)
+			{
+				addTargetInterface(targetinterfaces[i]);
+			}
+		}
 	}
-
+	
 	/**
-	 *  Get the targetclass.
-	 *  @return the targetclass.
+	 *  Add a target interface.
+	 *  @param targetinterface The target interface.
 	 */
-	public Class getTargetClass()
+	public void addTargetInterface(Class targetinterface)
 	{
-		return targetclass;
-	}
-
-	/**
-	 *  Set the targetclass.
-	 *  @param targetclass The targetclass to set.
-	 */
-	public void setTargetClass(Class targetclass)
-	{
-		this.targetclass = targetclass;
+		if(targetinterfaces==null)
+			targetinterfaces = new ArrayList();
+		targetinterfaces.add(targetinterface);
 	}
 
 	/**
@@ -353,12 +287,9 @@ public class ProxyInfo
 	 */
 	public String toString()
 	{
-		return "ProxyInfo(rms=" + rms + ", sid=" + sid + ", cache=" + cache
-				+ ", excluded=" + excluded + ", uncached=" + uncached
-				+ ", synchronous=" + synchronous + ", replacements="
-				+ replacements + ", cid=" + cid + ", targetclass="
-				+ targetclass + ")";
+		return "ProxyInfo(excluded=" + excluded + ", uncached=" + uncached
+			+ ", synchronous=" + synchronous + ", replacements="
+			+ replacements + ", targetinterfaces="
+			+ targetinterfaces + ")";
 	}
-	
-	
 }

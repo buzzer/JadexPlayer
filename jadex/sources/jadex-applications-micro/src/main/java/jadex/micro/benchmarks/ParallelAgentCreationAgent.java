@@ -5,7 +5,8 @@ import jadex.bridge.CreationInfo;
 import jadex.bridge.IArgument;
 import jadex.bridge.IComponentIdentifier;
 import jadex.bridge.IComponentManagementService;
-import jadex.commons.ICommand;
+import jadex.bridge.IComponentStep;
+import jadex.bridge.IInternalAccess;
 import jadex.commons.concurrent.CounterResultListener;
 import jadex.commons.concurrent.DefaultResultListener;
 import jadex.commons.concurrent.IResultListener;
@@ -49,20 +50,13 @@ public class ParallelAgentCreationAgent extends MicroAgent
 							final double[]	dur	= new double[1];
 							final long[]	killstarttime	= new long[1];
 							
-							IResultListener	creationlis	= new CounterResultListener(num)
+							IResultListener	creationlis	= new CounterResultListener(num, new IResultListener()
 							{
-								public void intermediateResultAvailable(Object source, Object result)
+								public void resultAvailable(Object source, Object result)
 								{
-									System.out.println("Created peer: "+cnt);
-								}
-								
-								public void finalResultAvailable(Object source, Object result)
-								{
-									System.out.println("Created peer: "+cnt);
-									
-									scheduleStep(new ICommand()
+									scheduleStep(new IComponentStep()
 									{
-										public void execute(Object args)
+										public Object execute(IInternalAccess ia)
 										{
 											long used = Runtime.getRuntime().totalMemory()-Runtime.getRuntime().freeMemory();
 											omem[0] = (used-startmem)/1024;
@@ -80,16 +74,17 @@ public class ParallelAgentCreationAgent extends MicroAgent
 												String name = createPeerName(i);
 												IComponentIdentifier cid = cms.createComponentIdentifier(name, true, null);
 												cms.destroyComponent(cid);	// Kill listener already added on create.
-											}											
+											}		
+											return null;
 										}
 									});
 								}
 								
 								public void exceptionOccurred(Object source, final Exception exception)
 								{
-									scheduleStep(new ICommand()
+									scheduleStep(new IComponentStep()
 									{
-										public void execute(Object args)
+										public Object execute(IInternalAccess ia)
 										{
 											if(exception instanceof RuntimeException)
 												throw (RuntimeException)exception;
@@ -98,22 +93,22 @@ public class ParallelAgentCreationAgent extends MicroAgent
 										}
 									});
 								}
+							})
+							{
+								public void intermediateResultAvailable(Object source, Object result)
+								{
+									System.out.println("Created peer: "+getCnt());
+								}
 							};
 							
-							IResultListener	killlis	= new CounterResultListener(num)
+							
+							IResultListener	killlis	= new CounterResultListener(num, new IResultListener()
 							{
-								public void intermediateResultAvailable(
-										Object source, Object result)
+								public void resultAvailable(Object source, Object result)
 								{
-									System.out.println("Successfully destroyed peer: "+source);
-								}
-								public void finalResultAvailable(Object source, Object result)
-								{
-									System.out.println("Successfully destroyed peer: "+source);
-									
-									scheduleStep(new ICommand()
+									scheduleStep(new IComponentStep()
 									{
-										public void execute(Object args)
+										public Object execute(IInternalAccess ia)
 										{
 											long killend = clock.getTime();
 											System.out.println("Last peer destroyed. "+num+" agents killed.");
@@ -132,15 +127,17 @@ public class ParallelAgentCreationAgent extends MicroAgent
 											System.out.println("Still used memory: "+stillused+"kB.");
 									
 											killAgent();
+											
+											return null;
 										}
 									});
 								}
 								
 								public void exceptionOccurred(Object source, final Exception exception)
 								{
-									scheduleStep(new ICommand()
+									scheduleStep(new IComponentStep()
 									{
-										public void execute(Object args)
+										public Object execute(IInternalAccess ia)
 										{
 											if(exception instanceof RuntimeException)
 												throw (RuntimeException)exception;
@@ -148,6 +145,12 @@ public class ParallelAgentCreationAgent extends MicroAgent
 												throw new RuntimeException(exception);
 										}
 									});
+								}
+							})
+							{
+								public void intermediateResultAvailable(Object source, Object result)
+								{
+									System.out.println("Successfully destroyed peer: "+source);
 								}
 							};
 							

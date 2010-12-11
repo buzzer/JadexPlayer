@@ -14,6 +14,9 @@ import jadex.bdi.runtime.interpreter.PlanRules;
 import jadex.commons.AbstractModelLoader;
 import jadex.commons.ICacheableModel;
 import jadex.commons.ResourceInfo;
+import jadex.commons.Tuple;
+import jadex.commons.collection.IndexMap;
+import jadex.commons.collection.MultiCollection;
 import jadex.rules.parser.conditions.ParserHelper;
 import jadex.rules.parser.conditions.javagrammar.IParserHelper;
 import jadex.rules.rulesystem.IAction;
@@ -36,6 +39,7 @@ import jadex.rules.state.OAVAttributeType;
 import jadex.rules.state.OAVJavaType;
 import jadex.rules.state.OAVObjectType;
 import jadex.rules.state.OAVTypeModel;
+import jadex.rules.state.io.xml.OAVUserContext;
 import jadex.rules.state.javaimpl.OAVStateFactory;
 import jadex.xml.StackElement;
 import jadex.xml.reader.Reader;
@@ -44,6 +48,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
@@ -116,14 +121,14 @@ public class OAVBDIModelLoader	extends AbstractModelLoader
 	 *  @param name	The original name (i.e. not filename).
 	 *  @param info	The resource info.
 	 */
-	protected ICacheableModel	doLoadModel(String name, ResourceInfo info, ClassLoader classloader) throws Exception
+	protected ICacheableModel	doLoadModel(String name, ResourceInfo info, ClassLoader classloader)
 	{
 		OAVCapabilityModel	ret;
 
 		OAVTypeModel	typemodel	= new OAVTypeModel(name+"_typemodel", classloader);
 		// Requires runtime meta model, because e.g. user conditions can refer to runtime elements (belief, goal, etc.) 
 		typemodel.addTypeModel(OAVBDIRuntimeModel.bdi_rt_model);
-		IOAVState	state	= OAVStateFactory.createOAVState(typemodel);
+		final IOAVState	state	= OAVStateFactory.createOAVState(typemodel);
 		
 		final Set	types	= new HashSet();
 		IOAVStateListener	listener	= new IOAVStateListener()
@@ -145,35 +150,40 @@ public class OAVBDIModelLoader	extends AbstractModelLoader
 		};
 		
 		
-//		Report	report	= new Report();
+		state.addStateListener(listener, false);
+		// Use index map to keep insertion order for elements.
+		MultiCollection	entries	= new MultiCollection(new IndexMap().getAsMap(), LinkedHashSet.class);
+		Object handle	= null;
 		try
 		{
-			state.addStateListener(listener, false);
-			Object handle = reader.read(info.getInputStream(), classloader, state);
-//				Object handle = reader.read(info.getInputStream(), state, mapping, report.entries);
-			state.removeStateListener(listener);
-
-			if(state.getType(handle).isSubtype(OAVBDIMetaModel.agent_type))
-			{
-				ret	=  new OAVAgentModel(state, handle, types, info.getFilename(), info.getLastModified());//, report);
-			}
-			else
-			{
-				ret	=  new OAVCapabilityModel(state, handle, types, info.getFilename(), info.getLastModified());//, report);
-			}
+			handle = reader.read(info.getInputStream(), classloader, new OAVUserContext(state, entries));
 		}
 		catch(Exception e)
 		{
-//				e.printStackTrace();
-			if(e instanceof RuntimeException)
-				throw (RuntimeException)e;
-			else
-				throw new RuntimeException(e);
+			entries.put(new Tuple(new Object[]{new StackElement(new QName("capability"), "XML file")}), e.toString());
 		}
+		state.removeStateListener(listener);
 		
-		createAgentModelEntry(ret);
-
-
+		if(handle!=null)
+		{
+			if(state.getType(handle).isSubtype(OAVBDIMetaModel.agent_type))
+			{
+				ret	=  new OAVAgentModel(state, handle, types, info.getFilename(), info.getLastModified(), entries);
+			}
+			else
+			{
+				ret	=  new OAVCapabilityModel(state, handle, types, info.getFilename(), info.getLastModified(), entries);
+			}
+			
+			createAgentModelEntry(ret);
+		}
+		else
+		{
+			// Todo: capability or agent?
+			ret	=  new OAVCapabilityModel(state, handle, types, info.getFilename(), info.getLastModified(), entries);
+		}
+		ret.initModelInfo();
+		
 		return ret;
 	}
 
@@ -181,7 +191,7 @@ public class OAVBDIModelLoader	extends AbstractModelLoader
 	 *  Rules for agent elements have to be created and added to the generic
 	 *  BDI interpreter rules.
 	 */
-	public void	createAgentModelEntry(OAVCapabilityModel model) throws Exception
+	public void	createAgentModelEntry(OAVCapabilityModel model)
 	{
 		IRulebase rb = model.getRulebase();
 		IOAVState state	= model.getState();
@@ -192,22 +202,38 @@ public class OAVBDIModelLoader	extends AbstractModelLoader
 		Collection mcaparefs = state.getAttributeValues(mcapa, OAVBDIMetaModel.capability_has_capabilityrefs);
 		if(mcaparefs!=null)
 		{
-			for(Iterator it=mcaparefs.iterator(); it.hasNext(); )
+			Object[]	mcrs	= mcaparefs.toArray(); 
+			for(int i=0; i<mcrs.length; i++)
 			{
-				Object mcaparef = it.next();
-				String	file	= (String)state.getAttributeValue(mcaparef, OAVBDIMetaModel.capabilityref_has_file);
-				OAVCapabilityModel	cmodel	= loadCapabilityModel(file, imports, model.getClassLoader());
-				model.addSubcapabilityModel(cmodel);
-				if(cmodel.getModelInfo().getReport()!=null)
+				String	file	= (String)state.getAttributeValue(mcrs[i], OAVBDIMetaModel.capabilityref_has_file);
+				try
 				{
-					StackElement se	= new StackElement(new QName("capability"), mcaparef, null);
-//					se.path	= model instanceof OAVAgentModel ? "agent/capabilities/capability" : "capability/capabilities/capability";
-//					se.object	= mcaparef;
-					cmodel.addEntry(se, "Included capability <a href=\"#"+cmodel.getModelInfo().getFilename()+"\">"+cmodel.getName()+"</a> has errors.");
-					cmodel.addDocument(cmodel.getModelInfo().getFilename(), cmodel.getModelInfo().getReport().getErrorHTML());
+					OAVCapabilityModel	cmodel	= loadCapabilityModel(file, imports, model.getClassLoader());
+					model.addSubcapabilityModel(cmodel);
+					if(cmodel.getModelInfo().getReport()!=null)
+					{
+						Tuple	se	= new Tuple(new Object[]{
+							new StackElement(new QName(model instanceof OAVAgentModel ? "agent" : "capability"), mcapa, null),
+							new StackElement(new QName("capabilities"), null, null),
+							new StackElement(new QName("capability"), mcrs[i], null)});
+						model.addEntry(se, "Included capability <a href=\"#"+cmodel.getModelInfo().getFilename()+"\">"+cmodel.getName()+"</a> has errors.");
+						model.addDocument(cmodel.getModelInfo().getFilename(), cmodel.getModelInfo().getReport().getErrorHTML());
+					}
+	
+					state.setAttributeValue(mcrs[i], OAVBDIMetaModel.capabilityref_has_capability, cmodel.getHandle());
 				}
-
-				state.setAttributeValue(mcaparef, OAVBDIMetaModel.capabilityref_has_capability, cmodel.getHandle());				
+				catch(Exception e)
+				{
+					// Remove broken capability reference as otherwise nullpointerexceptions will occur.
+					String	name	= (String)state.getAttributeValue(mcrs[i], OAVBDIMetaModel.modelelement_has_name);
+					state.removeAttributeValue(mcapa, OAVBDIMetaModel.capability_has_capabilityrefs, name);
+					
+					Tuple	se	= new Tuple(new Object[]{
+						new StackElement(new QName(model instanceof OAVAgentModel ? "agent" : "capability"), mcapa, null),
+						new StackElement(new QName("capabilities"), null, null),
+						new StackElement(new QName("capability"), mcrs[i], null)});	// Todo: mcaparef no longer in state!=
+					model.addEntry(se, "Included capability '"+file+"' cannot be loaded: "+e);
+				}
 			}
 		}
 
@@ -225,21 +251,17 @@ public class OAVBDIModelLoader	extends AbstractModelLoader
 				Object create = state.getAttributeValue(mgoal, OAVBDIMetaModel.goal_has_creationcondition);
 				if(create!=null)
 				{
-					Object usercond = state.getAttributeValue(create, OAVBDIMetaModel.expression_has_content);
-					if(usercond!=null)
+					String rulename = Rulebase.getUniqueRuleName(rb, "goal_create_"+gtname);
+					Boolean	unique	= (Boolean)state.getAttributeValue(mgoal, OAVBDIMetaModel.goal_has_unique);
+					if(unique==null || !unique.booleanValue())
 					{
-						String rulename = Rulebase.getUniqueRuleName(rb, "goal_create_"+gtname);
-						Boolean	unique	= (Boolean)state.getAttributeValue(mgoal, OAVBDIMetaModel.goal_has_unique);
-						if(unique==null || !unique.booleanValue())
-						{
-							Object[]	tmp	= GoalLifecycleRules.createGoalCreationUserRule(mgoal);
-							rb.addRule(createUserRule(state, mcapa, imports, mgoal, create, usercond, rulename, tmp));
-						}
-						else
-						{
-							Object[]	tmp	= GoalLifecycleRules.createGoalCreationUniqueUserRule(mgoal, state);
-							rb.addRule(createUserRule(state, mcapa, imports, mgoal, create, usercond, rulename, tmp));
-						}
+						Object[]	tmp	= GoalLifecycleRules.createGoalCreationUserRule(mgoal);
+						createUserRule(model, rb, imports, mgoal, create, rulename, tmp);
+					}
+					else
+					{
+						Object[]	tmp	= GoalLifecycleRules.createGoalCreationUniqueUserRule(mgoal, state);
+						createUserRule(model, rb, imports, mgoal, create, rulename, tmp);
 					}
 				}
 				
@@ -247,42 +269,30 @@ public class OAVBDIModelLoader	extends AbstractModelLoader
 				if(context!=null)
 				{
 					// Two rules have to be added (negated condition for suspend)
-					Object	usercond	= state.getAttributeValue(context, OAVBDIMetaModel.expression_has_content);
-					if(usercond!=null)
-					{
-						String rulename = Rulebase.getUniqueRuleName(rb, "goal_option_"+gtname);
-						Object[]	tmp	= GoalLifecycleRules.createGoalOptionUserRule(mgoal);
-						rb.addRule(createUserRule(state, mcapa, imports, mgoal, context, usercond, rulename, tmp));
+					String rulename = Rulebase.getUniqueRuleName(rb, "goal_option_"+gtname);
+					Object[]	tmp	= GoalLifecycleRules.createGoalOptionUserRule(mgoal);
+					createUserRule(model, rb, imports, mgoal, context, rulename, tmp);
 
-						rulename = Rulebase.getUniqueRuleName(rb, "goal_suspend_"+gtname);
-						tmp	= GoalLifecycleRules.createGoalSuspendUserRule(mgoal);
-						rb.addRule(createUserRule(state, mcapa, imports, mgoal, context, usercond, rulename, tmp));
-					}
+					rulename = Rulebase.getUniqueRuleName(rb, "goal_suspend_"+gtname);
+					tmp	= GoalLifecycleRules.createGoalSuspendUserRule(mgoal);
+					createUserRule(model, rb, imports, mgoal, context, rulename, tmp);
 				}
 				
 				Object drop = state.getAttributeValue(mgoal, OAVBDIMetaModel.goal_has_dropcondition);
 				if(drop!=null)
 				{
-					Object usercond = state.getAttributeValue(drop, OAVBDIMetaModel.expression_has_content);
-					if(usercond!=null)
-					{
-						String rulename = Rulebase.getUniqueRuleName(rb, "goal_drop_"+gtname);
-						Object[]	tmp	= GoalLifecycleRules.createGoalDroppingUserRule(mgoal);
-						rb.addRule(createUserRule(state, mcapa, imports, mgoal, drop, usercond, rulename, tmp));
-					}
+					String rulename = Rulebase.getUniqueRuleName(rb, "goal_drop_"+gtname);
+					Object[]	tmp	= GoalLifecycleRules.createGoalDroppingUserRule(mgoal);
+					createUserRule(model, rb, imports, mgoal, drop, rulename, tmp);
 				}
 				
 				// Create recur condition
 				Object recur = state.getAttributeValue(mgoal, OAVBDIMetaModel.goal_has_recurcondition);
 				if(recur!=null)
 				{
-					Object	usercond = state.getAttributeValue(recur, OAVBDIMetaModel.expression_has_content);
-					if(usercond!=null)
-					{
-						String rulename = Rulebase.getUniqueRuleName(rb, "goal_recur_"+gtname);
-						Object[]	tmp	= GoalProcessingRules.createGoalRecurUserRule(mgoal);
-						rb.addRule(createUserRule(state, mcapa, imports, mgoal, recur, usercond, rulename, tmp));
-					}
+					String rulename = Rulebase.getUniqueRuleName(rb, "goal_recur_"+gtname);
+					Object[]	tmp	= GoalProcessingRules.createGoalRecurUserRule(mgoal);
+					createUserRule(model, rb, imports, mgoal, recur, rulename, tmp);
 				}
 				
 				// Create deliberation rules
@@ -292,19 +302,20 @@ public class OAVBDIModelLoader	extends AbstractModelLoader
 					for(Iterator it2=inhibits.iterator(); it2.hasNext(); )
 					{
 						Object	inhibit = it2.next();
-						Object	usercond = state.getAttributeValue(inhibit, OAVBDIMetaModel.expression_has_content);
-						if(usercond!=null)
+						String	text	= (String)state.getAttributeValue(inhibit, OAVBDIMetaModel.expression_has_text);
+						Object	cond	= state.getAttributeValue(inhibit, OAVBDIMetaModel.expression_has_parsed);
+						if(text!=null || cond!=null)
 						{
 							String	ref	= (String)state.getAttributeValue(inhibit, OAVBDIMetaModel.inhibits_has_ref);
 							String	inmode	= (String)state.getAttributeValue(inhibit, OAVBDIMetaModel.inhibits_has_inhibit);
-
+		
 							String rulename = Rulebase.getUniqueRuleName(rb, "goal_deliberate_addinstanceinhibition_"+gtname);
 							Object[]	tmp	= GoalDeliberationRules.createAddInhibitionLinkUserRule(mgoal, inmode, ref);
-							rb.addRule(createUserRule(state, mcapa, imports, mgoal, inhibit, usercond, rulename, tmp));
-
+							createUserRule(model, rb, imports, mgoal, inhibit, rulename, tmp);
+		
 							rulename = Rulebase.getUniqueRuleName(rb, "goal_deliberate_removeinstanceinhibition_"+gtname);
 							tmp	= GoalDeliberationRules.createRemoveInhibitionLinkUserRule(mgoal, inmode, ref);
-							rb.addRule(createUserRule(state, mcapa, imports, mgoal, inhibit, usercond, rulename, tmp));
+							createUserRule(model, rb, imports, mgoal, inhibit, rulename, tmp);
 						}
 					}
 				}
@@ -316,13 +327,9 @@ public class OAVBDIModelLoader	extends AbstractModelLoader
 					Object target = state.getAttributeValue(mgoal, OAVBDIMetaModel.achievegoal_has_targetcondition);
 					if(target!=null)
 					{
-						Object usercond = state.getAttributeValue(target, OAVBDIMetaModel.expression_has_content);
-						if(usercond!=null)
-						{
-							String rulename = Rulebase.getUniqueRuleName(rb, "achievegoal_target_"+gtname);
-							Object[]	tmp	= GoalProcessingRules.createAchievegoalSucceededUserRule(mgoal);
-							rb.addRule(createUserRule(state, mcapa, imports, mgoal, target, usercond, rulename, tmp));
-						}
+						String rulename = Rulebase.getUniqueRuleName(rb, "achievegoal_target_"+gtname);
+						Object[]	tmp	= GoalProcessingRules.createAchievegoalSucceededUserRule(mgoal);
+						createUserRule(model, rb, imports, mgoal, target, rulename, tmp);
 					}
 				}
 				
@@ -333,34 +340,26 @@ public class OAVBDIModelLoader	extends AbstractModelLoader
 					Object maintain = state.getAttributeValue(mgoal, OAVBDIMetaModel.maintaingoal_has_maintaincondition);
 					if(maintain!=null)
 					{
-						Object usercond = state.getAttributeValue(maintain, OAVBDIMetaModel.expression_has_content);
-						if(usercond!=null)
-						{
-							String rulename = Rulebase.getUniqueRuleName(rb, "maintaingoal_maintain_"+gtname);
-							Object[]	tmp	= GoalProcessingRules.createMaintaingoalProcessingUserRule(mgoal);
-							rb.addRule(createUserRule(state, mcapa, imports, mgoal, maintain, usercond, rulename, tmp));
-						}
+						String rulename = Rulebase.getUniqueRuleName(rb, "maintaingoal_maintain_"+gtname);
+						Object[]	tmp	= GoalProcessingRules.createMaintaingoalProcessingUserRule(mgoal);
+						createUserRule(model, rb, imports, mgoal, maintain, rulename, tmp);
 					}
 					
 					Object target = state.getAttributeValue(mgoal, OAVBDIMetaModel.maintaingoal_has_targetcondition);
 					target	= target!=null ? target : maintain;
 					if(target!=null)
 					{
-						Object	usercond = state.getAttributeValue(target, OAVBDIMetaModel.expression_has_content);
-						if(usercond!=null)
-						{
-							String rulename = Rulebase.getUniqueRuleName(rb, "maintaingoal_target_"+gtname);
-							Object[]	tmp	= GoalProcessingRules.createMaintaingoalSucceededUserRule(mgoal);
-							rb.addRule(createUserRule(state, mcapa, imports, mgoal, target, usercond, rulename, tmp));
-						}
+						String rulename = Rulebase.getUniqueRuleName(rb, "maintaingoal_target_"+gtname);
+						Object[]	tmp	= GoalProcessingRules.createMaintaingoalSucceededUserRule(mgoal);
+						createUserRule(model, rb, imports, mgoal, target, rulename, tmp);
 					}
 				}
 				
 				// Create rules for dynamic parameter values.
-				createDynamicParameterValuesConditions(mgoal, state, rb, mcapa, imports);
+				createDynamicParameterValuesConditions(model, mgoal, rb, imports);
 				
 				// Create rules for dynamic parameter set values.
-				createDynamicParameterSetValuesConditions(mgoal, state, rb, mcapa, imports);
+				createDynamicParameterSetValuesConditions(model, mgoal, rb, imports);
 			}
 		}
 		
@@ -380,33 +379,25 @@ public class OAVBDIModelLoader	extends AbstractModelLoader
 					Object create = state.getAttributeValue(trigger, OAVBDIMetaModel.plantrigger_has_condition);
 					if(create!=null)
 					{
-						Object usercond = state.getAttributeValue(create, OAVBDIMetaModel.expression_has_content);
-						if(usercond!=null)
-						{
-							String rulename = Rulebase.getUniqueRuleName(rb, "plan_create_"+mplan.toString());
-							Object[]	tmp	= PlanRules.createPlanCreationUserRule(mplan);
-							rb.addRule(createUserRule(state, mcapa, imports, mplan, create, usercond, rulename, tmp));
-						}
+						String rulename = Rulebase.getUniqueRuleName(rb, "plan_create_"+mplan.toString());
+						Object[]	tmp	= PlanRules.createPlanCreationUserRule(mplan);
+						createUserRule(model, rb, imports, mplan, create, rulename, tmp);
 					}
 				}
 				
 				Object context = state.getAttributeValue(mplan, OAVBDIMetaModel.plan_has_contextcondition);
 				if(context!=null)
 				{
-					Object usercond = state.getAttributeValue(context, OAVBDIMetaModel.expression_has_content);
-					if(usercond!=null)
-					{
-						String rulename = Rulebase.getUniqueRuleName(rb, "plan_context_"+mplan.toString());
-						Object[]	tmp	= PlanRules.createPlanContextInvalidUserRule(mplan);
-						rb.addRule(createUserRule(state, mcapa, imports, mplan, context, usercond, rulename, tmp));
-					}
+					String rulename = Rulebase.getUniqueRuleName(rb, "plan_context_"+mplan.toString());
+					Object[]	tmp	= PlanRules.createPlanContextInvalidUserRule(mplan);
+					createUserRule(model, rb, imports, mplan, context, rulename, tmp);
 				}
 				
 				// Create rules for dynamic parameter values.
-				createDynamicParameterValuesConditions(mplan, state, rb, mcapa, imports);
+				createDynamicParameterValuesConditions(model, mplan, rb, imports);
 				
 				// Create rules for dynamic parameter set values.
-				createDynamicParameterSetValuesConditions(mplan, state, rb, mcapa, imports);
+				createDynamicParameterSetValuesConditions(model, mplan, rb, imports);
 			}
 		}
 		
@@ -426,25 +417,21 @@ public class OAVBDIModelLoader	extends AbstractModelLoader
 					Object fact = state.getAttributeValue(mbel, OAVBDIMetaModel.belief_has_fact);
 					if(fact!=null)
 					{
-						Object usercond = state.getAttributeValue(fact, OAVBDIMetaModel.expression_has_content);
-						if(usercond!=null)
+						Variable	var	= null;
+						String	varname	= (String)state.getAttributeValue(fact, OAVBDIMetaModel.expression_has_variable);
+						if(varname!=null)
 						{
-							Variable	var	= null;
-							String	varname	= (String)state.getAttributeValue(fact, OAVBDIMetaModel.expression_has_variable);
-							if(varname!=null)
-							{
-								Class	clazz	= (Class)state.getAttributeValue(mbel, OAVBDIMetaModel.typedelement_has_class);
-								var	= new Variable(varname, state.getTypeModel().getJavaType(clazz));
-							}
-							else
-							{
-								var	= new Variable("?ret", OAVJavaType.java_object_type);
-							}
-							String btname = (String)state.getAttributeValue(mbel, OAVBDIMetaModel.modelelement_has_name);
-							String rulename = Rulebase.getUniqueRuleName(rb, "belief_dynamicfact_"+btname);
-							Object[]	tmp	= BeliefRules.createDynamicBeliefUserRule(mbel, var);
-							rb.addRule(createUserRule(state, mcapa, imports, null, fact, usercond, rulename, tmp));
+							Class	clazz	= (Class)state.getAttributeValue(mbel, OAVBDIMetaModel.typedelement_has_class);
+							var	= new Variable(varname, state.getTypeModel().getJavaType(clazz));
 						}
+						else
+						{
+							var	= new Variable("?ret", OAVJavaType.java_object_type);
+						}
+						String btname = (String)state.getAttributeValue(mbel, OAVBDIMetaModel.modelelement_has_name);
+						String rulename = Rulebase.getUniqueRuleName(rb, "belief_dynamicfact_"+btname);
+						Object[]	tmp	= BeliefRules.createDynamicBeliefUserRule(mbel, var);
+						createUserRule(model, rb, imports, null, fact, rulename, tmp);
 					}
 				}
 			}
@@ -466,25 +453,21 @@ public class OAVBDIModelLoader	extends AbstractModelLoader
 					Object facts = state.getAttributeValue(mbelset, OAVBDIMetaModel.beliefset_has_factsexpression);
 					if(facts!=null)
 					{
-						Object usercond = state.getAttributeValue(facts, OAVBDIMetaModel.expression_has_content);
-						if(usercond!=null)
+						Variable	var	= null;
+						String	varname	= (String)state.getAttributeValue(facts, OAVBDIMetaModel.expression_has_variable);
+						if(varname!=null)
 						{
-							Variable	var	= null;
-							String	varname	= (String)state.getAttributeValue(facts, OAVBDIMetaModel.expression_has_variable);
-							if(varname!=null)
-							{
-								Class	clazz	= (Class)state.getAttributeValue(mbelset, OAVBDIMetaModel.typedelement_has_class);
-								var	= new Variable(varname, state.getTypeModel().getJavaType(clazz));
-							}
-							else
-							{
-								var	= new Variable("$?ret", OAVJavaType.java_object_type);
-							}
-							String btname = (String)state.getAttributeValue(mbelset, OAVBDIMetaModel.modelelement_has_name);
-							String rulename = Rulebase.getUniqueRuleName(rb, "beliefset_dynamicfacts_"+btname);
-							Object[]	tmp	= BeliefRules.createDynamicBeliefSetUserRule(mbelset, var);
-							rb.addRule(createUserRule(state, mcapa, imports, null, facts, usercond, rulename, tmp));
+							Class	clazz	= (Class)state.getAttributeValue(mbelset, OAVBDIMetaModel.typedelement_has_class);
+							var	= new Variable(varname, state.getTypeModel().getJavaType(clazz));
 						}
+						else
+						{
+							var	= new Variable("$?ret", OAVJavaType.java_object_type);
+						}
+						String btname = (String)state.getAttributeValue(mbelset, OAVBDIMetaModel.modelelement_has_name);
+						String rulename = Rulebase.getUniqueRuleName(rb, "beliefset_dynamicfacts_"+btname);
+						Object[]	tmp	= BeliefRules.createDynamicBeliefSetUserRule(mbelset, var);
+						createUserRule(model, rb, imports, null, facts, rulename, tmp);
 					}
 				}
 			}
@@ -497,14 +480,10 @@ public class OAVBDIModelLoader	extends AbstractModelLoader
 			for(Iterator it=mconds.iterator(); it.hasNext(); )
 			{
 				Object mcond = it.next();
-				Object usercond = state.getAttributeValue(mcond, OAVBDIMetaModel.expression_has_content);
-				if(usercond!=null)
-				{
-					String name = (String)state.getAttributeValue(mcond, OAVBDIMetaModel.modelelement_has_name);
-					String rulename = Rulebase.getUniqueRuleName(rb, "condition_"+name);
-					Object[]	tmp	= BeliefRules.createConditionUserRule(mcond);
-					rb.addRule(createUserRule(state, mcapa, imports, null, mcond, usercond, rulename, tmp));
-				}
+				String name = (String)state.getAttributeValue(mcond, OAVBDIMetaModel.modelelement_has_name);
+				String rulename = Rulebase.getUniqueRuleName(rb, "condition_"+name);
+				Object[]	tmp	= BeliefRules.createConditionUserRule(mcond);
+				createUserRule(model, rb, imports, null, mcond, rulename, tmp);
 			}
 		}
 		
@@ -538,15 +517,12 @@ public class OAVBDIModelLoader	extends AbstractModelLoader
 			ReteBuilder builder = pm.getReteNode().getBuilder();
 			if(builder!=null && ReteBuilder.REPORTING)
 				System.out.println(builder.getBuildReport());
-			
-			((OAVAgentModel)model).addAgentProperties();
 		}
 	}
 
 	/**
 	 *  Create a user rule.
-	 *  @param state	The state. 
-	 *  @param mcapa	The scope (mcapability).
+	 *  @param model	The capability model.
 	 *  @param imports	The imports.
 	 *  @param melement	The element that holds the condition, if any (e.g. mgoal or mplan).
 	 *  @param mcondition	The mcondition.
@@ -555,30 +531,57 @@ public class OAVBDIModelLoader	extends AbstractModelLoader
 	 *  @param tmp	The rule template [predefined condition, action, priority evaluator(optional), return variable(optional), invert (optional)].
 	 *  @return The created rule.
 	 */
-	protected IRule	createUserRule(IOAVState state, Object mcapa,
-			String[] imports, Object melement, Object mcondition,
-			Object usercond, String rulename, Object[] tmp)
+	protected IRule	createUserRule(OAVCapabilityModel model, IRulebase rb, String[] imports,
+		Object melement, Object mcondition, String rulename, Object[] tmp)
 	{
-		IRule	ret;
-		boolean	invert	= tmp.length>=5 && Boolean.TRUE.equals(tmp[4]);
-		if(usercond instanceof String)
+		IOAVState state	= model.getState();
+		Object mcapa = model.getHandle();
+		IRule	ret	= null;
+		try
 		{
-			String language = (String)state.getAttributeValue(mcondition, OAVBDIMetaModel.expression_has_language);
-			IParserHelper	helper	= new BDIParserHelper((ICondition)tmp[0], mcapa, melement, state);
-			ICondition	cond	= ParserHelper.parseCondition((ICondition)tmp[0], (String)usercond, language, state.getTypeModel(), imports, null, helper, tmp.length>=4 ? (Variable)tmp[3] : null, invert);
-			ret	= tmp.length==2
-				? new Rule(rulename, cond, (IAction)tmp[1])
-				: new Rule(rulename, cond, (IAction)tmp[1], (IPriorityEvaluator)tmp[2]);
+			boolean	invert	= tmp.length>=5 && Boolean.TRUE.equals(tmp[4]);
+			Object	usercond	= state.getAttributeValue(mcondition, OAVBDIMetaModel.expression_has_parsed);
+
+			// Compatibility code for clips conditions: Todo remove
+			if(usercond instanceof ICondition)
+			{
+				ICondition	cond	= new AndCondition(new ICondition[]{(ICondition)tmp[0],
+						invert ? new NotCondition((ICondition)usercond) : (ICondition)usercond });
+					ret	= tmp.length==2
+						? new Rule(rulename, cond, (IAction)tmp[1])
+						: new Rule(rulename, cond, (IAction)tmp[1], (IPriorityEvaluator)tmp[2]);
+			}
+			
+			else
+			{
+				String	text	= (String)state.getAttributeValue(mcondition, OAVBDIMetaModel.expression_has_text);
+				String language = (String)state.getAttributeValue(mcondition, OAVBDIMetaModel.expression_has_language);
+				IParserHelper	helper	= new BDIParserHelper((ICondition)tmp[0], mcapa, melement, state);
+				ICondition	cond	= ParserHelper.parseCondition((ICondition)tmp[0], text, language, state.getTypeModel(), imports, null, helper, tmp.length>=4 ? (Variable)tmp[3] : null, invert);
+				ret	= tmp.length==2
+					? new Rule(rulename, cond, (IAction)tmp[1])
+					: new Rule(rulename, cond, (IAction)tmp[1], (IPriorityEvaluator)tmp[2]);
+			}
+			
+			rb.addRule(ret);
 		}
-		
-		// Compatibility code for clips conditions: Todo remove
-		else
+		catch(RuntimeException e)
 		{
-			ICondition	cond	= new AndCondition(new ICondition[]{(ICondition)tmp[0],
-				invert ? new NotCondition((ICondition)usercond) : (ICondition)usercond });
-			ret	= tmp.length==2
-				? new Rule(rulename, cond, (IAction)tmp[1])
-				: new Rule(rulename, cond, (IAction)tmp[1], (IPriorityEvaluator)tmp[2]);
+			Tuple	se;
+			if(melement!=null)
+			{
+				se	= new Tuple(new Object[]{
+					new StackElement(new QName(model instanceof OAVAgentModel ? "agent" : "capability"), mcapa, null),
+					new StackElement(new QName(state.getType(melement).getName()), melement, null),
+					new StackElement(new QName(state.getType(mcondition).getName()), mcondition, null)});
+			}
+			else
+			{
+				se	= new Tuple(new Object[]{
+					new StackElement(new QName(model instanceof OAVAgentModel ? "agent" : "capability"), mcapa, null),
+					new StackElement(new QName(state.getType(mcondition).getName()), mcondition, null)});				
+			}
+			model.addEntry(se, "Error in condition: "+e);
 		}
 		return ret;
 	}
@@ -589,8 +592,9 @@ public class OAVBDIModelLoader	extends AbstractModelLoader
 	 *  @param state The state.
 	 *  @param rb The rulebase.
 	 */
-	protected void createDynamicParameterValuesConditions(Object mpe, IOAVState state, IRulebase rb, Object mcapa, String[] imports)
+	protected void createDynamicParameterValuesConditions(OAVCapabilityModel model, Object mpe, IRulebase rb, String[] imports)
 	{
+		IOAVState state	= model.getState();
 		// Create rules for dynamic parameter value.
 		
 		Collection mparams = state.getAttributeValues(mpe, OAVBDIMetaModel.parameterelement_has_parameters);
@@ -606,25 +610,21 @@ public class OAVBDIModelLoader	extends AbstractModelLoader
 					Object value = state.getAttributeValue(mparam, OAVBDIMetaModel.parameter_has_value);
 					if(value!=null)
 					{
-						Object	usercond	= state.getAttributeValue(value, OAVBDIMetaModel.expression_has_content);
-						if(usercond!=null)
+						Variable	var	= null;
+						String	varname	= (String)state.getAttributeValue(value, OAVBDIMetaModel.expression_has_variable);
+						if(varname!=null)
 						{
-							Variable	var	= null;
-							String	varname	= (String)state.getAttributeValue(value, OAVBDIMetaModel.expression_has_variable);
-							if(varname!=null)
-							{
-								Class	clazz	= (Class)state.getAttributeValue(mparam, OAVBDIMetaModel.typedelement_has_class);
-								var	= new Variable(varname, state.getTypeModel().getJavaType(clazz));
-							}
-							else
-							{
-								var	= new Variable("?ret", OAVJavaType.java_object_type);
-							}
-							String	ptname	= (String)state.getAttributeValue(mparam, OAVBDIMetaModel.modelelement_has_name);
-							String	rulename	= Rulebase.getUniqueRuleName(rb, "parameter_dynamicvalue_"+state.getAttributeValue(mpe, OAVBDIMetaModel.modelelement_has_name)+"_"+ptname);
-							Object[]	tmp	= BeliefRules.createDynamicParameterUserRule(mpe, ptname, var);
-							rb.addRule(createUserRule(state, mcapa, imports, mpe, value, usercond, rulename, tmp));
+							Class	clazz	= (Class)state.getAttributeValue(mparam, OAVBDIMetaModel.typedelement_has_class);
+							var	= new Variable(varname, state.getTypeModel().getJavaType(clazz));
 						}
+						else
+						{
+							var	= new Variable("?ret", OAVJavaType.java_object_type);
+						}
+						String	ptname	= (String)state.getAttributeValue(mparam, OAVBDIMetaModel.modelelement_has_name);
+						String	rulename	= Rulebase.getUniqueRuleName(rb, "parameter_dynamicvalue_"+state.getAttributeValue(mpe, OAVBDIMetaModel.modelelement_has_name)+"_"+ptname);
+						Object[]	tmp	= BeliefRules.createDynamicParameterUserRule(mpe, ptname, var);
+						createUserRule(model, rb, imports, mpe, value, rulename, tmp);
 					}
 				}
 			}
@@ -637,8 +637,9 @@ public class OAVBDIModelLoader	extends AbstractModelLoader
 	 *  @param state The state.
 	 *  @param rb The rulebase.
 	 */
-	protected void createDynamicParameterSetValuesConditions(Object mpe, IOAVState state, IRulebase rb, Object mcapa, String[] imports)
+	protected void createDynamicParameterSetValuesConditions(OAVCapabilityModel model, Object mpe, IRulebase rb, String[] imports)
 	{
+		IOAVState state	= model.getState();
 		// Create rules for dynamic parameter set values.
 	
 		Collection mparamsets = state.getAttributeValues(mpe, OAVBDIMetaModel.parameterelement_has_parametersets);
@@ -654,25 +655,21 @@ public class OAVBDIModelLoader	extends AbstractModelLoader
 					Object values = state.getAttributeValue(mparamset, OAVBDIMetaModel.parameterset_has_valuesexpression);
 					if(values!=null)
 					{
-						Object usercond = state.getAttributeValue(values, OAVBDIMetaModel.expression_has_content);
-						if(usercond!=null)
+						Variable	var	= null;
+						String	varname	= (String)state.getAttributeValue(values, OAVBDIMetaModel.expression_has_variable);
+						if(varname!=null)
 						{
-							Variable	var	= null;
-							String	varname	= (String)state.getAttributeValue(values, OAVBDIMetaModel.expression_has_variable);
-							if(varname!=null)
-							{
-								Class	clazz	= (Class)state.getAttributeValue(mparamset, OAVBDIMetaModel.typedelement_has_class);
-								var	= new Variable(varname, state.getTypeModel().getJavaType(clazz));
-							}
-							else
-							{
-								var	= new Variable("$?ret", OAVJavaType.java_object_type);
-							}
-							String ptname = (String)state.getAttributeValue(mparamset, OAVBDIMetaModel.modelelement_has_name);
-							String rulename = Rulebase.getUniqueRuleName(rb, "parameterset_dynamicvalues_"+state.getAttributeValue(mpe, OAVBDIMetaModel.modelelement_has_name)+"_"+ptname);
-							Object[]	tmp	= BeliefRules.createDynamicParameterSetUserRule(mpe, ptname, var);
-							rb.addRule(createUserRule(state, mcapa, imports, mpe, values, usercond, rulename, tmp));
+							Class	clazz	= (Class)state.getAttributeValue(mparamset, OAVBDIMetaModel.typedelement_has_class);
+							var	= new Variable(varname, state.getTypeModel().getJavaType(clazz));
 						}
+						else
+						{
+							var	= new Variable("$?ret", OAVJavaType.java_object_type);
+						}
+						String ptname = (String)state.getAttributeValue(mparamset, OAVBDIMetaModel.modelelement_has_name);
+						String rulename = Rulebase.getUniqueRuleName(rb, "parameterset_dynamicvalues_"+state.getAttributeValue(mpe, OAVBDIMetaModel.modelelement_has_name)+"_"+ptname);
+						Object[]	tmp	= BeliefRules.createDynamicParameterSetUserRule(mpe, ptname, var);
+						createUserRule(model, rb, imports, mpe, values, rulename, tmp);
 					}
 				}
 			}
@@ -707,7 +704,7 @@ public class OAVBDIModelLoader	extends AbstractModelLoader
 				// Only ignore rule, when type is part of agent meta(!) model.
 				OAVObjectType	type	= oc.getObjectType();
 				OAVObjectType	mtype	= (OAVObjectType)OAVBDIRuntimeModel.modelmap.get(type);
-				check	= types.contains(type)
+				check	= type instanceof OAVJavaType || types.contains(type)
 					|| mtype!=null && types.contains(mtype)
 					|| mtype==null && !OAVBDIMetaModel.bdimm_type_model.contains(type);
 				

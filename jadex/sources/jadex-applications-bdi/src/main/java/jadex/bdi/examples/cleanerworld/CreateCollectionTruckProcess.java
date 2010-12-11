@@ -4,12 +4,15 @@ import jadex.application.runtime.IApplication;
 import jadex.application.space.envsupport.environment.IEnvironmentSpace;
 import jadex.application.space.envsupport.environment.ISpaceObject;
 import jadex.application.space.envsupport.environment.ISpaceProcess;
-import jadex.bdi.runtime.AgentEvent;
-import jadex.bdi.runtime.IAgentListener;
 import jadex.bdi.runtime.IBDIExternalAccess;
+import jadex.bdi.runtime.IBDIInternalAccess;
 import jadex.bridge.CreationInfo;
 import jadex.bridge.IComponentIdentifier;
+import jadex.bridge.IComponentListener;
 import jadex.bridge.IComponentManagementService;
+import jadex.bridge.IComponentStep;
+import jadex.bridge.IInternalAccess;
+import jadex.commons.ChangeEvent;
 import jadex.commons.IFuture;
 import jadex.commons.SimplePropertyObject;
 import jadex.commons.concurrent.DefaultResultListener;
@@ -89,7 +92,7 @@ public class CreateCollectionTruckProcess extends SimplePropertyObject implement
 					{
 						final IComponentManagementService cms	= (IComponentManagementService)result;
 						IFuture ret = cms.createComponent(null, app.getComponentFilename("Truck"),
-							new CreationInfo(null, params, app.getComponentIdentifier(), false, false, false, app.getAllImports()), null);
+							new CreationInfo(null, params, app.getComponentIdentifier(), null, null, null, null, app.getAllImports()), null);
 						
 						IResultListener lis = new IResultListener()
 						{
@@ -107,16 +110,34 @@ public class CreateCollectionTruckProcess extends SimplePropertyObject implement
 									public void resultAvailable(Object source, Object result)
 									{
 										IBDIExternalAccess ex = (IBDIExternalAccess)result;
-										ex.addAgentListener(new IAgentListener()
+										ex.scheduleStep(new IComponentStep()
 										{
-											public void agentTerminated(AgentEvent ae)
+											public Object execute(IInternalAccess ia)
 											{
-												ongoing.removeAll(todo);
-											}
-											public void agentTerminating(AgentEvent ae)
-											{
+												IBDIInternalAccess bia = (IBDIInternalAccess)ia;
+												bia.addComponentListener(new IComponentListener()
+												{
+													public void componentTerminated(ChangeEvent ae)
+													{
+														ongoing.removeAll(todo);
+													}
+													public void componentTerminating(ChangeEvent ae)
+													{
+													}
+												});
+												return null;
 											}
 										});
+//										ex.addAgentListener(new IAgentListener()
+//										{
+//											public void agentTerminated(AgentEvent ae)
+//											{
+//												ongoing.removeAll(todo);
+//											}
+//											public void agentTerminating(AgentEvent ae)
+//											{
+//											}
+//										});
 									}
 								});
 							}

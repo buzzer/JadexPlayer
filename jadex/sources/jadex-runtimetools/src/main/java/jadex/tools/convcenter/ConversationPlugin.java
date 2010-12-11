@@ -7,15 +7,17 @@ import jadex.base.gui.componenttree.IComponentTreeNode;
 import jadex.base.gui.componenttree.INodeHandler;
 import jadex.base.gui.plugin.AbstractJCCPlugin;
 import jadex.bdi.runtime.AgentEvent;
-import jadex.bdi.runtime.IEAMessageEvent;
+import jadex.bdi.runtime.IBDIInternalAccess;
+import jadex.bdi.runtime.IMessageEvent;
 import jadex.bdi.runtime.IMessageEventListener;
 import jadex.bridge.IComponentIdentifier;
 import jadex.bridge.IComponentManagementService;
+import jadex.bridge.IComponentStep;
+import jadex.bridge.IInternalAccess;
 import jadex.commons.Properties;
 import jadex.commons.SGUI;
 import jadex.commons.concurrent.SwingDefaultResultListener;
 import jadex.commons.service.SServiceProvider;
-import jadex.tools.help.SHelp;
 import jadex.tools.jcc.AgentControlCenter;
 import jadex.tools.starter.StarterPlugin;
 
@@ -140,6 +142,7 @@ public class ConversationPlugin extends AbstractJCCPlugin
 		comptree = new ComponentTreePanel(getJCC().getServiceProvider());
 		comptree.setMinimumSize(new Dimension(0, 0));
 		split.add(comptree);
+		convcenter = new FipaConversationPanel(((AgentControlCenter)getJCC()).getAgent(), comptree);
 		comptree.addNodeHandler(new INodeHandler()
 		{
 			public Action[] getPopupActions(IComponentTreeNode[] nodes)
@@ -193,9 +196,9 @@ public class ConversationPlugin extends AbstractJCCPlugin
 			}
 		});
 
-		split.add(convcenter = new FipaConversationPanel(((AgentControlCenter)getJCC()).getAgent(), comptree));
+		split.add(convcenter);
 
-		SHelp.setupHelp(split, "tools.conversationcenter");
+//		SHelp.setupHelp(split, "tools.conversationcenter");
 
 		split.setDividerLocation(150);
 
@@ -208,12 +211,20 @@ public class ConversationPlugin extends AbstractJCCPlugin
 			
 			public void messageEventReceived(AgentEvent ae)
 			{
-				processMessage((IEAMessageEvent)ae.getSource());
+				processMessage((IMessageEvent)ae.getSource());
 			}
 		};
 		
-		((AgentControlCenter)jcc).getAgent().getEventbase().addMessageEventListener("fipamsg", lis);
-		((AgentControlCenter)jcc).getAgent().getEventbase().addMessageEventListener("component_inform", lis);
+		((AgentControlCenter)getJCC()).getAgent().scheduleStep(new IComponentStep()
+		{
+			public Object execute(IInternalAccess ia)
+			{
+				IBDIInternalAccess	scope	= (IBDIInternalAccess)ia;
+				scope.getEventbase().addMessageEventListener("fipamsg", lis);
+				scope.getEventbase().addMessageEventListener("component_inform", lis);
+				return null;
+			}
+		});
 		
 		
 //		((AgentControlCenter)jcc).getAgent().getEventbase().addMessageEventListener("component_inform", lis);
@@ -225,18 +236,20 @@ public class ConversationPlugin extends AbstractJCCPlugin
 	 * @param me
 	 * @return true if the message event is not from tool_management ontology
 	 */
-	public void processMessage(final IEAMessageEvent message)
+	public void processMessage(final IMessageEvent message)
 	{
-		convcenter.createMessageMap(message).addResultListener(new SwingDefaultResultListener(convcenter)
+		((AgentControlCenter)getJCC()).getAgent().scheduleStep(new IComponentStep()
 		{
-			public void customResultAvailable(Object source, Object result)
+			public Object execute(IInternalAccess ia)
 			{
-				Map	msg	= (Map)result;
+				IBDIInternalAccess	scope	= (IBDIInternalAccess)ia;
+				Map	msg	= convcenter.createMessageMap(scope, message);
 				String onto	= (String)msg.get(SFipa.ONTOLOGY);
 				if(onto==null || !onto.startsWith("jadex.tools"))
 				{
 					convcenter.addMessage(msg);										
 				}						
+				return null;
 			}
 		});
 	}

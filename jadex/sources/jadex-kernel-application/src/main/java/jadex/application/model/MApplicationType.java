@@ -1,26 +1,29 @@
 package jadex.application.model;
 
+import jadex.bridge.AbstractErrorReportBuilder;
 import jadex.bridge.Argument;
 import jadex.bridge.ModelInfo;
+import jadex.bridge.ModelValueProvider;
 import jadex.commons.ICacheableModel;
 import jadex.commons.IFuture;
 import jadex.commons.SReflect;
 import jadex.commons.SUtil;
+import jadex.commons.Tuple;
+import jadex.commons.collection.MultiCollection;
 import jadex.javaparser.IParsedExpression;
-import jadex.javaparser.javaccimpl.JavaCCExpressionParser;
+import jadex.xml.StackElement;
 
 import java.util.ArrayList;
 import java.util.List;
 
+import javax.xml.namespace.QName;
+
 /**
  *  Application type representation.
  */
-public class MApplicationType implements ICacheableModel
+public class MApplicationType extends MStartable implements ICacheableModel
 {
 	//-------- attributes --------
-	
-	/** The autoshutdown flag. */
-	protected boolean autoshutdown;
 	
 	/** The imports. */
 	protected List imports;
@@ -33,10 +36,7 @@ public class MApplicationType implements ICacheableModel
 	
 	/** The list of contained application descriptions. */
 	protected List applications;
-	
-	/** The services. */
-	protected List services;
-	
+		
 	/** The service container. */
 	protected MExpressionType container;
 	
@@ -70,6 +70,13 @@ public class MApplicationType implements ICacheableModel
 	/** The model info. */
 	protected ModelInfo modelinfo;
 	
+	/** The provided services. */
+	protected List providedservices;
+
+	/** The required services. */
+	protected List requiredservices;
+
+	
 	//-------- constructors --------
 	
 	/**
@@ -83,16 +90,16 @@ public class MApplicationType implements ICacheableModel
 		this.applications = new ArrayList();
 //		this.arguments = new ArrayList();
 //		this.results = new ArrayList();
-		this.services = new ArrayList();
+		this.providedservices = new ArrayList();
+		this.requiredservices = new ArrayList();
 //		this.properties = new ArrayList();
-		this.autoshutdown = true;
 		this.modelinfo = new ModelInfo();
 	}
 	
 	/**
 	 *  Init the model info.
 	 */
-	public void initModelInfo()
+	public void initModelInfo(MultiCollection entries)
 	{
 		// todo: breakpoints?!
 //		List names = new ArrayList();
@@ -106,21 +113,73 @@ public class MApplicationType implements ICacheableModel
 		}
 		modelinfo.setConfigurations(configs);
 
-		// Init arguments.
-		String[] imports = getAllImports();
-		JavaCCExpressionParser	parser = new JavaCCExpressionParser();
+		// Init flags.
+		ModelValueProvider suspend = new ModelValueProvider();
+		ModelValueProvider master = new ModelValueProvider();
+		ModelValueProvider daemon = new ModelValueProvider();
+		ModelValueProvider autoshutdown = new ModelValueProvider();
+		modelinfo.setSuspend(suspend);
+		modelinfo.setMaster(master);
+		modelinfo.setDaemon(daemon);
+		modelinfo.setAutoShutdown(autoshutdown);
+		if(getSuspend()!=null)
+			suspend.setValue(getSuspend());
+		if(getMaster()!=null)
+			master.setValue(getMaster());
+		if(getDaemon()!=null)
+			daemon.setValue(getDaemon());
+		if(getAutoShutdown()!=null)
+			autoshutdown.setValue(getAutoShutdown());
+		
 		for(int i=0; i<apps.size(); i++)
 		{
 			MApplicationInstance mapp = (MApplicationInstance)apps.get(i);
 			List instargs = mapp.getArguments();
 			for(int j=0; j<instargs.size(); j++)
 			{
-				MArgument arg = (MArgument)instargs.get(j);
-				String valtext = arg.getValue();
-				Argument rarg = (Argument)getModelInfo().getArgument(arg.getName());
-				
-				Object val = parser.parseExpression(valtext, imports, null, modelinfo.getClassLoader()).getValue(null);
-				rarg.setDefaultValue(mapp.getName(), val);
+				MExpressionType arg = (MExpressionType)instargs.get(j);
+				try
+				{
+					Argument rarg = (Argument)getModelInfo().getArgument(arg.getName());
+					
+					Object val = arg.getParsedValue().getValue(null);
+					rarg.setDefaultValue(mapp.getName(), val);
+				}
+				catch(Exception e)
+				{
+					Tuple	se	= new Tuple(new Object[]{
+						new StackElement(new QName("applicationtype"), this, null),
+						new StackElement(new QName("applications"), null, null),
+						new StackElement(new QName("application"), mapp, null),
+						new StackElement(new QName("arguments"), null, null),
+						new StackElement(new QName("argument"), arg, null)});
+					entries.put(se, e.toString()+": "+arg.getValue());
+				}
+			}
+			
+			Object val = mapp.getSuspend();
+			if(val!=null)
+			{
+				suspend.setValue(mapp.getName(), val);
+//				System.out.println("suspend: "+val+" "+mapp.getName());
+			}
+			val = mapp.getMaster();
+			if(val!=null)
+			{
+				master.setValue(mapp.getName(), val);
+//				System.out.println("master: "+val+" "+mapp.getName());
+			}
+			val = mapp.getDaemon();
+			if(val!=null)
+			{
+				daemon.setValue(mapp.getName(), val);
+//				System.out.println("daemon: "+val+" "+mapp.getName());
+			}
+			val = mapp.getAutoShutdown();
+			if(val!=null)
+			{
+				autoshutdown.setValue(mapp.getName(), val);
+//				System.out.println("autoshutdown: "+val+" "+mapp.getName());
 			}
 		}
 		
@@ -141,15 +200,94 @@ public class MApplicationType implements ICacheableModel
 					}
 					catch(Exception e)
 					{
-						// Hack!!! Exception should be propagated.
-						System.err.println(pex.getExpressionText());
-						e.printStackTrace();
+						Tuple	se	= new Tuple(new Object[]{
+							new StackElement(new QName("applicationtype"), this, null),
+							new StackElement(new QName("properties"), null, null),
+							new StackElement(new QName("property"), mexp, null)});
+						entries.put(se, e.toString()+": "+pex.getExpressionText());
 					}
 				}
 			}
 		}
 		
 		modelinfo.setStartable(true);
+		
+		List reqs = getRequiredServices();
+		if(reqs!=null)
+		{
+			Class[] tmp = new Class[reqs.size()];
+			for(int i=0; i<reqs.size(); i++)
+			{
+				MRequiredServiceType ser = (MRequiredServiceType)reqs.get(i);
+				tmp[i] = ser.getClazz();
+			}
+			
+			modelinfo.setRequiredServices(tmp);
+		}
+		
+		List provs = getProvidedServices();
+		if(provs!=null)
+		{
+			Class[] tmp = new Class[provs.size()];
+			for(int i=0; i<provs.size(); i++)
+			{
+				MProvidedServiceType ser = (MProvidedServiceType)provs.get(i);
+				tmp[i] = ser.getClazz();
+				if(tmp[i]==null && ser.getParsedValue()!=null)
+					tmp[i] = ser.getParsedValue().getStaticType();
+			}
+			
+			modelinfo.setProvidedServices(tmp);
+		}
+				
+		// Build error report.
+		modelinfo.setReport(new AbstractErrorReportBuilder(modelinfo.getName(), modelinfo.getFilename(),
+			new String[]{"Space", "Component", "Application"}, entries, null)
+		{
+			public boolean isInCategory(Object obj, String category)
+			{
+				return "Space".equals(category) && obj instanceof MSpaceType
+					|| "Component".equals(category) && obj instanceof MComponentType
+					|| "Application".equals(category) && obj instanceof MApplicationInstance;
+			}
+			
+			public Object getPathElementObject(Object element)
+			{
+				return ((StackElement)element).getObject();
+			}
+			
+			public String getObjectName(Object obj)
+			{
+				String	name	= null;
+				String	type	= obj!=null ? SReflect.getInnerClassName(obj.getClass()) : null;
+				if(obj instanceof MSpaceType)
+				{
+					name	= ((MSpaceType)obj).getName();
+				}
+				else if(obj instanceof MComponentType)
+				{
+					name	= ((MComponentType)obj).getName();
+				}
+				else if(obj instanceof MApplicationInstance)
+				{
+					name	= ((MApplicationInstance)obj).getName();
+					type	= "Application";
+				}
+				else if(obj instanceof MExpressionType)
+				{
+					IParsedExpression	pexp	= ((MExpressionType)obj).getParsedValue();
+					String	exp	= pexp!=null ? pexp.getExpressionText() : null;
+					name	= exp!=null ? ""+exp : null;
+				}
+				
+				if(type!=null && type.startsWith("M") && type.endsWith("Type"))
+				{
+					type	= type.substring(1, type.length()-4);
+				}
+				
+				return type!=null ? name!=null ? type+" "+name : type : name!=null ? name : "";
+			}
+		}.buildErrorReport());
 	}
 	
 	//-------- methods --------
@@ -263,24 +401,6 @@ public class MApplicationType implements ICacheableModel
 	}
 
 	/**
-	 *  Get the autoshutdown.
-	 *  @return The autoshutdown.
-	 */
-	public boolean isAutoShutdown()
-	{
-		return this.autoshutdown;
-	}
-
-	/**
-	 *  Set the autoshutdown.
-	 *  @param autoshutdown The autoshutdown to set.
-	 */
-	public void setAutoShutdown(boolean autoshutdown)
-	{
-		this.autoshutdown = autoshutdown;
-	}
-
-	/**
 	 *  Add an import.
 	 *  @param import The import.
 	 */
@@ -338,9 +458,18 @@ public class MApplicationType implements ICacheableModel
 	 *  Add a service.
 	 *  @param service The service.
 	 */
-	public void addService(MExpressionType service)
+	public void addMProvidedServiceType(MProvidedServiceType service)
 	{
-		this.services.add(service);
+		this.providedservices.add(service);
+	}
+	
+	/**
+	 *  Add a required service.
+	 *  @param service The required service.
+	 */
+	public void addMRequiredServiceType(MRequiredServiceType service)
+	{
+		this.requiredservices.add(service);
 	}
 	
 	/**
@@ -490,12 +619,21 @@ public class MApplicationType implements ICacheableModel
 	}
 	
 	/**
-	 *  Get the services.
+	 *  Get the provided services.
 	 *  @return The services.
 	 */
-	public List getServices()
+	public List getProvidedServices()
 	{
-		return this.services;
+		return this.providedservices;
+	}
+	
+	/**
+	 *  Get the required services.
+	 *  @return The services.
+	 */
+	public List getRequiredServices()
+	{
+		return this.requiredservices;
 	}
 	
 	/**

@@ -3,12 +3,11 @@ package jadex.micro;
 import jadex.bridge.ComponentResultListener;
 import jadex.bridge.IComponentAdapter;
 import jadex.bridge.IComponentIdentifier;
+import jadex.bridge.IComponentStep;
 import jadex.bridge.IModelInfo;
 import jadex.bridge.MessageType;
 import jadex.commons.Future;
-import jadex.commons.ICommand;
 import jadex.commons.IFuture;
-import jadex.commons.IResultCommand;
 import jadex.commons.concurrent.DelegationResultListener;
 import jadex.commons.concurrent.IResultListener;
 import jadex.commons.service.IServiceProvider;
@@ -76,15 +75,15 @@ public class ExternalAccess implements IMicroExternalAccess
 		return ret;
 	}
 	
-	/**
-	 *  Schedule a step of the agent.
-	 *  May safely be called from external threads.
-	 *  @param step	Code to be executed as a step of the agent.
-	 */
-	public IFuture scheduleStep(ICommand step)
-	{
-		return interpreter.scheduleStep(step);
-	}
+//	/**
+//	 *  Schedule a step of the agent.
+//	 *  May safely be called from external threads.
+//	 *  @param step	Code to be executed as a step of the agent.
+//	 */
+//	public IFuture scheduleStep(ICommand step)
+//	{
+//		return interpreter.scheduleStep(step);
+//	}
 	
 	/**
 	 *  Schedule a step of the agent.
@@ -92,9 +91,30 @@ public class ExternalAccess implements IMicroExternalAccess
 	 *  @param step	Code to be executed as a step of the agent.
 	 *  @return The result of the step.
 	 */
-	public IFuture scheduleResultStep(IResultCommand step)
+	public IFuture scheduleStep(IComponentStep step)
 	{
-		return interpreter.scheduleResultStep(step);
+		return interpreter.scheduleStep(step);
+	}
+	
+	// todo: support with IResultCommand also?!
+	/**
+	 *  Wait for an specified amount of time.
+	 *  @param time The time.
+	 *  @param run The runnable.
+	 */
+	public IFuture waitFor(long time, IComponentStep run)
+	{
+		return agent.waitFor(time, run);
+	}
+	
+	// todo: support with IResultCommand also?!
+	/**
+	 *  Wait for the next tick.
+	 *  @param time The time.
+	 */
+	public IFuture waitForTick(IComponentStep run)
+	{
+		return agent.waitForTick(run);
 	}
 
 	/**
@@ -154,7 +174,7 @@ public class ExternalAccess implements IMicroExternalAccess
 	 */
 	public IFuture getChildren()
 	{
-		return adapter.getChildren();
+		return adapter.getChildrenIdentifiers();
 	}
 
 	/**
@@ -170,13 +190,13 @@ public class ExternalAccess implements IMicroExternalAccess
 			{
 				public void run() 
 				{
-					interpreter.cleanupComponent().addResultListener(new DelegationResultListener(ret));
+					interpreter.killComponent().addResultListener(new DelegationResultListener(ret));
 				}
 			});
 		}
 		else
 		{
-			interpreter.cleanupComponent().addResultListener(new DelegationResultListener(ret));
+			interpreter.killComponent().addResultListener(new DelegationResultListener(ret));
 		}
 		
 		return ret;

@@ -1,6 +1,7 @@
 package jadex.commons.service;
 
 import jadex.commons.IFuture;
+import jadex.commons.IRemotable;
 
 import java.util.Map;
 
@@ -8,7 +9,7 @@ import java.util.Map;
 /**
  *  The interface for platform services.
  */
-public interface IService
+public interface IService extends IRemotable
 {
 	//-------- constants --------
 	
@@ -24,7 +25,7 @@ public interface IService
 	public IServiceIdentifier getServiceIdentifier();
 	
 	/**
-	 *  Get the map of properties (considered as constant)..
+	 *  Get the map of properties (considered as constant).
 	 *  @return The service property map (if any).
 	 */
 	public Map getPropertyMap();

@@ -68,7 +68,7 @@ public class CacheServiceContainer	implements IServiceContainer
 			
 		Object data = null;
 		// Todo: cast hack??? While no clock service found (during init) search without cache.
-		final long now = clock!=null && ((BasicService)clock).isValid()? clock.getTime(): -1;
+		final long now = clock!=null && ((IInternalService)clock).isValid()? clock.getTime(): -1;
 		
 		if(cacheon && !manager.isForcedSearch())
 		{
@@ -101,9 +101,9 @@ public class CacheServiceContainer	implements IServiceContainer
 //						System.out.println("hit: "+data+" "+getId());
 //					}
 					
-					if(data instanceof BasicService)
+					if(data instanceof IInternalService)
 					{
-						if(!((BasicService)data).isValid())
+						if(!((IInternalService)data).isValid())
 						{
 							cache.remove(key);
 							data = null;
@@ -126,9 +126,9 @@ public class CacheServiceContainer	implements IServiceContainer
 						for(Iterator it=coll.iterator(); it.hasNext(); )
 						{
 							Object	next	= it.next();
-							if(next instanceof BasicService)
+							if(next instanceof IInternalService)
 							{
-								if(!((BasicService)next).isValid())
+								if(!((IInternalService)next).isValid())
 								{
 									// if one is invalid whole result is invalid
 									cache.remove(key);
@@ -278,7 +278,7 @@ public class CacheServiceContainer	implements IServiceContainer
 	 *  @param name The name.
 	 *  @param service The service.
 	 */
-	public IFuture addService(BasicService service)
+	public IFuture addService(IInternalService service)
 	{
 		return container.addService(service);
 	}

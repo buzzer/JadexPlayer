@@ -21,6 +21,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowEvent;
 import java.awt.event.WindowListener;
+import java.awt.event.WindowStateListener;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -190,6 +191,18 @@ public class ObserverCenter
 				plugintimer.start();
 								
 				mainwindow.addWindowListener(new ObserverWindowController());
+				
+				mainwindow.addWindowStateListener(new WindowStateListener()
+				{
+					public void windowStateChanged(WindowEvent e)
+					{
+						IPerspective p = getSelectedPerspective();
+						if (p instanceof Perspective2D)
+						{
+							((Perspective2D) p).getViewport().refreshCanvasSize();
+						}
+					}
+				});
 			}
 		};
 		
@@ -414,11 +427,35 @@ public class ObserverCenter
 				synchronized(perspectives)
 				{
 					IPerspective perspective = (IPerspective)perspectives.get(name);
+					double z = 1.0;
+					IVector2 ps = null;
+					if (perspective instanceof Perspective2D)
+					{
+						Perspective2D p = (Perspective2D) perspective;
+						z = p.getZoom();
+						ps = p.getViewport().getPosition();
+					}
+					
 					perspective.setOpenGl(opengl);
 					if (name.equals(selectedperspective.getName()))
 					{
 						mainwindow.setPerspectiveView(selectedperspective.getView());
 						selectedperspective.reset();
+					}
+					
+					if (perspective instanceof Perspective2D)
+					{
+						final Perspective2D p = (Perspective2D) perspective;
+						final IVector2 pos = ps;
+						final double zoom = z;
+						SwingUtilities.invokeLater(new Runnable()
+						{
+							public void run()
+							{
+								p.setZoom(zoom);
+								p.getViewport().setPosition(pos);
+							}
+						});
 					}
 				}
 			}
@@ -543,7 +580,7 @@ public class ObserverCenter
 				oldPlugin.shutdown();
 			}
 
-			mainwindow.setPluginView(plugin.getView());
+			mainwindow.setPluginView(plugin.getName(), plugin.getView());
 			plugin.start(this);
 			activeplugin = plugin;
 		}

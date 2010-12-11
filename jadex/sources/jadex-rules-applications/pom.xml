@@ -4,7 +4,7 @@
 	<groupId>net.sourceforge.jadex</groupId>
 	<artifactId>jadex-rules-applications</artifactId>
 	<packaging>jar</packaging>
-	<version>2.0-rc5</version>
+	<version>2.0-rc6</version>
 	<name>jadex-rules-applications</name>
 	<url>http://jadex.sourceforge.net</url>
 
@@ -94,6 +94,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
+        		<version>2.3.2</version>
 				<configuration>
 					<source>1.4</source>
 					<target>1.4</target>
@@ -103,6 +104,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-source-plugin</artifactId>
+        		<version>2.1.2</version>
 				<executions>
 					<execution>
 						<id>attach-sources</id>
@@ -117,6 +119,7 @@
 			<plugin>
 		        <groupId>org.apache.maven.plugins</groupId>
         		<artifactId>maven-javadoc-plugin</artifactId>
+        		<version>2.7</version>
 				<executions>
 					<execution>
 						<id>attach-javadoc</id>
@@ -134,6 +137,7 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-jar-plugin</artifactId>
+        		<version>2.3.1</version>
 				<configuration>
 					<archive>
 						<manifest>
@@ -171,13 +175,13 @@
 		<dependency>
 			<groupId>net.sourceforge.jadex</groupId>
 			<artifactId>jadex-rules</artifactId>
-			<version>2.0-rc5</version>
+			<version>2.0-rc6</version>
 		</dependency>
 
 		<dependency>
 			<groupId>net.sourceforge.jadex</groupId>
 			<artifactId>jadex-rules-tools</artifactId>
-			<version>2.0-rc5</version>
+			<version>2.0-rc6</version>
 		</dependency>
 	</dependencies>
 </project>

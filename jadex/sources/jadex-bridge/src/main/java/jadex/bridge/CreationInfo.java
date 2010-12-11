@@ -22,16 +22,16 @@ public class CreationInfo
 	protected IComponentIdentifier	parent;
 	
 	/** The suspend flag (default: false). */
-	protected boolean	suspend;
+	protected Boolean	suspend;
 
 	/** The master flag (default: false). */
-	protected boolean	master;
+	protected Boolean	master;
 	
 	/** The daemon flag (default: false). */
-	protected boolean daemon;
+	protected Boolean daemon;
 	
 	/** The auto shutdown flag (default: false). */
-	protected boolean autoshutdown;
+	protected Boolean autoshutdown;
 	
 	/** The imports. */
 	protected String[]	imports;
@@ -92,33 +92,7 @@ public class CreationInfo
 	 */
 	public CreationInfo(String config, Map args, IComponentIdentifier parent)
 	{
-		this(config, args, parent, false, false);
-	}
-	
-	/**
-	 *  Create a new creation info.
-	 *  @param config	The configuration.
-	 *  @param args	The arguments.
-	 *  @param parent	The parent of the component to be created.
-	 *  @param suspend	The suspend flag.
-	 *  @param master	The master flag.
-	 */
-	public CreationInfo(String config, Map args, IComponentIdentifier parent, boolean suspend, boolean master)
-	{
-		this(config, args, parent, suspend, master, false);
-	}
-	
-	/**
-	 *  Create a new creation info.
-	 *  @param config	The configuration.
-	 *  @param args	The arguments.
-	 *  @param parent	The parent of the component to be created.
-	 *  @param suspend	The suspend flag.
-	 *  @param master	The master flag.
-	 */
-	public CreationInfo(String config, Map args, IComponentIdentifier parent, boolean suspend, boolean master, boolean daemon)
-	{
-		this(config, args, parent, suspend, master, daemon, null);
+		this(config, args, parent, null, (String[])null);
 	}
 	
 	/**
@@ -130,7 +104,76 @@ public class CreationInfo
 	 *  @param master	The master flag.
 	 *  @param imports	The imports.
 	 */
-	public CreationInfo(String config, Map args, IComponentIdentifier parent, boolean suspend, boolean master, boolean daemon, String[] imports)
+	public CreationInfo(String config, Map args, IComponentIdentifier parent, boolean suspend)
+	{
+		this(config, args, parent, null, (String[])null);
+	}
+	
+	/**
+	 *  Create a new creation info.
+	 *  @param config	The configuration.
+	 *  @param args	The arguments.
+	 *  @param parent	The parent of the component to be created.
+	 *  @param suspend	The suspend flag.
+	 *  @param master	The master flag.
+	 *  @param imports	The imports.
+	 */
+	public CreationInfo(String config, Map args, IComponentIdentifier parent, Boolean suspend, String[] imports)
+	{
+		this(config, args, parent, null, null, null, null, imports);
+	}
+	
+	/**
+	 *  Create a new creation info.
+	 *  @param config	The configuration.
+	 *  @param args	The arguments.
+	 *  @param parent	The parent of the component to be created.
+	 *  @param suspend	The suspend flag.
+	 *  @param master	The master flag.
+	 */
+	public CreationInfo(String config, Map args, IComponentIdentifier parent, Boolean suspend, Boolean master)
+	{
+		this(config, args, parent, suspend, master, null);
+	}
+	
+	/**
+	 *  Create a new creation info.
+	 *  @param config	The configuration.
+	 *  @param args	The arguments.
+	 *  @param parent	The parent of the component to be created.
+	 *  @param suspend	The suspend flag.
+	 *  @param master	The master flag.
+	 */
+	public CreationInfo(String config, Map args, IComponentIdentifier parent, Boolean suspend, Boolean master, Boolean daemon)
+	{
+		this(config, args, parent, suspend, master, daemon, null);
+	}
+	
+	/**
+	 *  Create a new creation info.
+	 *  @param config	The configuration.
+	 *  @param args	The arguments.
+	 *  @param parent	The parent of the component to be created.
+	 *  @param suspend	The suspend flag.
+	 *  @param master	The master flag.
+	 */
+	public CreationInfo(String config, Map args, IComponentIdentifier parent, Boolean suspend, 
+		Boolean master, Boolean daemon, Boolean autoshutdown)
+	{
+		this(config, args, parent, suspend, master, daemon, autoshutdown, null);
+	}
+	
+	/**
+	 *  Create a new creation info.
+	 *  @param config	The configuration.
+	 *  @param args	The arguments.
+	 *  @param parent	The parent of the component to be created.
+	 *  @param suspend	The suspend flag.
+	 *  @param master	The master flag.
+	 *  @param imports	The imports.
+	 */
+	public CreationInfo(String config, Map args, IComponentIdentifier parent, 
+		Boolean suspend, Boolean master, Boolean daemon, Boolean autoshutdown, String[] imports)
 	{
 		this.config	= config;
 		this.args	= args;
@@ -138,6 +181,7 @@ public class CreationInfo
 		this.suspend	= suspend;
 		this.master = master;
 		this.daemon = daemon;
+		this.autoshutdown = autoshutdown;
 		this.imports	= imports;
 	}
 	
@@ -201,7 +245,7 @@ public class CreationInfo
 	 *  Get the suspend flag.
 	 *  @return the suspend flag
 	 */
-	public boolean isSuspend()
+	public Boolean getSuspend()
 	{
 		return suspend;
 	}
@@ -210,63 +254,63 @@ public class CreationInfo
 	 *  Set the suspend flag.
 	 *  @param suspend the suspend to set flag
 	 */
-	public void setSuspend(boolean suspend)
+	public void setSuspend(Boolean suspend)
 	{
 		this.suspend = suspend;
 	}
 
 	/**
-	 *  Get the master flag.
-	 *  @return the master flag.
+	 *  Get the master.
+	 *  @return The master.
 	 */
-	public boolean isMaster()
+	public Boolean getMaster()
 	{
 		return master;
 	}
 
 	/**
-	 *  Set the master flag.
-	 *  @param master the master to set
+	 *  Set the master.
+	 *  @param master The master to set.
 	 */
-	public void setMaster(boolean master)
+	public void setMaster(Boolean master)
 	{
 		this.master = master;
 	}
-	
+
 	/**
 	 *  Get the daemon.
 	 *  @return The daemon.
 	 */
-	public boolean isDaemon()
+	public Boolean getDaemon()
 	{
-		return this.daemon;
+		return daemon;
 	}
 
 	/**
 	 *  Set the daemon.
 	 *  @param daemon The daemon to set.
 	 */
-	public void setDaemon(boolean daemon)
+	public void setDaemon(Boolean daemon)
 	{
 		this.daemon = daemon;
 	}
-	
+
 	/**
-	 *  Get the auto shutdown flag.
-	 *  @return	The flag.
+	 *  Get the autoshutdown.
+	 *  @return The autoshutdown.
 	 */
-	public boolean isAutoShutdown()
+	public Boolean getAutoShutdown()
 	{
 		return autoshutdown;
 	}
-	
+
 	/**
-	 *  Set the auto shutdown flag.
-	 *  @param autoshutdown	The flag.
+	 *  Set the autoshutdown.
+	 *  @param autoshutdown The autoshutdown to set.
 	 */
-	public void	setAutoShutdown(boolean autoshutdown)
+	public void setAutoshutdown(Boolean autoshutdown)
 	{
-		this.autoshutdown	= autoshutdown;
+		this.autoshutdown = autoshutdown;
 	}
 
 	/**

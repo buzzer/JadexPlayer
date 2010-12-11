@@ -47,6 +47,9 @@ public class ComponentTreeNode	extends AbstractComponentTreeNode implements IAct
 		IComponentManagementService cms, ComponentIconCache iconcache)
 	{
 		super(parent, model, tree);
+		
+		assert desc!=null;
+		
 		this.desc	= desc;
 		this.cms	= cms;
 		this.iconcache	= iconcache;
@@ -329,6 +332,14 @@ public class ComponentTreeNode	extends AbstractComponentTreeNode implements IAct
 	public IComponentDescription	getDescription()
 	{
 		return desc;
+	}
+	
+	/**
+	 *  Get the component id.
+	 */
+	public IComponentIdentifier getComponentIdentifier()
+	{
+		return desc!=null? desc.getName(): null;
 	}
 
 	/**

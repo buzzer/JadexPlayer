@@ -8,16 +8,17 @@ import jadex.bridge.IComponentAdapterFactory;
 import jadex.bridge.IComponentDescription;
 import jadex.bridge.IComponentIdentifier;
 import jadex.bridge.IComponentInstance;
+import jadex.bridge.IComponentListener;
 import jadex.bridge.IComponentManagementService;
+import jadex.bridge.IComponentStep;
 import jadex.bridge.IExternalAccess;
+import jadex.bridge.IInternalAccess;
 import jadex.bridge.IMessageAdapter;
 import jadex.bridge.IModelInfo;
 import jadex.commons.ChangeEvent;
 import jadex.commons.Future;
 import jadex.commons.IChangeListener;
-import jadex.commons.ICommand;
 import jadex.commons.IFuture;
-import jadex.commons.IResultCommand;
 import jadex.commons.concurrent.DefaultResultListener;
 import jadex.commons.concurrent.DelegationResultListener;
 import jadex.commons.concurrent.IResultListener;
@@ -65,7 +66,7 @@ public class MicroAgentInterpreter implements IComponentInstance
 	protected List steps;
 	
 	/** The change listeners. */
-	protected List listeners;
+	protected List changelisteners;
 
 	/** The execution history. */
 	protected List history;
@@ -73,8 +74,11 @@ public class MicroAgentInterpreter implements IComponentInstance
 	/** The service container. */
 	protected IServiceContainer container;
 	
-	/** The stop flag, stops interpreter execution. */
-	protected boolean stop;
+	/** The component listeners. */
+	protected List componentlisteners;
+	
+	/** Flag indicating that no steps may be scheduled any more. */
+	protected boolean nosteps;
 	
 	//-------- constructors --------
 	
@@ -131,24 +135,24 @@ public class MicroAgentInterpreter implements IComponentInstance
 			microagent.init(MicroAgentInterpreter.this);
 			
 			// Schedule initial step.
-			addStep(new Object[]{new ICommand()
+			addStep(new Object[]{new IComponentStep()
 			{
-				public void execute(Object agent)
+				public Object execute(IInternalAccess ia)
 				{
 					microagent.agentCreated();
 					getServiceContainer().start().addResultListener(createResultListener(new IResultListener()
 					{
 						public void resultAvailable(Object source, Object result)
 						{
-							// Init is now finished. Notify cms and stop execution.
-							stop = true;
+							// Init is now finished. Notify cms.
 							inited.setResult(new Object[]{MicroAgentInterpreter.this, adapter});
 							
-							addStep(new Object[]{new ICommand()
+							addStep(new Object[]{new IComponentStep()
 							{
-								public void execute(Object agent)
+								public Object execute(IInternalAccess ia)
 								{
 									microagent.executeBody();
+									return null;
 								}
 								public String toString()
 								{
@@ -162,6 +166,7 @@ public class MicroAgentInterpreter implements IComponentInstance
 							inited.setException(exception);
 						}
 					}));
+					return null;
 				}
 				public String toString()
 				{
@@ -201,23 +206,31 @@ public class MicroAgentInterpreter implements IComponentInstance
 				
 				// Correct to execute them in try catch?!
 				
-				if(step[0] instanceof ICommand)
-				{
+//				if(step[0] instanceof ICommand)
+//				{
+//					if(future!=null)
+//					{
+//						try
+//						{
+//							((ICommand)step[0]).execute(microagent);
+//							future.setResult(null);
+//						}
+//						catch(RuntimeException e)
+//						{
+//							future.setException(e);
+//							throw e;
+//						}
+//					}
+//					else
+//					{
+//						((ICommand)step[0]).execute(microagent);
+//					}
+//				}
+//				else //if(step[0] instanceof IResultCommand)
+//				{
 					try
 					{
-						((ICommand)step[0]).execute(microagent);
-						future.setResult(null);
-					}
-					catch(Exception e)
-					{
-						future.setException(e);
-					}
-				}
-				else 
-				{
-					try
-					{
-						Object res = ((IResultCommand)step[0]).execute(microagent);
+						Object res = ((IComponentStep)step[0]).execute(microagent);
 						if(res instanceof IFuture)
 						{
 							((IFuture)res).addResultListener(new DelegationResultListener(future));
@@ -227,18 +240,17 @@ public class MicroAgentInterpreter implements IComponentInstance
 							future.setResult(res);
 						}
 					}
-					catch(Exception e)
+					catch(RuntimeException e)
 					{
 						future.setException(e);
+						throw e;
 					}
-				}
+//				}
 				
 				addHistoryEntry(steptext);
 			}
 	
-			boolean ret = !stop && !steps.isEmpty();
-			stop = false;
-			return ret;
+			return !steps.isEmpty();
 		}
 		catch(ComponentTerminatedException ate)
 		{
@@ -258,11 +270,13 @@ public class MicroAgentInterpreter implements IComponentInstance
 	public void messageArrived(final IMessageAdapter message)
 	{
 //		System.out.println("msgrec: "+getAgentAdapter().getComponentIdentifier()+" "+message);
-		scheduleStep(new ICommand()
+//		IFuture ret = scheduleStep(new ICommand()
+		scheduleStep(new IComponentStep()
 		{
-			public void execute(Object agent)
+			public Object execute(IInternalAccess ia)
 			{
 				microagent.messageArrived(Collections.unmodifiableMap(message.getParameterMap()), message.getMessageType());
+				return null;
 			}
 			
 			public String toString()
@@ -270,6 +284,12 @@ public class MicroAgentInterpreter implements IComponentInstance
 				return "microagent.messageArrived("+message+")_#"+this.hashCode();
 			}
 		});
+//		ret.addResultListener(new DefaultResultListener(adapter.getLogger())
+//		{
+//			public void resultAvailable(Object source, Object result)
+//			{
+//			}
+//		});
 	}
 
 	/**
@@ -291,13 +311,40 @@ public class MicroAgentInterpreter implements IComponentInstance
 			{
 				public void run()
 				{	
+//					System.out.println("cleanupComponent: "+getAgentAdapter().getComponentIdentifier());
+					nosteps = true;
+					ComponentTerminatedException ex = new ComponentTerminatedException(getAgentAdapter().getComponentIdentifier());
+					while(!steps.isEmpty())
+					{
+						Object[] step = removeStep();
+						Future future = (Future)step[1];
+						future.setException(ex);
+//						System.out.println("Cleaning obsolete step: "+getAgentAdapter().getComponentIdentifier()+", "+step[0]);
+					}
+					
 					for(int i=0; i<microagent.timers.size(); i++)
 					{
 						ITimer timer = (ITimer)microagent.timers.get(i);
 						timer.cancel();
 					}
 					microagent.timers.clear();
+					if(componentlisteners!=null)
+					{
+						for(int i=0; i<componentlisteners.size(); i++)
+						{
+							IComponentListener lis = (IComponentListener)componentlisteners.get(i);
+							lis.componentTerminating(new ChangeEvent(adapter.getComponentIdentifier()));
+						}
+					}
 					microagent.agentKilled();
+					if(componentlisteners!=null)
+					{
+						for(int i=0; i<componentlisteners.size(); i++)
+						{
+							IComponentListener lis = (IComponentListener)componentlisteners.get(i);
+							lis.componentTerminated(new ChangeEvent(adapter.getComponentIdentifier()));
+						}
+					}
 					IComponentIdentifier cid = adapter.getComponentIdentifier();
 					ret.setResult(cid);
 				}
@@ -393,18 +440,20 @@ public class MicroAgentInterpreter implements IComponentInstance
 	 *  The current subcomponents can be accessed by IComponentAdapter.getSubcomponents().
 	 *  @param comp	The newly created component.
 	 */
-	public void	componentCreated(IComponentDescription desc, IModelInfo model)
+	public IFuture	componentCreated(IComponentDescription desc, IModelInfo model)
 	{
+		return new Future(null);
 	}
-	
+
 	/**
 	 *  Called when a subcomponent of this component has been destroyed.
 	 *  This event may be ignored, if no special reaction  to new or destroyed components is required.
 	 *  The current subcomponents can be accessed by IComponentAdapter.getSubcomponents().
 	 *  @param comp	The destroyed component.
 	 */
-	public void	componentDestroyed(IComponentDescription desc)
+	public IFuture	componentDestroyed(IComponentDescription desc)
 	{
+		return new Future(null);
 	}
 	
 	/**
@@ -459,12 +508,38 @@ public class MicroAgentInterpreter implements IComponentInstance
 			history	= null;
 	}
 	
+//	/**
+//	 *  Schedule a step of the agent.
+//	 *  May safely be called from external threads.
+//	 *  @param step	Code to be executed as a step of the agent.
+//	 */
+//	public IFuture scheduleStep(final ICommand step)
+//	{
+//		final Future ret = new Future();
+////		System.out.println("ss: "+getAgentAdapter().getComponentIdentifier()+" "+Thread.currentThread()+" "+step);
+//		try
+//		{
+//			adapter.invokeLater(new Runnable()
+//			{			
+//				public void run()
+//				{
+//					addStep(new Object[]{step, ret});
+//				}
+//			});
+//		}
+//		catch(Exception e)
+//		{
+//			ret.setException(e);
+//		}
+//		return ret;
+//	}
+	
 	/**
 	 *  Schedule a step of the agent.
 	 *  May safely be called from external threads.
 	 *  @param step	Code to be executed as a step of the agent.
 	 */
-	public IFuture scheduleStep(final ICommand step)
+	public IFuture scheduleStep(final IComponentStep step)
 	{
 		final Future ret = new Future();
 //		System.out.println("ss: "+getAgentAdapter().getComponentIdentifier()+" "+Thread.currentThread()+" "+step);
@@ -476,31 +551,10 @@ public class MicroAgentInterpreter implements IComponentInstance
 				{
 					addStep(new Object[]{step, ret});
 				}
-			});
-		}
-		catch(Exception e)
-		{
-			ret.setException(e);
-		}
-		return ret;
-	}
-	
-	/**
-	 *  Schedule a step of the agent.
-	 *  May safely be called from external threads.
-	 *  @param step	Code to be executed as a step of the agent.
-	 */
-	public IFuture scheduleResultStep(final IResultCommand step)
-	{
-		final Future ret = new Future();
-//		System.out.println("ss: "+getAgentAdapter().getComponentIdentifier()+" "+Thread.currentThread()+" "+step);
-		try
-		{
-			adapter.invokeLater(new Runnable()
-			{			
-				public void run()
+				
+				public String toString()
 				{
-					addStep(new Object[]{step, ret});
+					return "invokeLater("+step+")";
 				}
 			});
 		}
@@ -516,8 +570,15 @@ public class MicroAgentInterpreter implements IComponentInstance
 	 */
 	protected void addStep(Object[] step)
 	{
-		steps.add(step);
-		notifyListeners(new ChangeEvent(this, "addStep", step));
+		if(nosteps)
+		{
+			((Future)step[1]).setException(new ComponentTerminatedException(getAgentAdapter().getComponentIdentifier()));
+		}
+		else
+		{
+			steps.add(step);
+			notifyListeners(new ChangeEvent(this, "addStep", step));
+		}
 	}
 	
 	/**
@@ -581,7 +642,7 @@ public class MicroAgentInterpreter implements IComponentInstance
 	 *  the method will directly fail with a runtime exception.
 	 *  Note: 1.4 compliant code.
 	 *  Problem: Deadlocks cannot be detected and no exception is thrown.
-	 */
+	 * /
 	public void invokeSynchronized(final Runnable code)
 	{
 		if(isExternalThread())
@@ -645,7 +706,7 @@ public class MicroAgentInterpreter implements IComponentInstance
 			Thread.dumpStack();
 			code.run();
 		}
-	}
+	}*/
 	
 	/**
 	 *  Check if the external thread is accessing.
@@ -803,9 +864,9 @@ public class MicroAgentInterpreter implements IComponentInstance
 	 */
 	public void addChangeListener(IChangeListener listener)
 	{
-		if(listeners==null)
-			listeners = new ArrayList();
-		listeners.add(listener);
+		if(changelisteners==null)
+			changelisteners = new ArrayList();
+		changelisteners.add(listener);
 		
 		// Inform new listener of current state.
 		listener.changeOccurred(new ChangeEvent(this, "initialState", new Object[]{
@@ -819,8 +880,8 @@ public class MicroAgentInterpreter implements IComponentInstance
 	 */
 	public void removeChangeListener(IChangeListener listener)
 	{
-		if(listeners!=null)
-			listeners.remove(listener);
+		if(changelisteners!=null)
+			changelisteners.remove(listener);
 	}
 	
 	/**
@@ -828,12 +889,33 @@ public class MicroAgentInterpreter implements IComponentInstance
 	 */
 	public void notifyListeners(ChangeEvent event)
 	{
-		if(listeners!=null)
+		if(changelisteners!=null)
 		{
-			for(int i=0; i<listeners.size(); i++)
+			for(int i=0; i<changelisteners.size(); i++)
 			{
-				((IChangeListener)listeners.get(i)).changeOccurred(event);
+				((IChangeListener)changelisteners.get(i)).changeOccurred(event);
 			}
 		}
+	}
+	
+	/**
+	 *  Add an component listener.
+	 *  @param listener The listener.
+	 */
+	public void addComponentListener(IComponentListener listener)
+	{
+		if(componentlisteners==null)
+			componentlisteners = new ArrayList();
+		componentlisteners.add(listener);
+	}
+	
+	/**
+	 *  Remove a component listener.
+	 *  @param listener The listener.
+	 */
+	public void removeComponentListener(IComponentListener listener)
+	{
+		if(componentlisteners!=null)
+			componentlisteners.remove(listener);
 	}
 }

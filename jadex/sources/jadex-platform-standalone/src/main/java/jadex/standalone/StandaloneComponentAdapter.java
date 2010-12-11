@@ -45,11 +45,17 @@ public class StandaloneComponentAdapter	extends AbstractComponentAdapter	impleme
 			{
 				try
 				{
+					if(getComponentIdentifier().toString().indexOf("@")==-1)
+					{
+//						System.err.println("doWakeup: "+getComponentIdentifier());
+//						Thread.dumpStack();
+					}
 					((IExecutionService)result).execute(StandaloneComponentAdapter.this);
 				}
 				catch(RuntimeException e)
 				{
 					// ignore if service is shutting down.
+					e.printStackTrace();
 				}
 			}
 		});

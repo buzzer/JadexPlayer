@@ -1,8 +1,11 @@
 package jadex.bdi.examples.puzzle;
 
-import jadex.bdi.runtime.AgentEvent;
-import jadex.bdi.runtime.IAgentListener;
 import jadex.bdi.runtime.IBDIExternalAccess;
+import jadex.bdi.runtime.IBDIInternalAccess;
+import jadex.bridge.IComponentListener;
+import jadex.bridge.IComponentStep;
+import jadex.bridge.IInternalAccess;
+import jadex.commons.ChangeEvent;
 import jadex.commons.SGUI;
 
 import java.awt.event.WindowAdapter;
@@ -63,26 +66,52 @@ public class BoardGui extends JFrame
 		{
 			public void windowClosing(WindowEvent e)
 			{
-				agent.killAgent();
+				agent.killComponent();
 			}
 		});
 		
-		agent.addAgentListener(new IAgentListener()
+		agent.scheduleStep(new IComponentStep()
 		{
-			public void agentTerminating(AgentEvent ae)
+			public Object execute(IInternalAccess ia)
 			{
-				SwingUtilities.invokeLater(new Runnable()
+				IBDIInternalAccess bia = (IBDIInternalAccess)ia;
+				bia.addComponentListener(new IComponentListener()
 				{
-					public void run()
+					public void componentTerminating(ChangeEvent ae)
 					{
-						BoardGui.this.dispose();
+						SwingUtilities.invokeLater(new Runnable()
+						{
+							public void run()
+							{
+								BoardGui.this.dispose();
+							}
+						});
+					}
+					
+					public void componentTerminated(ChangeEvent ae)
+					{
 					}
 				});
-			}
-			
-			public void agentTerminated(AgentEvent ae)
-			{
+				return null;
 			}
 		});
+		
+//		agent.addAgentListener(new IAgentListener()
+//		{
+//			public void agentTerminating(AgentEvent ae)
+//			{
+//				SwingUtilities.invokeLater(new Runnable()
+//				{
+//					public void run()
+//					{
+//						BoardGui.this.dispose();
+//					}
+//				});
+//			}
+//			
+//			public void agentTerminated(AgentEvent ae)
+//			{
+//			}
+//		});
 	}
 }

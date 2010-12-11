@@ -1,6 +1,7 @@
 package jadex.micro;
 
 import jadex.bridge.IArgument;
+import jadex.bridge.IModelValueProvider;
 import jadex.commons.SUtil;
 
 import java.util.Collections;
@@ -31,7 +32,48 @@ public class MicroAgentMetaInfo
 	/** The property map. */
 	protected Map properties;
 	
+	/** The required services. */
+	protected Class[] requiredservices;
+	
+	/** The provided services. */
+	protected Class[] providedservices;
+	
+	/** The master flag provider. */
+	protected IModelValueProvider master;
+	
+	/** The daemon flag provider. */
+	protected IModelValueProvider daemon;
+	
+	/** The autoshutdown flag provider. */
+	protected IModelValueProvider autoshutdown;
+	
 	//-------- constructors --------
+	
+	/**
+	 *  Create a new meta info.
+	 */
+	public MicroAgentMetaInfo(String description, String[] configs)
+	{
+		this(description, configs, (IArgument[])null, null);
+	}
+	
+	/**
+	 *  Create a new meta info.
+	 */
+	public MicroAgentMetaInfo(String description, String[] configs, 
+		IArgument[] args, IArgument[] results)
+	{
+		this(description, configs, args, results, null, null);
+	}
+	
+	/**
+	 *  Create a new meta info.
+	 */
+	public MicroAgentMetaInfo(String description, String[] configs, 
+		Class[] requiredservices, Class[] providedservices)
+	{
+		this(description, configs, null, null, null, null, requiredservices, providedservices);
+	}
 	
 	/**
 	 *  Create a new meta info.
@@ -39,12 +81,38 @@ public class MicroAgentMetaInfo
 	public MicroAgentMetaInfo(String description, String[] configs, 
 		IArgument[] args, IArgument[] results, String[] breakpoints, Map properties)
 	{
+		this(description, configs, args, results, breakpoints, properties, null, null);
+	}
+	
+	/**
+	 *  Create a new meta info.
+	 */
+	public MicroAgentMetaInfo(String description, String[] configs, 
+		IArgument[] args, IArgument[] results, String[] breakpoints, Map properties,
+		Class[] requiredservices, Class[] providedservices)
+	{
+		this(description, configs, args, results, breakpoints, properties, null, null, null, null, null);
+	}
+	
+	/**
+	 *  Create a new meta info.
+	 */
+	public MicroAgentMetaInfo(String description, String[] configs, 
+		IArgument[] args, IArgument[] results, String[] breakpoints, Map properties,
+		Class[] requiredservices, Class[] providedservices, 
+		IModelValueProvider master, IModelValueProvider daemon, IModelValueProvider autoshutdown)
+	{
 		this.description = description;
 		this.configs = configs == null? SUtil.EMPTY_STRING_ARRAY: configs;
 		this.args = args == null? new IArgument[0]: args;
 		this.results = results == null? new IArgument[0]: results;
 		this.breakpoints = breakpoints == null? new String[0]: breakpoints;
 		this.properties = properties==null? Collections.EMPTY_MAP: properties;
+		this.requiredservices = requiredservices==null? SUtil.EMPTY_CLASS_ARRAY: requiredservices;
+		this.providedservices = providedservices==null? SUtil.EMPTY_CLASS_ARRAY: providedservices;
+		this.master = master;
+		this.daemon = daemon;
+		this.autoshutdown = autoshutdown;
 	}
 
 	//-------- methods --------
@@ -102,4 +170,50 @@ public class MicroAgentMetaInfo
 	{
 		return properties;
 	}
+
+	/**
+	 *  Get the required services.
+	 *  @return The required services.
+	 */
+	public Class[] getRequiredServices()
+	{
+		return requiredservices;
+	}
+
+	/**
+	 *  Get the provided services.
+	 *  @return The provided services.
+	 */
+	public Class[] getProvidedServices()
+	{
+		return providedservices;
+	}
+
+	/**
+	 *  Get the master.
+	 *  @return the master.
+	 */
+	public IModelValueProvider getMaster()
+	{
+		return master;
+	}
+
+	/**
+	 *  Get the daemon.
+	 *  @return the daemon.
+	 */
+	public IModelValueProvider getDaemon()
+	{
+		return daemon;
+	}
+
+	/**
+	 *  Get the autoshutdown.
+	 *  @return the autoshutdown.
+	 */
+	public IModelValueProvider getAutoShutdown()
+	{
+		return autoshutdown;
+	}
+	
 }

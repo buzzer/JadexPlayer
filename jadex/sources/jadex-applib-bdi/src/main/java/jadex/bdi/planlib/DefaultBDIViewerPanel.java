@@ -4,16 +4,16 @@ import jadex.base.gui.componentviewer.AbstractComponentViewerPanel;
 import jadex.base.gui.componentviewer.IAbstractViewerPanel;
 import jadex.base.gui.componentviewer.IComponentViewerPanel;
 import jadex.base.gui.plugin.IControlCenter;
-import jadex.bdi.runtime.IBDIExternalAccess;
+import jadex.bdi.runtime.IBDIInternalAccess;
+import jadex.bdi.runtime.ICapability;
+import jadex.bridge.IComponentStep;
 import jadex.bridge.IExternalAccess;
+import jadex.bridge.IInternalAccess;
 import jadex.commons.Future;
 import jadex.commons.IFuture;
 import jadex.commons.SReflect;
 import jadex.commons.concurrent.CollectionResultListener;
 import jadex.commons.concurrent.DelegationResultListener;
-import jadex.commons.concurrent.IResultListener;
-import jadex.commons.service.SServiceProvider;
-import jadex.commons.service.library.ILibraryService;
 
 import java.awt.BorderLayout;
 import java.util.ArrayList;
@@ -36,6 +36,8 @@ public class DefaultBDIViewerPanel extends AbstractComponentViewerPanel
 	/** The constant for the agent optional viewerclass. */
 	public static final String PROPERTY_INCLUDESUBCAPABILITIES = "bdiviewerpanel.includesubcapabilities";
 	
+	//-------- attributes --------
+	
 	/** The panel. */
 	protected JPanel panel;
 	
@@ -52,64 +54,23 @@ public class DefaultBDIViewerPanel extends AbstractComponentViewerPanel
 		final Future ret = new Future();
 		
 		this.panel = new JPanel(new BorderLayout());
-		final IBDIExternalAccess bdiagent = (IBDIExternalAccess)component;
 		
-		super.init(jcc, component).addResultListener(new IResultListener()
+		// Init interface is asynchronous but super implementation is not.
+		IFuture	fut	= super.init(jcc, component);
+		assert fut.isDone();
+		
+		component.scheduleStep(new IComponentStep()
 		{
-			public void resultAvailable(Object source, Object result)
+			public Object execute(IInternalAccess ia)
 			{
-				SServiceProvider.getService(jcc.getServiceProvider(), ILibraryService.class)
-					.addResultListener(new IResultListener()
+				IBDIInternalAccess	scope	= (IBDIInternalAccess)ia;
+				String[] subcapnames = (String[])scope.getPropertybase().getProperty(PROPERTY_INCLUDESUBCAPABILITIES);
+				if(subcapnames==null)
 				{
-					public void resultAvailable(Object source, Object result)
-					{
-						final ILibraryService ls = (ILibraryService)result;
-						
-						bdiagent.getPropertybase().getProperty(PROPERTY_INCLUDESUBCAPABILITIES)
-							.addResultListener(new IResultListener()
-						{
-							public void resultAvailable(Object source, Object result)
-							{
-								if(result!=null)
-								{
-									String[] subcapnames = (String[])result;
-									createPanels(subcapnames, ls, ret);
-								}
-								else
-								{
-									bdiagent.getSubcapabilityNames().addResultListener(new IResultListener()
-									{
-										public void resultAvailable(Object source, Object result)
-										{
-											String[] subcapnames = (String[])result;
-											createPanels(subcapnames, ls, ret);
-										}
-										
-										public void exceptionOccurred(Object source, Exception exception)
-										{
-											ret.setException(exception);
-										}
-									});
-								}
-							}
-							
-							public void exceptionOccurred(Object source, Exception exception)
-							{
-								ret.setException(exception);
-							}
-						});
-					}
-					
-					public void exceptionOccurred(Object source, Exception exception)
-					{
-						ret.setException(exception);
-					}
-				});
-			}
-			
-			public void exceptionOccurred(Object source, Exception exception)
-			{
-				ret.setException(exception);
+					subcapnames = (String[])scope.getSubcapabilityNames();
+				}
+				createPanels(scope, subcapnames, ret);
+				return null;
 			}
 		});
 		
@@ -119,9 +80,8 @@ public class DefaultBDIViewerPanel extends AbstractComponentViewerPanel
 	/**
 	 *  Create the panels.
 	 */
-	protected void createPanels(final String[] subcapnames, final ILibraryService ls, final Future ret)
+	protected void createPanels(IBDIInternalAccess scope, String[] subcapnames, Future ret)
 	{
-		final IBDIExternalAccess bdiagent = (IBDIExternalAccess)getActiveComponent();
 		final List panels = new ArrayList();
 		
 		final CollectionResultListener lis = new CollectionResultListener(
@@ -149,83 +109,44 @@ public class DefaultBDIViewerPanel extends AbstractComponentViewerPanel
 		});
 		
 		// Agent panel.
-		bdiagent.getPropertybase().getProperty(PROPERTY_AGENTVIEWERCLASS)
-			.addResultListener(new IResultListener()
+		String clname = (String)scope.getPropertybase().getProperty(PROPERTY_AGENTVIEWERCLASS);
+		if(clname!=null)
 		{
-			public void resultAvailable(Object source, Object result)
+			try
 			{
-				String clname = (String)result;
-				if(clname!=null)
-				{
-					try
-					{
-						Class clazz	= SReflect.classForName(clname, ls.getClassLoader());
-						IComponentViewerPanel panel = (IComponentViewerPanel)clazz.newInstance();
-						panels.add(new Object[]{"agent", panel});
-						panel.init(jcc, bdiagent).addResultListener(lis);
-					}
-					catch(Exception e)
-					{
-						lis.exceptionOccurred(source, e);
-//							ret.setException(new RuntimeException("Could not init viewer class: "+clname));
-					}
-				}
-				else
-				{
-					lis.exceptionOccurred(source, null);
-				}
+				Class clazz	= SReflect.classForName(clname, scope.getClassLoader());
+				IComponentViewerPanel panel = (IComponentViewerPanel)clazz.newInstance();
+				panels.add(new Object[]{"agent", panel});
+				panel.init(jcc, getActiveComponent()).addResultListener(lis);
 			}
-			public void exceptionOccurred(Object source, Exception exception)
+			catch(Exception e)
 			{
-				lis.exceptionOccurred(source, exception);
+				lis.exceptionOccurred(this, e);
 			}
-		});
+		}
+		else
+		{
+			lis.exceptionOccurred(this, new RuntimeException("No viewerclass: "+clname));
+		}
 		
 		// Capability panels.
 		if(subcapnames!=null)
 		{
 			for(int i=0; i<subcapnames.length; i++)
 			{
-				final String subcapaname = subcapnames[i];
-				bdiagent.getExternalAccess(subcapnames[i])
-					.addResultListener(new IResultListener()
+				ICapability subcap = (ICapability)scope.getSubcapability(subcapnames[i]);
+				String sclname = (String)subcap.getPropertybase().getProperty(IAbstractViewerPanel.PROPERTY_VIEWERCLASS);
+				try
 				{
-					public void resultAvailable(Object source, Object result)
-					{
-						final IBDIExternalAccess subcap = (IBDIExternalAccess)result;
-						subcap.getPropertybase().getProperty(IAbstractViewerPanel.PROPERTY_VIEWERCLASS).addResultListener(new IResultListener()
-						{
-							public void resultAvailable(Object source, Object result)
-							{
-								String clname = (String)result;
-								try
-								{
-									Class clazz	= SReflect.classForName(clname, ls.getClassLoader());
-									IComponentViewerPanel panel = (IComponentViewerPanel)clazz.newInstance();
-									panels.add(new Object[]{subcapaname, panel});
-									panel.init(jcc, subcap).addResultListener(lis);
-								}
-								catch(Exception e)
-								{
-									lis.exceptionOccurred(source, e);
-//									ret.setException(new RuntimeException("Could not init viewer class: "+clname));
-								}
-							}
-							
-							public void exceptionOccurred(Object source, Exception exception)
-							{
-								lis.exceptionOccurred(source, exception);
-//								ret.setException(exception);
-							}
-						});
-						
-					}
-					
-					public void exceptionOccurred(Object source, Exception exception)
-					{
-						ret.setExceptionIfUndone(exception);
-					}
-				});
+					Class clazz	= SReflect.classForName(sclname, subcap.getClassLoader());
+					IComponentViewerPanel panel = (IComponentViewerPanel)clazz.newInstance();
+					panels.add(new Object[]{subcapnames[i], panel});
+					panel.init(jcc, subcap.getExternalAccess()).addResultListener(lis);
+				}
+				catch(Exception e)
+				{
+					lis.exceptionOccurred(this, e);
+				}
 			}
 		}
 	}

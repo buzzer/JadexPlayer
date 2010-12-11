@@ -3,7 +3,6 @@ package jadex.base.service.remote;
 import jadex.commons.IFuture;
 import jadex.micro.IMicroExternalAccess;
 
-import java.util.Map;
 
 /**
  *  Remote command interface for commands that the 
@@ -17,5 +16,5 @@ public interface IRemoteCommand
 	 *  @return An optional result command that will be 
 	 *  sent back to the command origin. 
 	 */
-	public IFuture execute(IMicroExternalAccess component, Map waitingcalls);
+	public IFuture execute(IMicroExternalAccess component, RemoteServiceManagementService rsms);
 }

@@ -2,12 +2,15 @@ package jadex.bdi.runtime.interpreter;
 
 import jadex.bdi.model.OAVBDIMetaModel;
 import jadex.bdi.runtime.IPlanExecutor;
-import jadex.bdi.runtime.impl.eaflyweights.ExternalAccessFlyweight;
+import jadex.bdi.runtime.impl.flyweights.CapabilityFlyweight;
+import jadex.bdi.runtime.impl.flyweights.ExternalAccessFlyweight;
 import jadex.bdi.runtime.impl.flyweights.ParameterFlyweight;
 import jadex.bridge.CheckedAction;
 import jadex.bridge.ComponentResultListener;
+import jadex.bridge.DecouplingServiceInvocationInterceptor;
 import jadex.bridge.IArgument;
 import jadex.bridge.IComponentManagementService;
+import jadex.bridge.IComponentStep;
 import jadex.bridge.IMessageService;
 import jadex.commons.Future;
 import jadex.commons.IFuture;
@@ -16,8 +19,9 @@ import jadex.commons.SUtil;
 import jadex.commons.collection.SCollection;
 import jadex.commons.concurrent.CounterResultListener;
 import jadex.commons.concurrent.DefaultResultListener;
+import jadex.commons.concurrent.DelegationResultListener;
 import jadex.commons.concurrent.IResultListener;
-import jadex.commons.service.BasicService;
+import jadex.commons.service.IInternalService;
 import jadex.commons.service.IServiceContainer;
 import jadex.commons.service.SServiceProvider;
 import jadex.commons.service.clock.IClockService;
@@ -38,6 +42,7 @@ import jadex.rules.rulesystem.rules.Rule;
 import jadex.rules.rulesystem.rules.Variable;
 import jadex.rules.state.IOAVState;
 import jadex.rules.state.OAVAttributeType;
+import jadex.rules.state.OAVJavaType;
 import jadex.rules.state.OAVObjectType;
 
 import java.lang.reflect.Array;
@@ -144,9 +149,9 @@ public class AgentRules
 				// Start service container.
 				futures.add(ip.getServiceContainer().start());
 				
-				IResultListener	crs	= new CounterResultListener(futures.size())
+				IResultListener	crs	= new CounterResultListener(futures.size(), new IResultListener()
 				{
-					public void finalResultAvailable(Object source, Object result)
+					public void resultAvailable(Object source, Object result)
 					{
 						boolean	startagent;
 						synchronized(services)
@@ -165,10 +170,11 @@ public class AgentRules
 							});
 						}
 					}
+					
 					public void exceptionOccurred(Object source, Exception exception)
 					{
 					}
-				};
+				});
 				if(!futures.isEmpty())
 				{
 					for(int i=0; i<futures.size(); i++)
@@ -216,8 +222,7 @@ public class AgentRules
 				// Inform get-external-access listeners (if any). Hack???
 				BDIInterpreter	bdii	= BDIInterpreter.getInterpreter(state);
 				
-				// Stop execution when init has finished and notify cms.
-				bdii.stop = true;
+				// When init has finished -> notify cms.
 				bdii.inited.setResult(new Object[]{bdii, bdii.getAgentAdapter()});
 			}
 		};
@@ -575,33 +580,59 @@ public class AgentRules
 	 */
 	protected static Rule createExecuteActionRule()
 	{
-		Variable	runnable	= new Variable("?runnable", OAVBDIRuntimeModel.java_runnable_type);
+		Variable	com	= new Variable("?step", OAVJavaType.java_object_type);
 		Variable	ragent	= new Variable("?ragent", OAVBDIRuntimeModel.agent_type);
 		
-		ObjectCondition actioncon = new ObjectCondition(runnable.getType()); 
-		actioncon.addConstraint(new BoundConstraint(null, runnable));
+		ObjectCondition actioncon = new ObjectCondition(com.getType()); 
+		actioncon.addConstraint(new BoundConstraint(null, com));
 		
 		ObjectCondition ragentcon = new ObjectCondition(OAVBDIRuntimeModel.agent_type);
 		ragentcon.addConstraint(new BoundConstraint(null, ragent));
-		ragentcon.addConstraint(new BoundConstraint(OAVBDIRuntimeModel.agent_has_actions, runnable, IOperator.CONTAINS));
+		ragentcon.addConstraint(new BoundConstraint(OAVBDIRuntimeModel.agent_has_actions, com, IOperator.CONTAINS));
 		
 		IAction	action	= new IAction()
 		{
 			public void execute(IOAVState state, IVariableAssignments assignments)
 			{
 				Object ragent = assignments.getVariableValue("?ragent");
-				Runnable runnable = (Runnable)assignments.getVariableValue("?runnable");
-//				System.out.println("Executing external action: "+runnable);
-				state.removeAttributeValue(ragent, OAVBDIRuntimeModel.agent_has_actions, runnable);
-				if(runnable instanceof CheckedAction)
+				Object[] step = (Object[])assignments.getVariableValue("?step");
+//				System.out.println("Executing external action: "+step[0]);
+				state.removeAttributeValue(ragent, OAVBDIRuntimeModel.agent_has_actions, step);
+				
+				Future res = (Future)((Object[])step)[1];
+				try
 				{
-					if(((CheckedAction)runnable).isValid())
-						runnable.run();
-					((CheckedAction)runnable).cleanup();
+					if(step[0] instanceof CheckedAction)
+					{
+						CheckedAction ca = (CheckedAction)step[0];
+						if(ca.isValid())
+							ca.run();
+						ca.cleanup();
+						res.setResult(null);
+					}
+					else if(step[0] instanceof Runnable)
+					{
+						((Runnable)step[0]).run();
+						res.setResult(null);
+					}
+					else if(step[0] instanceof IComponentStep)
+					{
+						IComponentStep st = (IComponentStep)((Object[])step)[0];
+						Object r = st.execute(new CapabilityFlyweight(state, step[2]));
+						if(r instanceof IFuture)
+						{
+							((IFuture)r).addResultListener(new DelegationResultListener(res));
+						}
+						else
+						{
+							res.setResult(r);
+						}
+					}
 				}
-				else //if(entries[i] instanceof Runnable)
+				catch(RuntimeException e)
 				{
-					runnable.run();
+					res.setException(e);
+					throw e;
 				}
 			}
 		};
@@ -1167,18 +1198,32 @@ public class AgentRules
 		// Initialize services.
 		
 		// todo: connect services of capabilities, name them accordingly
-		Collection	mservices = state.getAttributeValues(mcapa, OAVBDIMetaModel.capability_has_services);
+		Collection	mservices = state.getAttributeValues(mcapa, OAVBDIMetaModel.capability_has_providedservices);
 		if(mservices!=null)
 		{
 			for(Iterator it=mservices.iterator(); it.hasNext(); )
 			{
 				Object mexp = it.next();
-//				String name = (String)state.getAttributeValue(mexp, OAVBDIMetaModel.modelelement_has_name);
-				BasicService val = (BasicService)evaluateExpression(state, mexp, new OAVBDIFetcher(state, rcapa));
-//				Class type = (Class)state.getAttributeValue(mexp, OAVBDIMetaModel.expression_has_class);
-				// cast hack?!
-				((IServiceContainer)BDIInterpreter.getInterpreter(state).getServiceProvider()).addService(val);
-//				System.out.println("Service: "+name+" "+val+" "+type);
+				try
+				{
+//					String name = (String)state.getAttributeValue(mexp, OAVBDIMetaModel.modelelement_has_name);
+					IInternalService val = (IInternalService)evaluateExpression(state, mexp, new OAVBDIFetcher(state, rcapa));
+//					Class type = (Class)state.getAttributeValue(mexp, OAVBDIMetaModel.expression_has_class);
+					// cast hack?!
+					Boolean direct = (Boolean)state.getAttributeValue(mexp, OAVBDIMetaModel.providedservice_has_direct);
+					if(!direct.booleanValue())
+					{
+						val = DecouplingServiceInvocationInterceptor.createServiceProxy(BDIInterpreter.getInterpreter(state).getExternalAccess(), BDIInterpreter.getInterpreter(state).getAgentAdapter(), val);
+//						System.out.println("Created decoupled service: "+val);
+					}
+					((IServiceContainer)BDIInterpreter.getInterpreter(state).getServiceProvider()).addService(val);
+//					System.out.println("Service: "+name+" "+val+" "+type);
+				}
+				catch(Exception e)
+				{
+//					e.printStackTrace();
+					BDIInterpreter.getInterpreter(state).getAgentAdapter().getLogger().warning("Service creation error: "+state.getAttributeValue(mexp, OAVBDIMetaModel.expression_has_text));
+				}
 			}
 		}
 		
@@ -1677,15 +1722,20 @@ public class AgentRules
 //						String name = (String)state.getAttributeValue(agent, OAVBDIRuntimeModel.agent_has_name);
 						Object value = evaluateExpression(state, exp, fet);
 						BeliefRules.setBeliefValue(state, rbel, value);
+//						System.out.println("Updating belief: "+state.getAttributeValue(mbel, OAVBDIMetaModel.modelelement_has_name)+" = "+value+", "+BDIInterpreter.getInterpreter(state).getClockService().getTime());
 					}
 					catch(Exception e)
 					{
 						String name = BDIInterpreter.getInterpreter(state).getAgentAdapter().getComponentIdentifier().getName();
-						BDIInterpreter.getInterpreter(state).getLogger(rcapa).severe("Could not evaluate belief expression: "+name+" "+state.getAttributeValue(exp, OAVBDIMetaModel.expression_has_content));
+						BDIInterpreter.getInterpreter(state).getLogger(rcapa).severe("Could not evaluate belief expression: "+name+" "+state.getAttributeValue(exp, OAVBDIMetaModel.expression_has_parsed));
 					}
-	//					// changed *.class to *.TYPE due to javaflow bug
 					state.setAttributeValue(rbel, OAVBDIRuntimeModel.typedelement_has_timer, 
 						BDIInterpreter.getInterpreter(state).getClockService().createTimer(update.longValue(), to[0]));
+				}
+				
+				public String toString()
+				{
+					return "CheckedAction: initBelief(), "+state.getAttributeValue(mbel, OAVBDIMetaModel.modelelement_has_name)+", "+state.getAttributeValue(rbel, OAVBDIRuntimeModel.belief_has_fact);
 				}
 			});
 			
@@ -1894,7 +1944,7 @@ public class AgentRules
 					catch(Exception e)
 					{
 						String name = BDIInterpreter.getInterpreter(state).getAgentAdapter().getComponentIdentifier().getName();
-						BDIInterpreter.getInterpreter(state).getLogger(rcapa).severe("Could not evaluate belief expression: "+name+" "+state.getAttributeValue(exp, OAVBDIMetaModel.expression_has_content));
+						BDIInterpreter.getInterpreter(state).getLogger(rcapa).severe("Could not evaluate belief expression: "+name+" "+state.getAttributeValue(exp, OAVBDIMetaModel.expression_has_parsed));
 					}
 					// changed *.class to *.TYPE due to javaflow bug
 					state.setAttributeValue(rbelset, OAVBDIRuntimeModel.typedelement_has_timer, BDIInterpreter.getInterpreter(state).getClockService().createTimer(update.longValue(), to[0]));
@@ -2418,7 +2468,7 @@ public class AgentRules
 			
 		Object ret	= null;
 
-		IParsedExpression	pex = (IParsedExpression)state.getAttributeValue(mexp, OAVBDIMetaModel.expression_has_content);
+		IParsedExpression	pex = (IParsedExpression)state.getAttributeValue(mexp, OAVBDIMetaModel.expression_has_parsed);
 //		try
 //		{
 			ret	= pex.getValue(fetcher);
@@ -3163,8 +3213,8 @@ public class AgentRules
 			prop	= (Long)state.getAttributeValue(param, OAVBDIRuntimeModel.parameter_has_value);
 		}
 		long tt = prop!=null? prop.longValue(): 10000;
+//		System.out.println("Adding termination timeout: "+interpreter.getAgentAdapter().getComponentIdentifier().getLocalName()+", "+tt);
 		
-		// changed *.class to *.TYPE due to javaflow bug
 		state.setAttributeValue(ragent, OAVBDIRuntimeModel.agent_has_timer, interpreter.getClockService().createTimer(tt, 
 			new InterpreterTimedObject(BDIInterpreter.getInterpreter(state), new CheckedAction()
 			{
@@ -3179,6 +3229,7 @@ public class AgentRules
 //					if(state.containsObject(ragent))
 //					{
 						// todo: cleanup? or in terminated action?
+//						System.out.println("Forcing termination (timeout): "+interpreter.getAgentAdapter().getComponentIdentifier().getLocalName());
 						BDIInterpreter.getInterpreter(state).getLogger(ragent).info("Forcing termination (timeout): "+interpreter.getAgentAdapter().getComponentIdentifier().getLocalName());
 						state.setAttributeValue(ragent, OAVBDIRuntimeModel.agent_has_state, 
 							OAVBDIRuntimeModel.AGENTLIFECYCLESTATE_TERMINATED);

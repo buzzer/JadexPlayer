@@ -180,9 +180,6 @@ public class BDIInterpreter implements IComponentInstance //, ISynchronizator
 	/** The service container. */
 	protected IServiceContainer container;
 	
-	/** Flag if component should stop execution. */
-	protected boolean stop;
-
 	/** The cms future for init return. */
 	protected Future inited;
 	
@@ -309,7 +306,6 @@ public class BDIInterpreter implements IComponentInstance //, ISynchronizator
 		{
 			// Hack!!! platform should inform about ext entries to update agenda.
 			Activation	act	= rulesystem.getAgenda().getLastActivation();
-//			System.out.println("here: "+act);
 			state.getProfiler().start(IProfiler.TYPE_RULE, act!=null?act.getRule():null);
 			state.expungeStaleObjects();
 			state.notifyEventListeners();
@@ -324,15 +320,7 @@ public class BDIInterpreter implements IComponentInstance //, ISynchronizator
 			state.notifyEventListeners();
 			state.getProfiler().stop(IProfiler.TYPE_RULE, act!=null?act.getRule():null);
 
-			if(stop)
-			{
-				stop = false;
-				return false;
-			}
-			else
-			{
-				return !rulesystem.getAgenda().isEmpty(); 
-			}
+			return !rulesystem.getAgenda().isEmpty(); 
 		}
 		catch(Throwable e)
 		{
@@ -480,7 +468,7 @@ public class BDIInterpreter implements IComponentInstance //, ISynchronizator
 			Throwable[]	exception	= (Throwable[])it.next();
 			synchronized(exception)
 			{
-				exception[0] = new ComponentTerminatedException(getAgentAdapter().getComponentIdentifier().getName());
+				exception[0] = new ComponentTerminatedException(getAgentAdapter().getComponentIdentifier());
 				exception[0].fillInStackTrace();
 				exception.notify();
 				it.remove();
@@ -495,19 +483,21 @@ public class BDIInterpreter implements IComponentInstance //, ISynchronizator
 	 *  The current subcomponents can be accessed by IComponentAdapter.getSubcomponents().
 	 *  @param comp	The newly created component.
 	 */
-	public void	componentCreated(IComponentDescription desc, IModelInfo model)
+	public IFuture	componentCreated(IComponentDescription desc, IModelInfo model)
 	{
+		return new Future(null);
 	}
-	
+
 	/**
 	 *  Called when a subcomponent of this component has been destroyed.
 	 *  This event may be ignored, if no special reaction  to new or destroyed components is required.
 	 *  The current subcomponents can be accessed by IComponentAdapter.getSubcomponents().
 	 *  @param comp	The destroyed component.
 	 */
-	public void	componentDestroyed(IComponentDescription desc)
+	public IFuture	componentDestroyed(IComponentDescription desc)
 	{
-	}	
+		return new Future(null);
+	}
 	
 	/**
 	 *  Test if the component's execution is currently at one of the
@@ -566,14 +556,14 @@ public class BDIInterpreter implements IComponentInstance //, ISynchronizator
 				try
 				{
 					ret = Logger.getLogger(name);
-					initLogger(rcapa, ret);
+					initLogger(path, ret);
 					//System.out.println(logger.getParent().getLevel());
 				}
 				catch(SecurityException e)
 				{
 					// Hack!!! For applets / webstart use anonymous logger.
 					ret	= Logger.getAnonymousLogger();
-					initLogger(rcapa, ret);
+					initLogger(path, ret);
 				}
 			}
 		}
@@ -620,33 +610,59 @@ public class BDIInterpreter implements IComponentInstance //, ISynchronizator
 	
 	/**
 	 *  Init the logger with capability settings.
+	 *  @param path The list of capability references from agent to subcapability.
 	 *  @param logger The logger.
 	 */
-	protected void initLogger(Object rcapa, Logger logger)
+	protected void initLogger(List path, Logger logger)
 	{
-		// get logging properties (from ADF)
-		// the level of the logger
-		// can be Integer or Level
+		// Outer settings overwrite inner settings.
+		Level	level	= null;
+		Boolean	useparent	= null;
+		Level	addconsole	= null;
+		String	logfile	= null;
 		
-		Object prop = AgentRules.getPropertyValue(state, rcapa, "logging.level");
-		Level level = prop==null? Level.SEVERE: (Level)prop;
-		logger.setLevel(level);
+		for(int i=-1; i<path.size(); i++)
+		{
+			Object	rcapa	= i==-1 ? ragent
+				: state.getAttributeValue(path.get(i), OAVBDIRuntimeModel.capabilityreference_has_capability);
+			if(level==null)
+			{
+				Object prop = AgentRules.getPropertyValue(state, rcapa, "logging.level");
+				level	= prop!=null ? (Level)prop : null;
+			}
+			if(useparent==null)
+			{
+				Object prop = AgentRules.getPropertyValue(state, rcapa, "logging.useParentHandlers");
+				useparent	= prop!=null ? (Boolean)prop : null;
+			}
+			if(addconsole==null)
+			{
+				Object prop = AgentRules.getPropertyValue(state, rcapa, "addConsoleHandler");
+				addconsole	= prop!=null ? (Level)prop : null;
+			}
+			if(logfile==null)
+			{
+				Object prop = AgentRules.getPropertyValue(state, rcapa, "logging.file");
+				logfile	= prop!=null ? (String)prop : null;
+			}
+		}
+		
+		// the level of the logger
+		logger.setLevel(level==null? Level.WARNING: level);
 
 		// if logger should use Handlers of parent (global) logger
 		// the global logger has a ConsoleHandler(Level:INFO) by default
-		prop = AgentRules.getPropertyValue(state, rcapa, "logging.useParentHandlers");
-		if(prop!=null)
+		if(useparent!=null)
 		{
-			logger.setUseParentHandlers(((Boolean)prop).booleanValue());
+			logger.setUseParentHandlers(useparent.booleanValue());
 		}
 			
 		// add a ConsoleHandler to the logger to print out
         // logs to the console. Set Level to given property value
-		prop = AgentRules.getPropertyValue(state, rcapa, "addConsoleHandler");
-		if(prop!=null)
+		if(addconsole!=null)
 		{
             ConsoleHandler console = new ConsoleHandler();
-            console.setLevel(Level.parse(prop.toString()));
+            console.setLevel(addconsole);
             logger.addHandler(console);
         }
 		
@@ -659,7 +675,6 @@ public class BDIInterpreter implements IComponentInstance //, ISynchronizator
 		// class, java.util.logging.FileHandler, 
 		// such as "%h" for the user's home directory.
 		// 
-		String logfile =	(String)AgentRules.getPropertyValue(state, rcapa, "logging.file");
 		if(logfile!=null)
 		{
 		    try
@@ -856,8 +871,8 @@ public class BDIInterpreter implements IComponentInstance //, ISynchronizator
 	{
 		if(isExternalThread())
 		{
-//			System.err.println("Unsynchronized internal thread.");
-//			Thread.dumpStack();
+			System.err.println("Unsynchronized internal thread.");
+			Thread.dumpStack();
 
 			final boolean[] notified = new boolean[1];
 			final Throwable[] exception = new Throwable[1];
@@ -914,7 +929,7 @@ public class BDIInterpreter implements IComponentInstance //, ISynchronizator
 						}
 						else
 						{
-							throw new ComponentTerminatedException(getAgentAdapter().getComponentIdentifier().getName());
+							throw new ComponentTerminatedException(getAgentAdapter().getComponentIdentifier());
 						}
 					}
 				}
@@ -967,16 +982,50 @@ public class BDIInterpreter implements IComponentInstance //, ISynchronizator
 	 *  May safely be called from external threads.
 	 *  @param step	Code to be executed as a step of the agent.
 	 */
-	public void	scheduleStep(final Runnable step)
+	public IFuture	scheduleStep(final Object step, final Object scope)
 	{
-		adapter.invokeLater(new Runnable()
+		final Future ret = new Future();
+		
+		if(adapter.isExternalThread())
 		{
-			public void run()
+			try
 			{
-//				System.out.println("Scheduling step: "+step);
-				state.addAttributeValue(ragent, OAVBDIRuntimeModel.agent_has_actions, step);
+				adapter.invokeLater(new Runnable() 
+				{
+					public void run() 
+					{
+						// Todo: fix termination such that external entries are properly executed!?
+						if(state.containsObject(ragent))
+						{
+							getState().addAttributeValue(ragent, OAVBDIRuntimeModel.agent_has_actions, new Object[]{step, ret, scope});							
+						}
+						else
+						{
+							ret.setException(new ComponentTerminatedException(getAgentAdapter().getComponentIdentifier()));
+						}
+					}
+				});
 			}
-		});
+			catch(Exception e)
+			{
+				ret.setException(e);
+			}
+		}
+		else
+		{
+			getState().addAttributeValue(ragent, OAVBDIRuntimeModel.agent_has_actions, new Object[]{step, ret, scope});
+		}
+
+		return ret;
+		
+//		adapter.invokeLater(new Runnable()
+//		{
+//			public void run()
+//			{
+////				System.out.println("Scheduling step: "+step);
+//				state.addAttributeValue(ragent, OAVBDIRuntimeModel.agent_has_actions, step);
+//			}
+//		});
 	}
 	
 	/**
@@ -1227,18 +1276,19 @@ public class BDIInterpreter implements IComponentInstance //, ISynchronizator
 			Object mexp = state.getAttributeValue(model.getHandle(), OAVBDIMetaModel.agent_has_servicecontainer);
 			if(mexp!=null)
 			{
-				try
-				{
+//				try
+//				{
 					container = (IServiceContainer)AgentRules.evaluateExpression(state, mexp, new OAVBDIFetcher(state, ragent));
-				}
-				catch(Exception e)
-				{
-					e.printStackTrace();
-				}
+//				}
+//				catch(Exception e)
+//				{
+//					e.printStackTrace();
+//				}
 			}
 			else
 			{
 				container = new CacheServiceContainer(new ComponentServiceContainer(getAgentAdapter()), 25, 1*30*1000); // 30 secs cache expire
+//				container = new ComponentServiceContainer(getAgentAdapter());
 			}
 		}
 		return container;

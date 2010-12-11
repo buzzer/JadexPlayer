@@ -5,6 +5,7 @@ import jadex.commons.ICommand;
 import jadex.commons.IFuture;
 import jadex.commons.collection.SCollection;
 import jadex.commons.concurrent.CounterResultListener;
+import jadex.commons.concurrent.DelegationResultListener;
 import jadex.commons.concurrent.Executor;
 import jadex.commons.concurrent.IExecutable;
 import jadex.commons.concurrent.IResultListener;
@@ -22,6 +23,10 @@ import java.util.Set;
  */
 public class AsyncExecutionService	extends BasicService implements IExecutionService
 {
+//	//-------- static part --------
+//	
+//	public static MultiCollection	DEBUG	= new MultiCollection();
+	
 	//-------- attributes --------
 	
 	/** The threadpool. */
@@ -91,7 +96,14 @@ public class AsyncExecutionService	extends BasicService implements IExecutionSer
 	 */
 	public synchronized void execute(final IExecutable task)
 	{	
+//		synchronized(DEBUG)
+//		{
+//			DEBUG.put(task, "execute called");
+//		}
 		//System.out.println("execute called: "+task);
+		if(!isValid())
+			throw new RuntimeException("Not running: "+task);
+		
 		if(shutdown)
 			throw new RuntimeException("Shutting down: "+task);
 		
@@ -99,6 +111,10 @@ public class AsyncExecutionService	extends BasicService implements IExecutionSer
 
 		if(exe==null)
 		{
+//			synchronized(DEBUG)
+//			{
+//				DEBUG.put(task, "creating executor");
+//			}
 //			System.out.println("Created executor for:"+task);
 //			if(executorcache.size()>0)
 //			{
@@ -109,6 +125,21 @@ public class AsyncExecutionService	extends BasicService implements IExecutionSer
 //			{
 				exe = new Executor(threadpool, task)
 				{
+					// Hack!!! overwritten for debugging.
+					protected boolean code()
+					{
+//						synchronized(DEBUG)
+//						{
+//							DEBUG.put(task, "executing code(): "+this);
+//						}
+						boolean	ret	= super.code();
+//						synchronized(DEBUG)
+//						{						
+//							DEBUG.put(task, "code() finished: "+this);
+//						}
+						return ret;
+					}
+					
 					// Hack!!! overwritten to know, when executor ends.
 					public void run()
 					{
@@ -151,11 +182,19 @@ public class AsyncExecutionService	extends BasicService implements IExecutionSer
 					}					
 				};
 //			}
+//			synchronized(DEBUG)
+//			{
+//				DEBUG.put(task, "new executor: "+exe);
+//			}
 			executors.put(task, exe);
 		}
 	
 		if(running)
 		{
+//			synchronized(DEBUG)
+//			{
+//				DEBUG.put(task, "calling execute(): "+exe);
+//			}
 //			System.out.println("Executing for: "+task+", "+exe);
 			exe.execute();
 		}
@@ -167,7 +206,7 @@ public class AsyncExecutionService	extends BasicService implements IExecutionSer
 	 *  @param task The task to execute.
 	 *  @param listener The listener.
 	 */
-	public IFuture cancel(final IExecutable task)
+	public synchronized IFuture cancel(final IExecutable task)
 	{
 		// todo: repair me: problem is that method can interfere with execute?!
 		final Future ret = new Future();
@@ -178,7 +217,7 @@ public class AsyncExecutionService	extends BasicService implements IExecutionSer
 		}
 		else
 		{
-			Executor exe = (Executor)executors.get(task);
+			final Executor exe = (Executor)executors.get(task);
 			if(exe!=null)
 			{
 				IResultListener lis = new IResultListener()
@@ -191,7 +230,10 @@ public class AsyncExecutionService	extends BasicService implements IExecutionSer
 							ret.setResult(result);
 							
 							if(executors!=null)
+							{
 								executors.remove(task);
+//								System.out.println("Removing executor with lis for: "+task+", "+exe);
+							}
 						}
 					}
 	
@@ -203,7 +245,10 @@ public class AsyncExecutionService	extends BasicService implements IExecutionSer
 							ret.setResult(exception);
 							
 							if(executors!=null)
+							{
 								executors.remove(task);
+//								System.out.println("Removing executor with lis e for: "+task+", "+exe);
+							}
 						}
 						
 					}
@@ -251,6 +296,7 @@ public class AsyncExecutionService	extends BasicService implements IExecutionSer
 						threadpool = (IThreadPoolService)result;
 						
 						running	= true;
+//						new RuntimeException("AsyncExecustionService.start()").printStackTrace();
 						
 						if(!executors.isEmpty())
 						{
@@ -310,19 +356,7 @@ public class AsyncExecutionService	extends BasicService implements IExecutionSer
 			if(keys.length>0)
 			{
 				// One listener counts until all executors have shutdowned.
-				IResultListener lis = new CounterResultListener(keys.length)
-				{
-					public void finalResultAvailable(Object source, Object result)
-					{
-						ret.setResult(result);
-					}
-					
-					public void exceptionOccurred(Object source, Exception exception)
-					{
-						ret.setException(exception);
-					}
-				};
-				
+				IResultListener lis = new CounterResultListener(keys.length, new DelegationResultListener(ret));
 				for(int i=0; i<keys.length; i++)
 				{
 					Executor exe = (Executor)executors.get(keys[i]);

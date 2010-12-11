@@ -463,7 +463,7 @@ public class SReflect
 
 		if(clazz==null)
 		{
-			throw new ClassNotFoundException("Class "+clname+" not found in imports: "+SUtil.arrayToString(imports));
+			throw new ClassNotFoundException("Class "+clname+" not found in imports");//: "+SUtil.arrayToString(imports));
 		}
 
 		return clazz;
@@ -927,6 +927,28 @@ public class SReflect
 	public static boolean instanceOf(Object o, Class c)
 	{
 		return isSupertype(c, o.getClass());
+	}
+	
+	/**
+	 *  Test if a class is an anonymous inner class.
+	 *  Checks if the name ends with $int.
+	 */
+	public static boolean isAnonymousInnerClass(Class clazz)
+	{
+		boolean	ret	= false;
+		String	name	= clazz.getName();
+		int	idx	= name.lastIndexOf('$');
+		if(idx!=-1)
+		{
+			ret	= true;
+			char[]	end	= new char[name.length()-idx-1];
+			name.getChars(idx+1, name.length(), end, 0);
+			for(int i=0; ret && i<end.length; i++)
+			{
+				ret	= end[i]>='0' && end[i]<='9';
+			}
+		}
+		return ret;
 	}
 }
 

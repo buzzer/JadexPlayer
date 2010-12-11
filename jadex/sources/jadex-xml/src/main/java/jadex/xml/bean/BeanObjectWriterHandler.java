@@ -174,6 +174,8 @@ public class BeanObjectWriterHandler extends AbstractObjectWriterHandler
 	 */
 	public QName getTagName(Object object, IContext context)
 	{
+		try
+		{
 		String pck;
 		String tag;
 		if(object!=null)
@@ -181,8 +183,8 @@ public class BeanObjectWriterHandler extends AbstractObjectWriterHandler
 			Class clazz = object.getClass();
 			String clazzname = SReflect.getClassName(clazz);
 			int idx = clazzname.lastIndexOf(".");
-			pck = SXML.PROTOCOL_TYPEINFO+clazzname.substring(0, idx);
-			tag = clazzname.substring(idx+1);
+			pck = idx!=-1? SXML.PROTOCOL_TYPEINFO+clazzname.substring(0, idx): SXML.PROTOCOL_TYPEINFO;
+			tag = idx!=-1? clazzname.substring(idx+1): clazzname;
 			
 			// Special case inner class, replace $ with :
 			tag = tag.replace("$", "-");
@@ -209,6 +211,13 @@ public class BeanObjectWriterHandler extends AbstractObjectWriterHandler
 		WriteContext wc = (WriteContext)context;
 		Namespace ns = wc.getNamespace(pck);
 		return new QName(ns.getURI(), tag, ns.getPrefix());
+		
+		}
+		catch(RuntimeException e)
+		{
+			e.printStackTrace();
+			throw e;
+		}
 	}
 	
 	/**
@@ -241,7 +250,7 @@ public class BeanObjectWriterHandler extends AbstractObjectWriterHandler
 	/**
 	 *  Get a value from an object.
 	 */
-	protected Object getValue(Object object, Object attr, IContext context, Object info)
+	protected Object getValue(Object object, Object attr, IContext context, Object info) throws Exception
 	{
 		if(attr==AccessInfo.THIS)
 			return object;
@@ -309,7 +318,9 @@ public class BeanObjectWriterHandler extends AbstractObjectWriterHandler
 		else if(field!=null)
 		{
 			try
-			{	
+			{
+				if((field.getModifiers()&Field.PUBLIC)==0)
+					field.setAccessible(true);
 				value = field.get(object);
 			}
 			catch(Exception e)

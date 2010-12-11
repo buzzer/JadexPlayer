@@ -3,6 +3,7 @@ package jadex.bdi.runtime.interpreter;
 import jadex.bdi.model.OAVBDIMetaModel;
 import jadex.bdi.runtime.IExternalCondition;
 import jadex.bridge.IMessageAdapter;
+import jadex.commons.IResultCommand;
 import jadex.commons.concurrent.IResultListener;
 import jadex.commons.service.IServiceProvider;
 import jadex.commons.service.clock.ITimer;
@@ -198,6 +199,10 @@ public class OAVBDIRuntimeModel
 	/** The service provider type. */
 	public static OAVJavaType java_serviceprovider_type;
 	
+	/** The result command type. */
+	public static OAVJavaType java_resultcommand_type;
+
+	
 	//-------- element --------
 	
 	/** The element (model) type. */
@@ -317,6 +322,7 @@ public class OAVBDIRuntimeModel
 	/** The capability has assigntosources (sources for abstract elements, assigned on init). */
 	public static OAVAttributeType capability_has_abstractsources;
 			
+	
 	//-------- capability reference --------
 	
 	/** The capability reference type. */
@@ -759,6 +765,7 @@ public class OAVBDIRuntimeModel
 		//java_planexecutor_type = createJavaType(IPlanExecutor.class);
 		//java_waitabstraction_type = bdirt_model_type.createJavaType(WaitAbstraction.class);
 		java_runnable_type = createJavaType(Runnable.class, OAVJavaType.KIND_OBJECT);
+		java_resultcommand_type = createJavaType(IResultCommand.class, OAVJavaType.KIND_OBJECT);
 		
 		// object types (done first, before attributes are created).
 		element_type = bdi_rt_model.createType("element", OAVBDIMetaModel.object_type);
@@ -835,7 +842,7 @@ public class OAVBDIRuntimeModel
 		goal_has_processingstate = goal_type.createAttributeType("goal_has_processingstate", OAVJavaType.java_string_type);
 		goal_has_protected = goal_type.createAttributeType("goal_has_protected", OAVJavaType.java_boolean_type, OAVAttributeType.NONE, Boolean.FALSE);
 		goal_has_parentplan = goal_type.createAttributeType("goal_has_parentplan", plan_type, OAVAttributeType.NONE);
-		goal_has_exception = goal_type.createAttributeType("goal_has_exception", goal_type);
+		goal_has_exception = goal_type.createAttributeType("goal_has_exception", OAVJavaType.java_exception_type);
 		goal_has_triedmplans = goal_type.createAttributeType("goal_has_triedmplans", OAVBDIMetaModel.object_type, OAVAttributeType.LIST);
 		goal_has_retrytimer = goal_type.createAttributeType("goal_has_retrytimer", java_timer_type);
 		goal_has_recurtimer = goal_type.createAttributeType("goal_has_recurtimer", java_timer_type);
@@ -944,7 +951,7 @@ public class OAVBDIRuntimeModel
 		agent_has_state = agent_type.createAttributeType("agent_has_state", OAVJavaType.java_string_type, OAVAttributeType.NONE);
 		// todo: use IMessageAdapter?
 		agent_has_inbox = agent_type.createAttributeType("agent_has_inbox", java_imessageadapter_type, OAVAttributeType.LIST, null);
-		agent_has_actions = agent_type.createAttributeType("agent_has_actions", java_runnable_type, OAVAttributeType.LIST, null);
+		agent_has_actions = agent_type.createAttributeType("agent_has_actions", OAVJavaType.java_object_type, OAVAttributeType.LIST, null);
 //		agent_has_serviceprovider = agent_type.createAttributeType("agent_has_serviceprovider", java_serviceprovider_type, OAVAttributeType.NONE);
 
 		java_map_type = createJavaType(Map.class, OAVJavaType.KIND_OBJECT);

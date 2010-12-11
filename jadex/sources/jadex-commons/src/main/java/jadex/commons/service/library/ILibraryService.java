@@ -50,6 +50,24 @@ public interface ILibraryService extends IService
 	 */
 	public IFuture getNonManagedURLs();
 	
+	/**
+	 *  Get all urls (managed and non-managed).
+	 *  @return The list of urls.
+	 */
+	public IFuture getAllURLs();
+	
+	/**
+	 *  Get the non-managed classpath entries as strings.
+	 *  @return Classpath entries as a list of strings.
+	 */
+	public IFuture getURLStrings();
+	
+	/**
+	 *  Get the non-managed classpath entries.
+	 *  @return Classpath entries as a list of strings.
+	 */
+	public IFuture getNonManagedURLStrings();
+	
 	/** 
 	 *  Returns the current ClassLoader.
 	 *  @return the current ClassLoader

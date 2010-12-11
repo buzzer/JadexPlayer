@@ -8,7 +8,7 @@ import jadex.base.gui.plugin.SJCC;
 import jadex.bridge.CreationInfo;
 import jadex.bridge.IComponentDescription;
 import jadex.bridge.IComponentIdentifier;
-import jadex.bridge.IComponentListener;
+import jadex.bridge.ICMSComponentListener;
 import jadex.bridge.IComponentManagementService;
 import jadex.bridge.IModelInfo;
 import jadex.commons.Properties;
@@ -58,7 +58,7 @@ import javax.swing.event.TreeSelectionListener;
 /**
  *  The starter plugin.
  */
-public class StarterPlugin extends AbstractJCCPlugin	implements IComponentListener
+public class StarterPlugin extends AbstractJCCPlugin	implements ICMSComponentListener
 {
 	//-------- constants --------
 
@@ -324,7 +324,7 @@ public class StarterPlugin extends AbstractJCCPlugin	implements IComponentListen
 								public void customResultAvailable(Object source, Object result)
 								{
 									if(((Boolean)result).booleanValue())
-										createComponent(type, null, null, null, false, null);
+										createComponent(type, null, null, null, false, null, null, null, null);
 									mpanel.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
 								}
 							});
@@ -555,7 +555,7 @@ public class StarterPlugin extends AbstractJCCPlugin	implements IComponentListen
 					{
 						Map args = new HashMap();
 						args.put("component", cid);
-						createComponent("jadex/base/service/remote/ProxyAgent.class", cid.getLocalName(), null, args, false, null);
+						createComponent("jadex/base/service/remote/ProxyAgent.class", cid.getLocalName(), null, args, false, null, null, null, null);
 					}
 				}
 			});
@@ -651,7 +651,7 @@ public class StarterPlugin extends AbstractJCCPlugin	implements IComponentListen
 										public void actionPerformed(ActionEvent e)
 										{
 											// todo: collectresults = false?
-											createComponent(type, null, config, null, false, null);
+											createComponent(type, null, config, null, false, null, null, null, null);
 										}
 									});
 									me.setToolTipText("Start in configuration: "+config);
@@ -678,7 +678,7 @@ public class StarterPlugin extends AbstractJCCPlugin	implements IComponentListen
 									public void actionPerformed(ActionEvent e)
 									{
 										// todo: collectresults = false?
-										createComponent(type, null, null, null, false, null);
+										createComponent(type, null, null, null, false, null, null, null, null);
 									}
 								});
 							}
@@ -768,7 +768,8 @@ public class StarterPlugin extends AbstractJCCPlugin	implements IComponentListen
 	 *  Create a new component on the platform.
 	 *  Any errors will be displayed in a dialog to the user.
 	 */
-	public void createComponent(final String type, final String name, final String configname, final Map arguments, final boolean suspend, final IResultListener killlistener)
+	public void createComponent(final String type, final String name, final String configname, final Map arguments, final Boolean suspend, 
+		final Boolean master, final Boolean daemon, final Boolean autosd, final IResultListener killlistener)
 	{
 		SServiceProvider.getServiceUpwards(jcc.getServiceProvider(),
 			IComponentManagementService.class).addResultListener(new SwingDefaultResultListener(spanel)
@@ -776,7 +777,7 @@ public class StarterPlugin extends AbstractJCCPlugin	implements IComponentListen
 			public void customResultAvailable(Object source, Object result)
 			{
 				IComponentManagementService cms = (IComponentManagementService)result;
-				cms.createComponent(name, type, new CreationInfo(configname, arguments, spanel.parent, suspend, false), killlistener).addResultListener(new IResultListener()
+				cms.createComponent(name, type, new CreationInfo(configname, arguments, spanel.parent, suspend, master, daemon, autosd), killlistener).addResultListener(new IResultListener()
 				{
 					public void resultAvailable(Object source, Object result)
 					{

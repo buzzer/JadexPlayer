@@ -2,12 +2,15 @@ package jadex.bdi.model;
 
 import jadex.bridge.Argument;
 import jadex.bridge.IArgument;
+import jadex.bridge.ModelValueProvider;
 import jadex.commons.SReflect;
+import jadex.commons.collection.MultiCollection;
 import jadex.rules.rulesystem.IPatternMatcherFunctionality;
 import jadex.rules.rulesystem.IRule;
 import jadex.rules.state.IOAVState;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -33,9 +36,9 @@ public class OAVAgentModel	extends OAVCapabilityModel
 	/**
 	 *  Create a model.
 	 */
-	public OAVAgentModel(IOAVState state, Object handle, Set types, String filename, long lastmod)//, IReport report)
+	public OAVAgentModel(IOAVState state, Object handle, Set types, String filename, long lastmod, MultiCollection entries)
 	{
-		super(state, handle, types, filename, lastmod);//, report);
+		super(state, handle, types, filename, lastmod, entries);
 	}
 	
 	//-------- IAgentModel methods --------
@@ -79,13 +82,12 @@ public class OAVAgentModel	extends OAVCapabilityModel
 	}
 	
 	/**
-	 *  Get the properties.
-	 *  Arbitrary properties that can e.g. be used to
-	 *  define kernel-specific settings to configure tools. 
-	 *  @return The properties.
+	 *  Init the model info.
 	 */
-	public void	addAgentProperties()
+	public void initModelInfo()
 	{
+		super.initModelInfo();
+		
 		// Hack!!!!! todo: remove
 		// Debugger breakpoints for BDI and user rules.
 		List names = new ArrayList();
@@ -93,24 +95,24 @@ public class OAVAgentModel	extends OAVCapabilityModel
 			names.add(((IRule)it.next()).getName());
 		modelinfo.addProperty("debugger.breakpoints", names);
 		
-		// Exclude IExternalAccess 
-		// Exclude all IBDIExternalAccess methods! :-( they work on flyweights
-		// Exclude many IEACapability methods
-		addMethodInfos(modelinfo.getProperties(), "remote_excluded", new String[]{
-			"getServiceProvider", 
-			
-			"dispatchTopLevelGoal", "createGoal", "sendMessage",
-			"dispatchInternalEvent", "createMessageEvent", "createInternalEvent",
-			"waitFor", "waitForTick", "waitForInternalEvent", "waitForInternalEvent",
-			"sendMessageAndWait", "waitForMessageEvent", "waitForReply", "waitForGoal",
-			"waitForFactChanged", "waitForFactAdded", "waitForFactRemoved", 
-			"dispatchTopLevelGoalAndWait",
-			
-			"getExternalAccess", "getBeliefbase", "getGoalbase", "getPlanbase",
-			"getEventbase", "getExpressionbase", "getPropertybase", "getLogger", 
-			"getPlatformComponent", "getTime", "getClassLoader", "addAgentListener", 
-			"removeAgentListener"
-			});
+//		// Exclude IExternalAccess 
+//		// Exclude all IBDIExternalAccess methods! :-( they work on flyweights
+//		// Exclude many IEACapability methods
+//		addMethodInfos(modelinfo.getProperties(), "remote_excluded", new String[]{
+//			"getServiceProvider", 
+//			
+//			"dispatchTopLevelGoal", "createGoal", "sendMessage",
+//			"dispatchInternalEvent", "createMessageEvent", "createInternalEvent",
+//			"waitFor", "waitForTick", "waitForInternalEvent", "waitForInternalEvent",
+//			"sendMessageAndWait", "waitForMessageEvent", "waitForReply", "waitForGoal",
+//			"waitForFactChanged", "waitForFactAdded", "waitForFactRemoved", 
+//			"dispatchTopLevelGoalAndWait",
+//			
+//			"getExternalAccess", "getBeliefbase", "getGoalbase", "getPlanbase",
+//			"getEventbase", "getExpressionbase", "getPropertybase", "getLogger", 
+//			"getPlatformComponent", "getTime", "getClassLoader", "addAgentListener", 
+//			"removeAgentListener"
+//			});
 		
 		// Init the arguments.
 		IArgument[] args = getModelInfo().getArguments();
@@ -124,6 +126,51 @@ public class OAVAgentModel	extends OAVCapabilityModel
 		{
 			OAVCapabilityModel.initArgument(((Argument)ress[i]), state, getHandle());
 		}
+		
+		// Init the flags.
+		ModelValueProvider suspend = new ModelValueProvider();
+		ModelValueProvider master = new ModelValueProvider();
+		ModelValueProvider daemon = new ModelValueProvider();
+		ModelValueProvider autosd = new ModelValueProvider();
+		
+		Boolean val = (Boolean)state.getAttributeValue(getHandle(), OAVBDIMetaModel.agent_has_suspend);
+		if(val!=null)
+			suspend.setValue(val);
+		val = (Boolean)state.getAttributeValue(getHandle(), OAVBDIMetaModel.agent_has_master);
+		if(val!=null)
+			master.setValue(val);
+		val = (Boolean)state.getAttributeValue(getHandle(), OAVBDIMetaModel.agent_has_daemon);
+		if(val!=null)
+			daemon.setValue(val);
+		val = (Boolean)state.getAttributeValue(getHandle(), OAVBDIMetaModel.agent_has_autoshutdown);
+		if(val!=null)
+			autosd.setValue(val);
+
+		Collection confs = state.getAttributeValues(getHandle(), OAVBDIMetaModel.capability_has_configurations);
+		if(confs!=null)
+		{
+			for(Iterator it=confs.iterator(); it.hasNext(); )
+			{
+				Object conf = it.next();
+				val = (Boolean)state.getAttributeValue(conf, OAVBDIMetaModel.configuration_has_suspend);
+				if(val!=null)
+					suspend.setValue((String)state.getAttributeValue(conf, OAVBDIMetaModel.modelelement_has_name), val);
+				val = (Boolean)state.getAttributeValue(conf, OAVBDIMetaModel.configuration_has_master);
+				if(val!=null)
+					master.setValue((String)state.getAttributeValue(conf, OAVBDIMetaModel.modelelement_has_name), val);
+				val = (Boolean)state.getAttributeValue(conf, OAVBDIMetaModel.configuration_has_daemon);
+				if(val!=null)
+					daemon.setValue((String)state.getAttributeValue(conf, OAVBDIMetaModel.modelelement_has_name), val);
+				val = (Boolean)state.getAttributeValue(conf, OAVBDIMetaModel.configuration_has_autoshutdown);
+				if(val!=null)
+					autosd.setValue((String)state.getAttributeValue(conf, OAVBDIMetaModel.modelelement_has_name), val);
+			}
+		}
+		
+		modelinfo.setSuspend(suspend);
+		modelinfo.setMaster(master);
+		modelinfo.setDaemon(daemon);
+		modelinfo.setAutoShutdown(autosd);
 		
 //		Map ret = super.getProperties();
 //		

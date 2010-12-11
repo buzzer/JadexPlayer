@@ -1,13 +1,14 @@
 package jadex.commons.service;
 
 import jadex.commons.IFuture;
+import jadex.commons.IRemotable;
 
 import java.util.Collection;
 
 /**
  *  Interface for service providers.
  */
-public interface IServiceProvider
+public interface IServiceProvider extends IRemotable
 {	
 	/**
 	 *  Get all services of a type.

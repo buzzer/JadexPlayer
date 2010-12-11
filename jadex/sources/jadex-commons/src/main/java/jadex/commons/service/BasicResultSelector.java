@@ -86,8 +86,10 @@ public class BasicResultSelector implements IResultSelector
 		
 		if(services!=null)
 		{
+//			if(services.length>0)
+//				System.out.println("adding: "+SUtil.arrayToString(services)+" "+this);
 			if(oneresult && services.length>0)
-			{
+			{				
 				for(int i=0; i<services.length; i++)
 				{
 					if(fil.filter(services[i]))

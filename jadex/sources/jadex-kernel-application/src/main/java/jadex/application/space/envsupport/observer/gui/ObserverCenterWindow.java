@@ -3,8 +3,11 @@ package jadex.application.space.envsupport.observer.gui;
 import jadex.commons.SGUI;
 
 import java.awt.BorderLayout;
+import java.awt.CardLayout;
 import java.awt.Component;
 import java.awt.EventQueue;
+import java.util.HashSet;
+import java.util.Set;
 
 import javax.swing.Action;
 import javax.swing.Icon;
@@ -32,6 +35,10 @@ public class ObserverCenterWindow extends JFrame
 	 */
 	private JSplitPane mainpane;
 	
+	/** Known plugin views
+	 */
+	protected Set knownpluginviews;
+	
 	/** Creates the main window.
 	 * 
 	 *  @param title title of the window
@@ -40,6 +47,8 @@ public class ObserverCenterWindow extends JFrame
 	public ObserverCenterWindow(String title)
 	{
 		super(title);
+		
+		this.knownpluginviews = new HashSet();
 		
 		Runnable runnable = new Runnable()
 		{
@@ -56,7 +65,11 @@ public class ObserverCenterWindow extends JFrame
 				mainpane.setOneTouchExpandable(true);
 				getContentPane().add(mainpane, BorderLayout.CENTER);
 
-				mainpane.setLeftComponent(new JPanel());
+				JPanel pluginpanel = new JPanel(new CardLayout());
+				mainpane.setLeftComponent(pluginpanel);
+				
+				JPanel perspectivepanel = new JPanel(new CardLayout());
+				mainpane.setRightComponent(perspectivepanel);
 
 				setResizable(true);
 				setBackground(null);
@@ -64,7 +77,7 @@ public class ObserverCenterWindow extends JFrame
 				setSize(800, 600);
 				setLocation(SGUI.calculateMiddlePosition(ObserverCenterWindow.this));
 				setVisible(true);
-//				mainpane.setDividerLocation(100);
+				mainpane.setDividerLocation(250);
 			}
 		};
 		
@@ -136,18 +149,28 @@ public class ObserverCenterWindow extends JFrame
 	 *  
 	 *  @param view the view
 	 */
-	public void setPluginView(Component view)
+	public void setPluginView(String pluginname, Component view)
 	{
-		mainpane.setLeftComponent(view);
+		JPanel pluginpanel = (JPanel) mainpane.getLeftComponent();
+		CardLayout cl = (CardLayout)(pluginpanel.getLayout());
+		
+		if (!knownpluginviews.contains(pluginname))
+		{
+			knownpluginviews.add(pluginname);
+			pluginpanel.add(view, pluginname);
+		}
+		
+		cl.show(pluginpanel, pluginname);
 	}
 	
 	/** Sets the perspective view.
 	 *  
 	 *  @param view the view
 	 */
-	public void setPerspectiveView(final Component view)
+	public void setPerspectiveView(Component view)
 	{
+		int loc = mainpane.getDividerLocation();
 		mainpane.setRightComponent(view);
-		mainpane.setDividerLocation(250 + mainpane.getInsets().left);
+		mainpane.setDividerLocation(loc);
 	}
 }

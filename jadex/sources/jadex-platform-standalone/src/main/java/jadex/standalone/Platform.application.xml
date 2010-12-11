@@ -34,7 +34,7 @@
 	</imports>
 	
 	<arguments>
-		<argument name="platformname">"lars"</argument>
+		<argument name="platformname">"jadex"</argument>
 		<argument name="simulation">false</argument>
 		<argument name="libpath"></argument>
 		<argument name="tcpport">9876</argument>
@@ -64,35 +64,38 @@
 		<!-- Using no cached container for root makes creation tests very slow. -->
 		<!-- <container class="IServiceContainer">new ComponentServiceContainer($component.getComponentAdapter())</container>-->
 		
-		<service>
+		<providedservice class="IThreadPool" direct="true">
 			new ThreadPoolService(new ThreadPool(new DefaultThreadPoolStrategy(0, 20, 30000, 0)), $component.getServiceProvider())
-		</service>
-		<service>
+		</providedservice>
+		<providedservice class="IExecutionService" direct="true">
 			$args.simulation
-			? new SyncExecutionService($component.getServiceProvider(), SUtil.createHashMap(new Object[]{"componentviewer.viewerclass", 
-				RemoteServiceManagementService.REMOTE_UNCACHED}, new Object[]{"jadex.base.gui.componentviewer.executionservice.Executioncomponentviewer", 
-				new String[]{"isIdle", "getTasks"}}))
-			: new AsyncExecutionService($component.getServiceProvider(), SUtil.createHashMap(new Object[]{"componentviewer.viewerclass", 
-				RemoteServiceManagementService.REMOTE_UNCACHED}, new Object[]{"jadex.base.gui.componentviewer.executionservice.Executioncomponentviewer", 
-				new String[]{"isIdle", "getTasks"}}))
-		</service>
-		<service>
+			? new SyncExecutionService($component.getServiceProvider(), SUtil.createHashMap(new Object[]{
+				RemoteServiceManagementService.REMOTE_UNCACHED}, new Object[]{new String[]{"isIdle", "getTasks"}}))
+			: new AsyncExecutionService($component.getServiceProvider(), SUtil.createHashMap(new Object[]{
+				RemoteServiceManagementService.REMOTE_UNCACHED}, new Object[]{new String[]{"isIdle", "getTasks"}}))
+			//$args.simulation
+			//? new SyncExecutionService($component.getServiceProvider(), SUtil.createHashMap(new Object[]{"componentviewer.viewerclass", 
+			//	RemoteServiceManagementService.REMOTE_UNCACHED}, new Object[]{"jadex.base.gui.componentviewer.executionservice.ExecutionServiceViewer", 
+			//	new String[]{"isIdle", "getTasks"}}))
+			//: new AsyncExecutionService($component.getServiceProvider(), SUtil.createHashMap(new Object[]{"componentviewer.viewerclass", 
+			//	RemoteServiceManagementService.REMOTE_UNCACHED}, new Object[]{"jadex.base.gui.componentviewer.executionservice.ExecutionServiceViewer", 
+			//	new String[]{"isIdle", "getTasks"}}))
+		</providedservice>
+		<providedservice class="ILibraryService" direct="true">
 			new LibraryService($args.libpath, $component.getComponentIdentifier(), 
-				SUtil.createHashMap(new Object[]{"componentviewer.viewerclass", 
-				RemoteServiceManagementService.REMOTE_UNCACHED, RemoteServiceManagementService.REMOTE_EXCLUDED}, 
-				new Object[]{"jadex.base.gui.componentviewer.libservice.LibServiceBrowser", 
-				new String[]{"getClassLoader", "getURLs"}, new String[]{"addLibraryServiceListener", "removeLibraryServiceListener"}})
+				SUtil.createHashMap(new Object[]{"componentviewer.viewerclass", RemoteServiceManagementService.REMOTE_EXCLUDED}, 
+				new Object[]{"jadex.base.gui.componentviewer.libservice.LibServiceBrowser", new String[]{"getClassLoader"}})
 				)
-		</service>
-		<service>
+		</providedservice>
+		<providedservice class="IComponentManagementService" direct="true">
 			new ComponentManagementService($component.getServiceProvider(), $component.getComponentAdapter())
-		</service>
-		<service>
+		</providedservice>
+		<providedservice class="IDF" direct="true">
 			new DirectoryFacilitatorService($component.getServiceProvider(), SUtil.createHashMap(
 				new Object[]{"componentviewer.viewerclass"}, 
 				new Object[]{"jadex.base.gui.componentviewer.dfservice.DFBrowserPanel"}))
-		</service>
-		<service>
+		</providedservice>
+		<providedservice class="IMessageService" direct="true">
 			new MessageService($component.getServiceProvider(),
 				new ITransport[]
 				{
@@ -104,8 +107,8 @@
 				{
 					new FIPAMessageType()
 				})
-		</service>
-		<service>
+		</providedservice>
+		<providedservice class="IClockService" direct="true">
 			$args.simulation
 			? new ClockService(new ClockCreationInfo(IClock.TYPE_EVENT_DRIVEN, "simulation_clock", System.currentTimeMillis(), 100), $component.getServiceProvider(),
 				SUtil.createHashMap(new Object[]{RemoteServiceManagementService.REMOTE_UNCACHED}, 
@@ -113,23 +116,27 @@
 			: new ClockService(new ClockCreationInfo(IClock.TYPE_SYSTEM, "simulation_clock", System.currentTimeMillis(), 100), $component.getServiceProvider(),
 				SUtil.createHashMap(new Object[]{RemoteServiceManagementService.REMOTE_UNCACHED}, 
 				new Object[]{new String[]{"getState", "getTime", "getTick", "getStarttime", "getDelta", "getDilation", "getNextTimer", "getTimers", "getClockType", "advanceEvent"}}))
-		</service>
-		<service>
+		</providedservice>
+		<providedservice class="ISimulationService" direct="true">
 			new SimulationService($component.getServiceProvider(),
 				SUtil.createHashMap(new Object[]{RemoteServiceManagementService.REMOTE_UNCACHED}, 
 				new Object[]{new String[]{"getMode", "isExecuting"}}))
-		</service>
-		<service>
+		</providedservice>
+		<providedservice class="IComponentFactory" direct="true">
 			new ApplicationComponentFactory(
 				new Set[]
 				{
 					MEnvSpaceType.getXMLMapping(),
 					MAGRSpaceType.getXMLMapping()
 				}, 
-				$component.getServiceProvider().getId()
+				$component.getServiceProvider()
 			)		
-		</service>
+		</providedservice>
 	</services>
+
+	<properties>
+		<property name="componentviewer.viewerclass">"jadex.base.gui.componentviewer.DefaultComponentServiceViewerPanel"</property>
+	</properties>
 	
 	<applications>
 		<application name="all_kernels auto (rms, awa, jcc)">
@@ -193,6 +200,16 @@
 			</components>
 		</application>
 		
+		<application name="all_kernels (jcc)">
+			<components>
+				<component name="kernel_micro" type="kernel_micro" daemon="true"/>
+				<!-- <component type="kernel_bdi" daemon="true"/> -->
+				<component name="kernel_bdibpmn" type="kernel_bdibpmn" daemon="true"/>
+				<component name="kernel_bpmn" type="kernel_bpmn" daemon="true"/>
+				<component name="jcc" type="jcc"/>
+			</components>
+		</application>
+		
 		<!-- todo remove: support autoshutdown as instance level flag. -->
 		<application name="all_kernels_no_daemons">
 			<components>
@@ -201,6 +218,15 @@
 				<component name="kernel_bdibpmn" type="kernel_bdibpmn"/>
 				<component name="kernel_bpmn" type="kernel_bpmn"/>
 				<component name="rms" type="rms"/>
+			</components>
+		</application>
+		
+		<!-- Configuration used by jadex.base.test.ComponentTestSuite -->
+		<application name="testcases">
+			<components>
+				<component name="kernel_micro" type="kernel_micro"/>
+				<component name="kernel_bdibpmn" type="kernel_bdibpmn"/>
+				<component name="kernel_bpmn" type="kernel_bpmn"/>
 			</components>
 		</application>
 		
@@ -220,7 +246,11 @@
 			</arguments>
 			<components>
 				<component type="kernel_micro" daemon="true"/>
-				<component type="CreationMicro"/>
+				<component type="CreationMicro">
+					<arguments>
+						<argument name="max">10000</argument>
+					</arguments>
+				</component>
 			</components>
 		</application>
 

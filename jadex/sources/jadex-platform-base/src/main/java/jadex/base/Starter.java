@@ -13,6 +13,7 @@ import jadex.commons.Future;
 import jadex.commons.IFuture;
 import jadex.commons.SReflect;
 import jadex.commons.SUtil;
+import jadex.commons.concurrent.DefaultResultListener;
 import jadex.commons.concurrent.IResultListener;
 import jadex.javaparser.SJavaParser;
 
@@ -54,7 +55,7 @@ public class Starter
 	
 	/** The adapter factory classname. */
 	public static final String ADAPTER_FACTORY = "adapterfactory";
-
+	
 	
 	/** The reserved platform parameters. */
 	public static final Set RESERVED;
@@ -78,7 +79,12 @@ public class Starter
 	 */
 	public static void main(String[] args)
 	{
-		createPlatform(args);
+		createPlatform(args).addResultListener(new DefaultResultListener()
+		{
+			public void resultAvailable(Object source, Object result)
+			{
+			}
+		});
 	}
 	
 	/**
@@ -95,7 +101,7 @@ public class Starter
 		
 			Map cmdargs = new HashMap();
 			Map compargs = new HashMap();
-			for(int i=0; i<args.length; i+=2)
+			for(int i=0; args!=null && i<args.length; i+=2)
 			{
 				String key = args[i].substring(1);
 				Object val = args[i+1];
@@ -123,10 +129,13 @@ public class Starter
 			Class cfclass = SReflect.findClass(cfclname, null, cl);
 			// The providerid for this service is not important as it will be thrown away 
 			// after loading the first component model.
-			IComponentFactory cfac = (IComponentFactory)cfclass.getConstructor(new Class[]{Object.class})
+			IComponentFactory cfac = (IComponentFactory)cfclass.getConstructor(new Class[]{String.class})
 				.newInstance(new Object[]{"rootid"});
 			IModelInfo model = cfac.loadModel(configfile, null, cl);
 	//		System.out.println("Model: "+model);
+			
+			if(model.getReport()!=null)
+				throw new RuntimeException("Error loading model:\n"+model.getReport().getErrorText());
 			
 			// Create an instance of the component.
 			String configname = (String)cmdargs.get("configname")!=null? (String)cmdargs.get("configname"): 
@@ -161,10 +170,10 @@ public class Starter
 				}
 			}
 			
-			IComponentIdentifier cid = new ComponentIdentifier(platformname);
+			final IComponentIdentifier cid = new ComponentIdentifier(platformname);
 			// Hack!!! Autoshutdown!?
-			CMSComponentDescription desc = new CMSComponentDescription(cid, cfac.getComponentType(
-				configfile, null, cl), null, false, false, true, model.getFullName());
+			final CMSComponentDescription desc = new CMSComponentDescription(cid, cfac.getComponentType(
+				configfile, null, cl), null, null, null, Boolean.TRUE, model.getFullName());
 			
 			String afclname = (String)cmdargs.get(ADAPTER_FACTORY)!=null? 
 				(String)cmdargs.get(ADAPTER_FACTORY): FALLBACK_ADAPTER_FACTORY;
@@ -183,7 +192,7 @@ public class Starter
 //					System.out.println("Instance: "+instance);
 					
 					long startup = System.currentTimeMillis() - starttime;
-					System.out.println("Platform startup time: " + startup + " ms.");
+					System.out.println(cid+" platform startup time: " + startup + " ms.");
 			//		platform.logger.info("Platform startup time: " + startup + " ms.");
 					
 					ret.setResult(instance.getExternalAccess());
@@ -202,12 +211,13 @@ public class Starter
 			boolean again = true;
 			while(again)
 			{
-//				System.out.print(".");
+//				System.out.println("Execute step: "+cid);
 				again = afac.executeStep(adapter);
 			}
+//			System.out.println("starting component execution");
 			
 			// Start normal execution of root component (i.e. platform).
-			adapter.wakeup();
+//			adapter.wakeup();
 			
 			return ret;
 		}

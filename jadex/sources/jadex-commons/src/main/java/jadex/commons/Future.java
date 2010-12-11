@@ -35,6 +35,7 @@ public class Future implements IFuture
 	
 	/** The exception (if any). */
 	protected Exception exception;
+//	protected Exception resultex;
 	
 	/** Flag indicating if result is available. */
 	protected boolean resultavailable;
@@ -123,8 +124,9 @@ public class Future implements IFuture
     		    	if(exception!=null)
     		    	{
     		    		// Nest exception to have both calling and manually set exception stack trace.
-    		    		exception	= new RuntimeException("Exception when evaluating future", exception);
-    		    	}
+//     		    		exception	= new RuntimeException("Exception when evaluating future", exception);
+     		    		exception	= new RuntimeException(exception.getMessage(), exception);
+     		    	    		    	}
 //    				System.out.println(this+" caller awoke: "+caller+" "+mon);
     			}
     			// else already resumed.
@@ -156,7 +158,16 @@ public class Future implements IFuture
 		{
     		// Ignore exception when already continued?!
         	if(resultavailable)
-        		throw new RuntimeException();
+        	{
+        		if(this.exception!=null)
+        			this.exception.printStackTrace();
+//        		if(resultex!=null)
+//        		{
+//        			System.err.println("Result: "+result);
+//        			resultex.printStackTrace();
+//        		}
+        		throw new RuntimeException(this.exception);
+        	}	
         	
 //        	System.out.println(this+" setResult: "+result);
         	this.exception = exception;
@@ -202,6 +213,7 @@ public class Future implements IFuture
 //        	System.out.println(this+" setResult: "+result);
         	this.result = result;
         	resultavailable = true;			
+//        	this.resultex = new Exception();
 		}
     	
     	resume();
@@ -298,14 +310,21 @@ public class Future implements IFuture
     protected void notifyListener(IResultListener listener)
     {
     	// todo: source?
-		if(exception!=null)
-		{
-			listener.exceptionOccurred(this, exception);
-		}
-		else
-		{
-			listener.resultAvailable(this, result); 
-		}
+    	try
+    	{
+			if(exception!=null)
+			{
+				listener.exceptionOccurred(this, exception);
+			}
+			else
+			{
+				listener.resultAvailable(this, result); 
+			}
+    	}
+    	catch(Exception e)
+    	{
+    		e.printStackTrace();
+    	}
     }
     
     /**

@@ -13,10 +13,14 @@ import jadex.bridge.IComponentFactory;
 import jadex.bridge.IExternalAccess;
 import jadex.bridge.IModelInfo;
 import jadex.commons.Future;
+import jadex.commons.IFuture;
 import jadex.commons.SGUI;
+import jadex.commons.concurrent.DefaultResultListener;
 import jadex.commons.service.BasicService;
 import jadex.commons.service.IServiceProvider;
+import jadex.commons.service.SServiceProvider;
 import jadex.commons.service.library.ILibraryService;
+import jadex.commons.service.library.ILibraryServiceListener;
 import jadex.rules.state.IOAVState;
 import jadex.rules.state.IOAVStateListener;
 import jadex.rules.state.OAVAttributeType;
@@ -24,6 +28,7 @@ import jadex.rules.state.OAVObjectType;
 import jadex.rules.state.OAVTypeModel;
 import jadex.rules.state.javaimpl.OAVStateFactory;
 
+import java.net.URL;
 import java.util.Collections;
 import java.util.HashSet;
 import java.util.Map;
@@ -72,8 +77,21 @@ public class BDIAgentFactory extends BasicService implements IComponentFactory
 	/** The types of a manually edited agent model. */
 	protected Map mtypes;
 	
+	/** The library service listener */
+	protected ILibraryServiceListener libservicelistener;
+	
 	//-------- constructors --------
 	
+	/**
+	 *  Create a stand alone agent factory for checking.
+	 */
+	public BDIAgentFactory(String id)
+	{
+		super(id, IComponentFactory.class, null);
+		this.loader	= new OAVBDIModelLoader();
+		this.mtypes	= Collections.synchronizedMap(new WeakHashMap());
+	}
+		
 	/**
 	 *  Create a new agent factory.
 	 */
@@ -85,6 +103,35 @@ public class BDIAgentFactory extends BasicService implements IComponentFactory
 		this.loader	= new OAVBDIModelLoader();
 		this.provider = provider;
 		this.mtypes	= Collections.synchronizedMap(new WeakHashMap());
+		this.libservicelistener = new ILibraryServiceListener()
+		{
+			public IFuture urlRemoved(URL url)
+			{
+				loader.clearModelCache();
+				return new Future(null);
+			}
+			
+			public IFuture urlAdded(URL url)
+			{
+				loader.clearModelCache();
+				return new Future(null);
+			}
+		};
+		SServiceProvider.getService(provider, ILibraryService.class).addResultListener(new DefaultResultListener()
+		{
+			public void resultAvailable(Object source, Object result)
+			{
+				if(result!=null)
+				{
+					ILibraryService libService = (ILibraryService) result;
+					libService.addLibraryServiceListener(libservicelistener);
+				}
+//				else
+//				{
+//					System.err.println("Warning: No library service found. Cannot clear BDI mode cache.");
+//				}
+			}
+		});
 	}
 	
 	/**
@@ -98,11 +145,19 @@ public class BDIAgentFactory extends BasicService implements IComponentFactory
 	/**
 	 *  Shutdown the service.
 	 *  @param listener The listener.
-	 * /
+	 */
 	public synchronized IFuture	shutdownService()
 	{
+		SServiceProvider.getService(provider, ILibraryService.class).addResultListener(new DefaultResultListener()
+		{
+			public void resultAvailable(Object source, Object result)
+			{
+				ILibraryService libService = (ILibraryService) result;
+				libService.removeLibraryServiceListener(libservicelistener);
+			}
+		});
 		return super.shutdownService();
-	}*/
+	}
 	
 	//-------- IAgentFactory interface --------
 	
@@ -181,8 +236,8 @@ public class BDIAgentFactory extends BasicService implements IComponentFactory
 		}
 		catch(Exception e)
 		{
-			System.err.println(filename);
-			throw new RuntimeException(e);
+//			System.err.println(filename);
+			throw e instanceof RuntimeException ? (RuntimeException)e : new RuntimeException(e);
 		}
 	}
 	
@@ -333,11 +388,11 @@ public class BDIAgentFactory extends BasicService implements IComponentFactory
 //		Report	report	= new Report();
 		if(state.getType(handle).isSubtype(OAVBDIMetaModel.agent_type))
 		{
-			ret	=  new OAVAgentModel(state, handle, (Set)(types!=null ? types[0] : null), filename, System.currentTimeMillis());//, report);
+			ret	=  new OAVAgentModel(state, handle, (Set)(types!=null ? types[0] : null), filename, System.currentTimeMillis(), null);
 		}
 		else
 		{
-			ret	=  new OAVCapabilityModel(state, handle, (Set)(types!=null ? types[0] : null), filename, System.currentTimeMillis());//, report);
+			ret	=  new OAVCapabilityModel(state, handle, (Set)(types!=null ? types[0] : null), filename, System.currentTimeMillis(), null);
 		}
 		
 		try

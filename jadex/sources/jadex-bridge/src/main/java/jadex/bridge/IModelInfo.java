@@ -92,4 +92,45 @@ public interface IModelInfo
 	 *  @return The class loader corresponding to the model.
 	 */
 	public ClassLoader getClassLoader();
+	
+	/**
+	 *  Get the required services.
+	 *  @return The required services.
+	 */
+	public Class[] getRequiredServices();
+
+	/**
+	 *  Get the provided services.
+	 *  @return The provided services.
+	 */
+	public Class[] getProvidedServices();
+	
+	/**
+	 *  Get the suspend flag.
+	 *  @param configname The configname.
+	 *  @return The suspend flag value.
+	 */
+	public Boolean getSuspend(String configname);
+	
+	/**
+	 *  Get the master flag.
+	 *  @param configname The configname.
+	 *  @return The master flag value.
+	 */
+	public Boolean getMaster(String configname);
+	
+	/**
+	 *  Get the daemon flag.
+	 *  @param configname The configname.
+	 *  @return The daemon flag value.
+	 */
+	public Boolean getDaemon(String configname);
+	
+	/**
+	 *  Get the autoshutdown flag.
+	 *  @param configname The configname.
+	 *  @return The autoshutdown flag value.
+	 */
+	public Boolean getAutoShutdown(String configname);
+
 }

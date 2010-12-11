@@ -79,8 +79,11 @@ public class SUtil
 															};
 
 	/** An empty string array. */
-	public static final String[]	EMPTY_STRING_ARRAY		= new String[0];
+	public static final String[] EMPTY_STRING_ARRAY	 = new String[0];
 
+	/** An empty class array. */
+	public static final Class[] EMPTY_CLASS_ARRAY = new Class[0];
+	
 	static
 	{
 		htmlwraps = new Hashtable();
@@ -1651,5 +1654,27 @@ public class SUtil
 		return buffer;
 	}
 
+	/**
+	 *  Convert an URL to a local file name.
+	 *  @param url The url.
+	 *  @return The absolute path to the url resource.
+	 */
+	public static String convertURLToString(URL url)
+	{
+		String file = url.getFile();
+		File f = new File(file);
+		
+		// Hack!!! Above code doesnt handle relative url paths. 
+		if(!f.exists())
+		{
+			File newfile = new File(new File("."), file);
+			if(newfile.exists())
+			{
+				f = newfile;
+			}
+		}
+		
+		return f.getAbsolutePath();
+	}
 	
 }

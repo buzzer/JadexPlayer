@@ -29,6 +29,7 @@ import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLDecoder;
+import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
@@ -350,17 +351,19 @@ public class LibraryPlugin extends AbstractJCCPlugin
 				ILibraryService ls = (ILibraryService)result;
 				ls.addLibraryServiceListener(new ILibraryServiceListener()
 				{
-					public void urlAdded(URL url)
+					public IFuture urlAdded(URL url)
 					{
 						// todo: make synchronized
 						if(!classpaths.containsEntry(url.toString()))
 							classpaths.addEntry(url.toString());
+						return new Future();
 					}
-					public void urlRemoved(URL url)
+					public IFuture urlRemoved(URL url)
 					{
 						// todo: make synchronized
 						if(classpaths.containsEntry(url.toString()))
 							classpaths.removeEntry(url.toString());
+						return new Future();
 					}
 				});
 			}
@@ -383,7 +386,7 @@ public class LibraryPlugin extends AbstractJCCPlugin
 			try
 			{
 				
-				File	file = new File(URLDecoder.decode(ps[i].getValue()));
+				File	file = new File(URLDecoder.decode(ps[i].getValue(), Charset.defaultCharset().name()));
 				if(file.exists())
 				{
 					ls.addURL(file.toURI().toURL());

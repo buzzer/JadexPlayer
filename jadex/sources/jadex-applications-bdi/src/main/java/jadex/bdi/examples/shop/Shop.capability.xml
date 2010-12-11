@@ -48,7 +48,11 @@
 	</plans>
 	
 	<services>
-		<service>new Shop($scope.getExternalAccess(), $beliefbase.shopname)</service>
+		<providedservice class="IShop">new Shop($scope, $beliefbase.shopname)</providedservice>
 	</services>
+	
+	<properties>
+		<property name="logging.level">java.util.logging.Level.SEVERE</property>
+	</properties>
 	
 </capability>

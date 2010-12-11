@@ -7,6 +7,7 @@ import jadex.commons.IFuture;
 import jadex.commons.concurrent.DelegationResultListener;
 import jadex.commons.service.IServiceProvider;
 import jadex.commons.service.SServiceProvider;
+import jadex.commons.service.ServiceNotFoundException;
 import jadex.commons.service.library.ILibraryService;
 
 
@@ -25,18 +26,32 @@ public class SComponentFactory
 	{
 		final Future ret = new Future();
 		
-		SServiceProvider.getService(provider, ILibraryService.class).addResultListener(new DelegationResultListener(ret)
+		SServiceProvider.getService(provider, ILibraryService.class)
+			.addResultListener(new DelegationResultListener(ret)
 		{
 			public void customResultAvailable(Object source, Object result)
 			{
 				final ILibraryService ls = (ILibraryService)result;
 				
-				SServiceProvider.getService(provider, new ComponentFactorySelector(model, null, ls.getClassLoader())).addResultListener(new DelegationResultListener(ret)
+				SServiceProvider.getService(provider, new ComponentFactorySelector(model, null, ls.getClassLoader()))
+					.addResultListener(new DelegationResultListener(ret)
 				{
 					public void customResultAvailable(Object source, Object result)
 					{
 						IComponentFactory fac = (IComponentFactory)result;
-						ret.setResult(fac!=null ? fac.loadModel(model, null, ls.getClassLoader()) : null);
+						ret.setResult(fac.loadModel(model, null, ls.getClassLoader()));
+					}
+					
+					public void exceptionOccurred(Object source, Exception exception)
+					{
+						if(exception instanceof ServiceNotFoundException)
+						{
+							ret.setResult(null);
+						}
+						else
+						{
+							super.exceptionOccurred(source, exception);
+						}
 					}
 				});
 			}
@@ -53,18 +68,32 @@ public class SComponentFactory
 	{
 		final Future ret = new Future();
 		
-		SServiceProvider.getService(provider, ILibraryService.class).addResultListener(new DelegationResultListener(ret)
+		SServiceProvider.getService(provider, ILibraryService.class)
+			.addResultListener(new DelegationResultListener(ret)
 		{
 			public void customResultAvailable(Object source, Object result)
 			{
 				final ILibraryService ls = (ILibraryService)result;
 				
-				SServiceProvider.getService(provider, new ComponentFactorySelector(model, null, ls.getClassLoader())).addResultListener(new DelegationResultListener(ret)
+				SServiceProvider.getService(provider, new ComponentFactorySelector(model, null, ls.getClassLoader()))
+					.addResultListener(new DelegationResultListener(ret)
 				{
 					public void customResultAvailable(Object source, Object result)
 					{
 						IComponentFactory fac = (IComponentFactory)result;
-						ret.setResult(fac!=null ? new Boolean(fac.isLoadable(model, null, ls.getClassLoader())) : Boolean.FALSE);
+						ret.setResult(new Boolean(fac.isLoadable(model, null, ls.getClassLoader())));
+					}
+					
+					public void exceptionOccurred(Object source, Exception exception)
+					{
+						if(exception instanceof ServiceNotFoundException)
+						{
+							ret.setResult(Boolean.FALSE);
+						}
+						else
+						{
+							super.exceptionOccurred(source, exception);
+						}
 					}
 				});
 			}
@@ -82,21 +111,35 @@ public class SComponentFactory
 	{
 		final Future ret = new Future();
 		
-		SServiceProvider.getService(provider, ILibraryService.class).addResultListener(new DelegationResultListener(ret)
+		SServiceProvider.getService(provider, ILibraryService.class)
+			.addResultListener(new DelegationResultListener(ret)
 		{
 			public void customResultAvailable(Object source, Object result)
 			{
 				final ILibraryService ls = (ILibraryService)result;
 				
-				SServiceProvider.getService(provider, new ComponentFactorySelector(model, null, ls.getClassLoader())).addResultListener(new DelegationResultListener(ret)
+				SServiceProvider.getService(provider, new ComponentFactorySelector(model, null, ls.getClassLoader()))
+					.addResultListener(new DelegationResultListener(ret)
 				{
 					public void customResultAvailable(Object source, Object result)
 					{
 						IComponentFactory fac = (IComponentFactory)result;
-						ret.setResult(fac!=null ? new Boolean(fac.isStartable(model, null, ls.getClassLoader())) : Boolean.FALSE);
+						ret.setResult(new Boolean(fac.isStartable(model, null, ls.getClassLoader())));
+					}
+					
+					public void exceptionOccurred(Object source, Exception exception)
+					{
+						if(exception instanceof ServiceNotFoundException)
+						{
+							ret.setResult(Boolean.FALSE);
+						}
+						else
+						{
+							super.exceptionOccurred(source, exception);
+						}
 					}
 				});
-			}
+			}			
 		});
 
 		return ret;
@@ -109,12 +152,25 @@ public class SComponentFactory
 	{
 		final Future ret = new Future();
 		
-		SServiceProvider.getService(provider, new ComponentFactorySelector(type)).addResultListener(new DelegationResultListener(ret)
+		SServiceProvider.getService(provider, new ComponentFactorySelector(type))
+			.addResultListener(new DelegationResultListener(ret)
 		{
 			public void customResultAvailable(Object source, Object result)
 			{
 				IComponentFactory fac = (IComponentFactory)result;
-				ret.setResult(fac!=null ? fac.getComponentTypeIcon(type) : null);
+				ret.setResult(fac.getComponentTypeIcon(type));
+			}
+			
+			public void exceptionOccurred(Object source, Exception exception)
+			{
+				if(exception instanceof ServiceNotFoundException)
+				{
+					ret.setResult(null);
+				}
+				else
+				{
+					super.exceptionOccurred(source, exception);
+				}
 			}
 		});
 
@@ -128,12 +184,25 @@ public class SComponentFactory
 	{
 		final Future ret = new Future();
 		
-		SServiceProvider.getService(provider, new ComponentFactorySelector(type)).addResultListener(new DelegationResultListener(ret)
+		SServiceProvider.getService(provider, new ComponentFactorySelector(type))
+			.addResultListener(new DelegationResultListener(ret)
 		{
 			public void customResultAvailable(Object source, Object result)
 			{
 				IComponentFactory fac = (IComponentFactory)result;
-				ret.setResult(fac!=null ? fac.getProperties(type) : null);
+				ret.setResult(fac.getProperties(type));
+			}
+			
+			public void exceptionOccurred(Object source, Exception exception)
+			{
+				if(exception instanceof ServiceNotFoundException)
+				{
+					ret.setResult(null);
+				}
+				else
+				{
+					super.exceptionOccurred(source, exception);
+				}
 			}
 		});
 		
@@ -153,12 +222,25 @@ public class SComponentFactory
 			{
 				final ILibraryService ls = (ILibraryService)result;
 				
-				SServiceProvider.getService(provider, new ComponentFactorySelector(model, null, ls.getClassLoader())).addResultListener(new DelegationResultListener(ret)
+				SServiceProvider.getService(provider, new ComponentFactorySelector(model, null, ls.getClassLoader()))
+					.addResultListener(new DelegationResultListener(ret)
 				{
 					public void customResultAvailable(Object source, Object result)
 					{
 						IComponentFactory fac = (IComponentFactory)result;
-						ret.setResult(fac!=null ? fac.getComponentType(model, null, ls.getClassLoader()) : null);
+						ret.setResult(fac.getComponentType(model, null, ls.getClassLoader()));
+					}
+					
+					public void exceptionOccurred(Object source, Exception exception)
+					{
+						if(exception instanceof ServiceNotFoundException)
+						{
+							ret.setResult(null);
+						}
+						else
+						{
+							super.exceptionOccurred(source, exception);
+						}
 					}
 				});
 			}

@@ -7,9 +7,11 @@ import jadex.rules.state.OAVJavaType;
 import jadex.rules.state.OAVObjectType;
 import jadex.xml.AttributeInfo;
 import jadex.xml.BasicTypeConverter;
+import jadex.xml.IPostProcessor;
 import jadex.xml.IStringObjectConverter;
 import jadex.xml.ObjectInfo;
 import jadex.xml.SXML;
+import jadex.xml.StackElement;
 import jadex.xml.SubobjectInfo;
 import jadex.xml.TypeInfo;
 import jadex.xml.TypeInfoPathManager;
@@ -162,7 +164,7 @@ public class OAVObjectReaderHandler implements IObjectReaderHandler
 	public Object createObject(Object type, boolean root, ReadContext context, Map rawattributes) throws Exception
 	{
 		Object ret = null;
-		IOAVState state = (IOAVState)context.getUserContext();
+		IOAVState state = ((OAVUserContext)context.getUserContext()).getState();
 		
 		if(type instanceof TypeInfo)
 			type =  ((TypeInfo)type).getTypeInfo();
@@ -211,7 +213,7 @@ public class OAVObjectReaderHandler implements IObjectReaderHandler
 	/**
 	 *  Convert an object to another type of object.
 	 */
-	public Object convertContentObject(String object, QName tag, ReadContext context)
+	public Object convertContentObject(String object, QName tag, ReadContext context) throws Exception
 	{
 		Object ret = object;
 		if(tag.getNamespaceURI().startsWith(SXML.PROTOCOL_TYPEINFO))
@@ -261,7 +263,7 @@ public class OAVObjectReaderHandler implements IObjectReaderHandler
 		if(attrval==null && !(attrinfo instanceof AttributeInfo && ((AttributeInfo)attrinfo).getAccessInfo().getDefaultValue()!=null))
 			return;
 		
-		IOAVState state = (IOAVState)context.getUserContext();
+		IOAVState state = ((OAVUserContext)context.getUserContext()).getState();
 
 		OAVAttributeType attrtype = null;
 		Object val = attrval;
@@ -286,7 +288,8 @@ public class OAVObjectReaderHandler implements IObjectReaderHandler
 		}
 		else if(attrinfo!=null)
 		{
-			throw new RuntimeException("Unknown attribute info: "+attrinfo);
+			StackElement	se	= context.getTopStackElement();
+			context.getReporter().report("Unknown attribute info: "+attrinfo, "attribute error", se, se.getLocation());
 		}
 		
 		// Search attribute in type and supertypes.
@@ -324,16 +327,25 @@ public class OAVObjectReaderHandler implements IObjectReaderHandler
 		
 		if(attrtype!=null)
 		{
-			Object arg = val instanceof String && attrtype.getType() instanceof OAVJavaType 
-				&& BasicTypeConverter.isBuiltInType(((OAVJavaType)attrtype.getType()).getClazz())?
-				BasicTypeConverter.getBasicStringConverter((((OAVJavaType)attrtype.getType()).getClazz()))
-					.convertString(attrval, null): val;
-	
-			setAttributeValue(state, object, attrtype, arg);		
+			try
+			{
+				Object arg = val instanceof String && attrtype.getType() instanceof OAVJavaType 
+					&& BasicTypeConverter.isBuiltInType(((OAVJavaType)attrtype.getType()).getClazz())?
+					BasicTypeConverter.getBasicStringConverter((((OAVJavaType)attrtype.getType()).getClazz()))
+						.convertString(attrval, null): val;
+		
+				setAttributeValue(state, object, attrtype, arg);
+			}
+			catch(Exception e)
+			{
+				StackElement	se	= context.getTopStackElement();
+				context.getReporter().report(e.toString(), "attribute error", se, se.getLocation());
+			}
 		}
 		else
 		{
-			System.out.println("Unhandled attribute: "+object+", "+xmlattrname+", "+attrpath);
+			StackElement	se	= context.getTopStackElement();
+			context.getReporter().report("Unhandled attribute: "+object+", "+xmlattrname+", "+attrpath, "unhandled attribute", se, se.getLocation());
 		}
 	}
 	
@@ -347,7 +359,7 @@ public class OAVObjectReaderHandler implements IObjectReaderHandler
 	 */
 	public void linkObject(Object elem, Object parent, Object linkinfo, QName[] pathname, ReadContext context) throws Exception
 	{
-		IOAVState state = (IOAVState)context.getUserContext();
+		IOAVState state = ((OAVUserContext)context.getUserContext()).getState();
 	
 //		int idx = pathname.lastIndexOf("/");
 //		String tagname = idx!=-1? pathname.substring(idx+1): pathname;
@@ -394,7 +406,10 @@ public class OAVObjectReaderHandler implements IObjectReaderHandler
 		}	
 		
 		if(!linked)
-			throw new RuntimeException("Could not link: "+elem+" "+parent);
+		{
+			context.getReporter().report("Could not link: "+elem+" "+parent, "Could not link", context, context.getParser().getLocation());
+//			throw new RuntimeException("Could not link: "+elem+" "+parent);
+		}
 	}
 	
 	/**
@@ -465,6 +480,15 @@ public class OAVObjectReaderHandler implements IObjectReaderHandler
 		{
 			state.addAttributeValue(object, attrtype, elem);
 		}
+	}
+	
+	/**
+	 *  Get the post-processor.
+	 *  @return The post-processor
+	 */
+	public IPostProcessor getPostProcessor(Object object, Object typeinfo)
+	{
+		return typeinfo instanceof TypeInfo? ((TypeInfo)typeinfo).getPostProcessor(): null;
 	}
 
 }

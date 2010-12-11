@@ -16,12 +16,14 @@ import jadex.bridge.MessageType;
 import jadex.commons.Future;
 import jadex.commons.ICommand;
 import jadex.commons.IFuture;
+import jadex.commons.concurrent.CollectionResultListener;
 import jadex.commons.concurrent.DefaultResultListener;
 import jadex.commons.concurrent.DelegationResultListener;
 import jadex.commons.concurrent.IExecutable;
 import jadex.commons.concurrent.IResultListener;
 import jadex.commons.service.IServiceContainer;
 import jadex.commons.service.SServiceProvider;
+import jadex.commons.service.ServiceNotFoundException;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -131,10 +133,12 @@ public abstract class AbstractComponentAdapter implements IComponentAdapter, IEx
 	 */
 	public void wakeup()
 	{
+//		System.err.println("wakeup: "+getComponentIdentifier());		
+		
 		wokenup	= true;
 
 		if(IComponentDescription.STATE_TERMINATED.equals(desc.getState()))
-			throw new ComponentTerminatedException(cid.getName());
+			throw new ComponentTerminatedException(cid);
 		
 		// Set processing state to ready if not running.
 		if(IComponentDescription.PROCESSINGSTATE_IDLE.equals(desc.getProcessingState()))
@@ -334,6 +338,64 @@ public abstract class AbstractComponentAdapter implements IComponentAdapter, IEx
 	}
 	
 	/**
+	 *  Get the children (if any).
+	 *  @return The children.
+	 */
+	public IFuture getChildrenIdentifiers()
+	{
+		final Future ret = new Future();
+		
+		getCMS().addResultListener(new IResultListener()
+		{
+			public void resultAvailable(Object source, Object result)
+			{
+				final IComponentManagementService cms = (IComponentManagementService)result;
+				cms.getChildren(getComponentIdentifier()).addResultListener(new DelegationResultListener(ret));
+			}
+			
+			public void exceptionOccurred(Object source, Exception exception)
+			{
+				ret.setException(exception);
+			}
+		});
+		
+		return ret;
+	}
+	
+	/**
+	 *  Get the children (if any).
+	 *  @return The children.
+	 */
+	public IFuture getChildrenAccesses()
+	{
+		final Future ret = new Future();
+		
+		SServiceProvider.getServiceUpwards(getServiceContainer(), IComponentManagementService.class)
+			.addResultListener(new DefaultResultListener()
+		{
+			public void resultAvailable(Object source, Object result)
+			{
+				final IComponentManagementService cms = (IComponentManagementService)result;
+				
+				cms.getChildren(getComponentIdentifier()).addResultListener(new DefaultResultListener()
+				{
+					public void resultAvailable(Object source, Object result)
+					{
+						IComponentIdentifier[] childs = (IComponentIdentifier[])result;
+						IResultListener	crl	= new CollectionResultListener(childs.length, true, new DelegationResultListener(ret));
+						for(int i=0; !ret.isDone() && i<childs.length; i++)
+						{
+							cms.getExternalAccess(childs[i]).addResultListener(crl);
+						}
+					}
+				});
+			}
+		});
+		
+		return ret;
+	}
+	
+	/**
 	 *  String representation of the component.
 	 */
 	public String toString()
@@ -409,7 +471,7 @@ public abstract class AbstractComponentAdapter implements IComponentAdapter, IEx
 //		System.out.println("killComponent: "+listener);
 		if(IComponentDescription.STATE_TERMINATED.equals(desc.getState()))
 		{
-			ret.setException(new ComponentTerminatedException(cid.getName()));
+			ret.setException(new ComponentTerminatedException(cid));
 		}
 		else
 		{
@@ -419,7 +481,25 @@ public abstract class AbstractComponentAdapter implements IComponentAdapter, IEx
 				{
 					public void resultAvailable(Object source, Object result)
 					{
-						shutdownContainer().addResultListener(new DelegationResultListener(ret));
+						synchronized(ext_entries)
+						{
+							// Do final cleanup step as (last) ext_entry
+							// for allowing previously added entries still be executed.
+							invokeLater(new Runnable()
+							{								
+								public void run()
+								{
+									shutdownContainer().addResultListener(new DelegationResultListener(ret));
+									
+//									System.out.println("Checking ext entries after cleanup: "+cid);
+									assert ext_entries.isEmpty() : "Ext entries after cleanup: "+cid+", "+ext_entries;
+								}
+							});
+							
+							// No more ext entries after cleanup step allowed.
+							ext_forbidden	= true;
+						}
+						
 					}
 					
 					public void exceptionOccurred(Object source, Exception exception)
@@ -476,7 +556,7 @@ public abstract class AbstractComponentAdapter implements IComponentAdapter, IEx
 	public void	receiveMessage(Map message, MessageType type)
 	{
 		if(IComponentDescription.STATE_TERMINATED.equals(desc.getState()) || fatalerror)
-			throw new ComponentTerminatedException(cid.getName());
+			throw new ComponentTerminatedException(cid);
 
 		// Add optional receival time.
 //		String rd = type.getReceiveDateIdentifier();
@@ -489,6 +569,9 @@ public abstract class AbstractComponentAdapter implements IComponentAdapter, IEx
 	}
 	
 	//-------- IExecutable interface --------
+	
+	boolean executing;
+	Exception	rte;
 
 	/**
 	 *  Executable code for running the component
@@ -496,124 +579,116 @@ public abstract class AbstractComponentAdapter implements IComponentAdapter, IEx
 	 */
 	public boolean	execute()
 	{
-		wokenup	= false;
+//		synchronized(AsyncExecutionService.DEBUG)
+//		{
+//			AsyncExecutionService.DEBUG.put(this, "adapter execute()");
+//		}
+		
+//		System.out.println("entering exe: "+getComponentIdentifier());
+		if(executing)
+		{
+			System.err.println(getComponentIdentifier()+": double execution");
+//			List	debug	= (List)AsyncExecutionService.DEBUG.getCollection(this);
+//			for(int i=0; i<debug.size(); i++)
+//				System.err.println(getComponentIdentifier()+": "+debug.get(i));
+//			rte.printStackTrace();
+			new RuntimeException("executing: "+getComponentIdentifier()).printStackTrace();
+		}
+//		rte	= new RuntimeException("executing: "+getComponentIdentifier());
+//		rte.fillInStackTrace();
+		executing	= true;
+		wokenup	= false;	
 		
 		// Note: wakeup() can be called from arbitrary threads (even when the
 		// component itself is currently running. I.e. it cannot be ensured easily
 		// that an execution task is enqueued and the component has terminated
 		// meanwhile.
-		if(IComponentDescription.STATE_TERMINATED.equals(desc.getState()))
-			return false;
-		
-		if(fatalerror)
-			throw new ComponentTerminatedException(cid.getName());
-
-		// Remember execution thread.
-		this.componentthread	= Thread.currentThread();
-		
-		ClassLoader	cl	= componentthread.getContextClassLoader();
-		componentthread.setContextClassLoader(model.getClassLoader());
-
-		getCMS().addResultListener(new DefaultResultListener()
+		boolean	ret;
+		if(!IComponentDescription.STATE_TERMINATED.equals(desc.getState()))
 		{
-			public void resultAvailable(Object source, Object result)
+			if(fatalerror)
+				return false;	// Component already failed: tell executor not to call again. (can happen during failed init)
+	
+			// Remember execution thread.
+			this.componentthread	= Thread.currentThread();
+			
+			ClassLoader	cl	= componentthread.getContextClassLoader();
+			componentthread.setContextClassLoader(model.getClassLoader());
+	
+			getCMS().addResultListener(new DefaultResultListener()
 			{
-				if(result!=null)	// may be null during platform init 
-					((ComponentManagementService)result).setProcessingState(cid, IComponentDescription.PROCESSINGSTATE_RUNNING);
-			}
-		});
-		
-		// Copy actions from external threads into the state.
-		// Is done in before tool check such that tools can see external actions appearing immediately (e.g. in debugger).
-		boolean	extexecuted	= false;
-		Runnable[]	entries	= null;
-		synchronized(ext_entries)
-		{
-			if(!(ext_entries.isEmpty()))
-			{
-				entries	= (Runnable[])ext_entries.toArray(new Runnable[ext_entries.size()]);
-				ext_entries.clear();
-				
-				extexecuted	= true;
-			}
-		}
-		for(int i=0; entries!=null && i<entries.length; i++)
-		{
-			if(entries[i] instanceof CheckedAction)
-			{
-				if(((CheckedAction)entries[i]).isValid())
+				public void resultAvailable(Object source, Object result)
 				{
+					((ComponentManagementService)result).setProcessingState(cid, IComponentDescription.PROCESSINGSTATE_RUNNING);
+				}
+				
+				public void exceptionOccurred(Object source, Exception exception)
+				{
+					// CMS may be null during platform init
+					if(!(exception instanceof ServiceNotFoundException))
+						super.exceptionOccurred(source, exception);
+				}
+			});
+			
+			// Copy actions from external threads into the state.
+			// Is done in before tool check such that tools can see external actions appearing immediately (e.g. in debugger).
+			boolean	extexecuted	= false;
+			Runnable[]	entries	= null;
+			synchronized(ext_entries)
+			{
+				if(!(ext_entries.isEmpty()))
+				{
+					entries	= (Runnable[])ext_entries.toArray(new Runnable[ext_entries.size()]);
+					ext_entries.clear();
+					
+					extexecuted	= true;
+				}
+			}
+			for(int i=0; entries!=null && i<entries.length; i++)
+			{
+				if(entries[i] instanceof CheckedAction)
+				{
+					if(((CheckedAction)entries[i]).isValid())
+					{
+						try
+						{
+							entries[i].run();
+						}
+						catch(Exception e)
+						{
+							fatalError(e);
+						}
+					}
 					try
 					{
-						entries[i].run();
+						((CheckedAction)entries[i]).cleanup();
 					}
 					catch(Exception e)
 					{
 						fatalError(e);
 					}
 				}
-				try
+				else //if(entries[i] instanceof Runnable)
 				{
-					((CheckedAction)entries[i]).cleanup();
-				}
-				catch(Exception e)
-				{
-					fatalError(e);
-				}
-			}
-			else //if(entries[i] instanceof Runnable)
-			{
-				try
-				{
-					entries[i].run();
-				}
-				catch(Exception e)
-				{
-//					e.printStackTrace();
-					fatalError(e);
-				}
-			}
-		}
-
-		// Suspend when breakpoint is triggered.
-		boolean	breakpoint_triggered	= false;
-		if(!dostep && !IComponentDescription.STATE_SUSPENDED.equals(desc.getState()))
-		{
-			if(component.isAtBreakpoint(desc.getBreakpoints()))
-			{
-				breakpoint_triggered	= true;
-				getCMS().addResultListener(new DefaultResultListener()
-				{
-					public void resultAvailable(Object source, Object result)
+					try
 					{
-						((IComponentManagementService)result).suspendComponent(cid);
+//						if(entries[i].toString().indexOf("calc")!=-1)
+//						{
+//							System.out.println("scheduleStep: "+getComponentIdentifier());
+//						}
+						entries[i].run();
 					}
-				});
-			}
-		}
-		
-		if(!breakpoint_triggered && !extexecuted && (!IComponentDescription.STATE_SUSPENDED.equals(desc.getState()) || dostep))
-		{
-			try
-			{
-//				System.out.println("Executing: "+component);
-				again	= component.executeStep();
-			}
-			catch(Exception e)
-			{
-				fatalError(e);
-			}
-			if(dostep)
-			{
-				dostep	= false;
-				if(stepfuture!=null)
-				{
-					stepfuture.setResult(desc);
+					catch(Exception e)
+					{
+	//					e.printStackTrace();
+						fatalError(e);
+					}
 				}
 			}
-			
+	
 			// Suspend when breakpoint is triggered.
-			if(!IComponentDescription.STATE_SUSPENDED.equals(desc.getState()))
+			boolean	breakpoint_triggered	= false;
+			if(!dostep && !IComponentDescription.STATE_SUSPENDED.equals(desc.getState()))
 			{
 				if(component.isAtBreakpoint(desc.getBreakpoints()))
 				{
@@ -627,25 +702,73 @@ public abstract class AbstractComponentAdapter implements IComponentAdapter, IEx
 					});
 				}
 			}
+			
+			if(!breakpoint_triggered && !extexecuted && (!IComponentDescription.STATE_SUSPENDED.equals(desc.getState()) || dostep))
+			{
+				try
+				{
+	//				System.out.println("Executing: "+component);
+					again	= component.executeStep();
+				}
+				catch(Exception e)
+				{
+					fatalError(e);
+				}
+				if(dostep)
+				{
+					dostep	= false;
+					if(stepfuture!=null)
+					{
+						stepfuture.setResult(desc);
+					}
+				}
+				
+				// Suspend when breakpoint is triggered.
+				if(!IComponentDescription.STATE_SUSPENDED.equals(desc.getState()))
+				{
+					if(component.isAtBreakpoint(desc.getBreakpoints()))
+					{
+						breakpoint_triggered	= true;
+						getCMS().addResultListener(new DefaultResultListener()
+						{
+							public void resultAvailable(Object source, Object result)
+							{
+								((IComponentManagementService)result).suspendComponent(cid);
+							}
+						});
+					}
+				}
+			}
+			
+			final boolean	ready	= again && !breakpoint_triggered || extexecuted || wokenup;
+			getCMS().addResultListener(new DefaultResultListener()
+			{
+				public void resultAvailable(Object source, Object result)
+				{
+					((ComponentManagementService)result).setProcessingState(cid, ready
+						? IComponentDescription.PROCESSINGSTATE_READY : IComponentDescription.PROCESSINGSTATE_IDLE);
+				}
+			});
+
+			// Reset execution thread.
+			componentthread.setContextClassLoader(cl);
+			this.componentthread = null;		
+
+			ret	= (again && !IComponentDescription.STATE_SUSPENDED.equals(desc.getState())) || extexecuted;
+		}
+		else
+		{
+			ret	= false;
 		}
 		
-		final boolean	ready	= again && !breakpoint_triggered || extexecuted || wokenup;
-		getCMS().addResultListener(new DefaultResultListener()
-		{
-			public void resultAvailable(Object source, Object result)
-			{
-				((ComponentManagementService)result).setProcessingState(cid, ready
-					? IComponentDescription.PROCESSINGSTATE_READY : IComponentDescription.PROCESSINGSTATE_IDLE);
-			}
-		});
-
-		// Reset execution thread.
-		componentthread.setContextClassLoader(cl);
-		this.componentthread = null;
-		
 //		System.out.println("end: "+getComponentIdentifier());
+		executing	= false;
+//		synchronized(AsyncExecutionService.DEBUG)
+//		{
+//			AsyncExecutionService.DEBUG.put(this, "adapter execute() finished");
+//		}
 		
-		return (again && !IComponentDescription.STATE_SUSPENDED.equals(desc.getState())) || extexecuted;
+		return ret;
 	}
 
 	/**
@@ -693,13 +816,16 @@ public abstract class AbstractComponentAdapter implements IComponentAdapter, IEx
 	public void invokeLater(Runnable action)
 	{
 		if(IComponentDescription.STATE_TERMINATED.equals(desc.getState()) || fatalerror)
-			throw new ComponentTerminatedException(cid.getName());
+			throw new ComponentTerminatedException(cid);
 
 		synchronized(ext_entries)
 		{
+//			System.out.println("Adding to ext entries: "+cid);
 			if(ext_forbidden)
-				throw new ComponentTerminatedException("External actions cannot be accepted " +
-					"due to terminated component state: "+this);
+			{
+				throw new ComponentTerminatedException(cid);
+			}
+			else
 			{
 				ext_entries.add(action);
 			}
@@ -726,7 +852,7 @@ public abstract class AbstractComponentAdapter implements IComponentAdapter, IEx
 	{
 		Future ret = new Future();
 		if(IComponentDescription.STATE_TERMINATED.equals(desc.getState()) || fatalerror)
-			ret.setException(new ComponentTerminatedException(cid.getName()));
+			ret.setException(new ComponentTerminatedException(cid));
 		else if(dostep)
 			ret.setException(new RuntimeException("Only one step allowed at a time."));
 			

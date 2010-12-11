@@ -21,7 +21,10 @@ import java.util.Set;
 
 import javax.xml.XMLConstants;
 import javax.xml.namespace.QName;
+import javax.xml.stream.Location;
 import javax.xml.stream.XMLInputFactory;
+import javax.xml.stream.XMLReporter;
+import javax.xml.stream.XMLStreamException;
 import javax.xml.stream.XMLStreamReader;
 
 /**
@@ -36,9 +39,10 @@ public class Reader
 	
 	/** The string marker object. */
 	public static final Object STRING_MARKER = new String();
-	
-	/** The xml input factory. */
-	protected static final XMLInputFactory	FACTORY	= XMLInputFactory.newInstance();
+
+	/** This thread local variable provides access to the read context,
+	 *  e.g. from the XML reporter, if required. */
+	public static final ThreadLocal	READ_CONTEXT	= new ThreadLocal();
 	
 	//-------- attributes --------
 	
@@ -47,6 +51,9 @@ public class Reader
 	
 	/** The link mode. */
 	protected boolean bulklink;
+	
+	/** The xml input factory. */
+	protected XMLInputFactory	factory;
 	
 	//-------- constructors --------
 
@@ -65,8 +72,34 @@ public class Reader
 	 */
 	public Reader(IObjectReaderHandler handler, boolean bulklink)
 	{
+		this(handler, bulklink, false, null);
+	}
+	
+	/**
+	 *  Create a new reader.
+	 *  @param handler The handler.
+	 */
+	public Reader(IObjectReaderHandler handler, boolean bulklink, boolean validate, XMLReporter reporter)
+	{
 		this.handler = handler;
 		this.bulklink = bulklink;
+		factory	= XMLInputFactory.newInstance();
+		
+		try
+		{
+			factory.setProperty(XMLInputFactory.IS_VALIDATING, validate ? Boolean.TRUE : Boolean.FALSE);
+		}
+		catch(Exception e)
+		{
+			// Validation not supported.
+			System.err.println("Error setting validation to "+validate);
+			e.printStackTrace();
+		}
+		
+		if(reporter!=null)
+		{
+			factory.setProperty(XMLInputFactory.REPORTER, reporter);
+		}
 	}
 	
 	//-------- methods --------
@@ -80,52 +113,76 @@ public class Reader
 	public Object read(InputStream input, final ClassLoader classloader, final Object callcontext) throws Exception
 	{
 		XMLStreamReader	parser;
-		synchronized(FACTORY)
+		synchronized(factory)
 		{
-			parser	= FACTORY.createXMLStreamReader(input);
+			parser	= factory.createXMLStreamReader(input);
 		}
-		ReadContext readcontext = new ReadContext(parser, callcontext, classloader);
-		
-		while(parser.hasNext())
+		XMLReporter	reporter	= factory.getXMLReporter();
+		if(reporter==null)
 		{
-			int	next = parser.next();
-			
-			if(next==XMLStreamReader.COMMENT)
+			reporter	= new XMLReporter()
 			{
-				handleComment(readcontext);
-			}
-			else if(next==XMLStreamReader.CHARACTERS || next==XMLStreamReader.CDATA)
-			{
-				handleContent(readcontext);
-			}
-			else if(next==XMLStreamReader.START_ELEMENT)
-			{	
-				handleStartElement(readcontext);
-			}
-			else if(next==XMLStreamReader.END_ELEMENT)
-			{
-				handleEndElement(readcontext);
-			}
-		}
-		parser.close();
-		
-		// Handle post-processors.
-		for(int i=1; readcontext.getPostProcessors().size()>0; i++)
-		{
-			List ps = (List)readcontext.getPostProcessors().remove(new Integer(i));
-			if(ps!=null)
-			{
-				for(int j=0; j<ps.size(); j++)
+				public void report(String message, String errorType, Object relatedInformation, Location location) throws XMLStreamException
 				{
-					((Runnable)ps.get(j)).run();
+					throw new XMLStreamException(message, location);
+				}
+			};
+		}
+		ReadContext readcontext = new ReadContext(parser, reporter, callcontext, classloader);
+		READ_CONTEXT.set(readcontext);
+		try
+		{
+			while(parser.hasNext())
+			{
+				int	next = parser.next();
+				
+				if(next==XMLStreamReader.COMMENT)
+				{
+					handleComment(readcontext);
+				}
+				else if(next==XMLStreamReader.CHARACTERS || next==XMLStreamReader.CDATA)
+				{
+					handleContent(readcontext);
+				}
+				else if(next==XMLStreamReader.START_ELEMENT)
+				{	
+					handleStartElement(readcontext);
+				}
+				else if(next==XMLStreamReader.END_ELEMENT)
+				{
+					handleEndElement(readcontext);
 				}
 			}
-//			System.out.println("i: "+i);
-		}
 			
+			// Handle post-processors.
+			for(int i=1; readcontext.getPostProcessors().size()>0; i++)
+			{
+				List ps = (List)readcontext.getPostProcessors().remove(new Integer(i));
+				if(ps!=null)
+				{
+					for(int j=0; j<ps.size(); j++)
+					{
+						((Runnable)ps.get(j)).run();
+					}
+				}
+	//			System.out.println("i: "+i);
+			}
+		}
+		catch(RuntimeException e)
+		{
+			e.printStackTrace();
+			Location	loc	= readcontext.getStack().size()>0 ? readcontext.getTopStackElement().getLocation() : parser.getLocation();
+			reporter.report(e.toString(), "XML error", readcontext, loc);
+		}
+		finally
+		{
+			READ_CONTEXT.set(null);
+			parser.close();
+		}
+
 		return readcontext.rootobject;
 	}
-	
+
 	/**
 	 *  Handle the comment.
 	 *  @param readcontext The context for reading with all necessary information.
@@ -229,11 +286,17 @@ public class Reader
 				String idref = rawattrs!=null? (String)rawattrs.get(SXML.IDREF): null;
 				if(idref!=null)
 				{
-					if(!readcontext.getReadObjects().containsKey(idref))
-						throw new RuntimeException("idref not contained: "+idref);
-					object = readcontext.getReadObjects().get(idref);
-					StackElement se = new StackElement(localname, object, rawattrs, typeinfo);
-					stack.add(se);
+					if(readcontext.getReadObjects().containsKey(idref))
+					{
+						object = readcontext.getReadObjects().get(idref);
+						StackElement se = new StackElement(localname, object, rawattrs, typeinfo, parser.getLocation());
+						stack.add(se);
+					}
+					else
+					{
+						StackElement	se	= readcontext.getTopStackElement();
+						readcontext.getReporter().report("idref not contained: "+idref, "idref error", se, se.getLocation());						
+					}
 				}
 				else
 				{	
@@ -264,7 +327,7 @@ public class Reader
 						readcontext.getReadObjects().put(id, object);
 					}
 					
-					stack.add(new StackElement(localname, object, rawattrs, typeinfo));
+					stack.add(new StackElement(localname, object, rawattrs, typeinfo, parser.getLocation()));
 					if(stack.size()==1)
 					{
 						readcontext.setRootObject(object);
@@ -285,51 +348,56 @@ public class Reader
 								attrpath.add(pse.getTag());
 								object = pse.getObject();
 							}
-							
-							if(object==null)
-								throw new RuntimeException("No element on stack for attributes"+stack);
 						}
 						
 						// Handle attributes
-						Set attrs = typeinfo==null? Collections.EMPTY_SET: typeinfo.getXMLAttributeNames();
-						for(int i=0; i<parser.getAttributeCount(); i++)
+						if(object!=null)
 						{
-							QName attrname = parser.getAttributePrefix(i)==null || parser.getAttributePrefix(i)==XMLConstants.DEFAULT_NS_PREFIX? new QName(parser.getAttributeLocalName(i))
-								: new QName(parser.getAttributeNamespace(i), parser.getAttributeLocalName(i), parser.getAttributePrefix(i));
-
-//							System.out.println("here: "+attrname);
-							
-							if(!attrname.getLocalPart().equals(SXML.ID))
-							{	
-								String attrval = parser.getAttributeValue(i);
-								attrs.remove(attrname);
+							Set attrs = typeinfo==null? Collections.EMPTY_SET: typeinfo.getXMLAttributeNames();
+							for(int i=0; i<parser.getAttributeCount(); i++)
+							{
+								QName attrname = parser.getAttributePrefix(i)==null || parser.getAttributePrefix(i)==XMLConstants.DEFAULT_NS_PREFIX? new QName(parser.getAttributeLocalName(i))
+									: new QName(parser.getAttributeNamespace(i), parser.getAttributeLocalName(i), parser.getAttributePrefix(i));
+	
+	//							System.out.println("here: "+attrname);
 								
-								Object attrinfo = typeinfo!=null ? typeinfo.getAttributeInfo(attrname) : null;
-								if(!(attrinfo instanceof AttributeInfo && ((AttributeInfo)attrinfo).isIgnoreRead()))
-								{
-		//							ITypeConverter attrconverter = typeinfo!=null ? typeinfo.getAttributeConverter(attrname) : null;
-		//							Object val = attrconverter!=null? attrconverter.convertObject(attrval, root, classloader): attrval;
+								if(!attrname.getLocalPart().equals(SXML.ID))
+								{	
+									String attrval = parser.getAttributeValue(i);
+									attrs.remove(attrname);
 									
-									handler.handleAttributeValue(object, attrname, attrpath, attrval, attrinfo, 
-										readcontext);
-								
-									if(attrinfo instanceof AttributeInfo && AttributeInfo.ID.equals(((AttributeInfo)attrinfo).getId()))
+									Object attrinfo = typeinfo!=null ? typeinfo.getAttributeInfo(attrname) : null;
+									if(!(attrinfo instanceof AttributeInfo && ((AttributeInfo)attrinfo).isIgnoreRead()))
 									{
-//										System.out.println("ID: "+attrval+", "+object);
-										readcontext.getReadObjects().put(attrval, object);
+			//							ITypeConverter attrconverter = typeinfo!=null ? typeinfo.getAttributeConverter(attrname) : null;
+			//							Object val = attrconverter!=null? attrconverter.convertObject(attrval, root, classloader): attrval;
+										
+										handler.handleAttributeValue(object, attrname, attrpath, attrval, attrinfo, 
+											readcontext);
+									
+										if(attrinfo instanceof AttributeInfo && AttributeInfo.ID.equals(((AttributeInfo)attrinfo).getId()))
+										{
+	//										System.out.println("ID: "+attrval+", "+object);
+											readcontext.getReadObjects().put(attrval, object);
+										}
 									}
 								}
 							}
+							// Handle unset attributes (possibly have default value).
+							for(Iterator it=attrs.iterator(); it.hasNext(); )
+							{
+								QName attrname = (QName)it.next();
+								Object attrinfo = typeinfo.getAttributeInfo(attrname);
+								
+								// Hack. want to read attribute info here
+								handler.handleAttributeValue(object, attrname, attrpath, null, attrinfo, 
+									readcontext);
+							}
 						}
-						// Handle unset attributes (possibly have default value).
-						for(Iterator it=attrs.iterator(); it.hasNext(); )
+						else
 						{
-							QName attrname = (QName)it.next();
-							Object attrinfo = typeinfo.getAttributeInfo(attrname);
-							
-							// Hack. want to read attribute info here
-							handler.handleAttributeValue(object, attrname, attrpath, null, attrinfo, 
-								readcontext);
+							StackElement	se	= readcontext.getTopStackElement();
+							readcontext.getReporter().report("No element on stack for attributes", "stack error", se, se.getLocation());													
 						}
 					}
 					
@@ -397,7 +465,7 @@ public class Reader
 					}
 				}
 				
-				topse = new StackElement(topse.getTag(), val, topse.getRawAttributes());
+				topse = new StackElement(topse.getTag(), val, topse.getRawAttributes(), null, topse.getLocation());
 				stack.set(stack.size()-1, topse);
 //				readcontext.setTopse(topse);
 				// If this is the only element on stack, set also root to it
@@ -421,23 +489,23 @@ public class Reader
 				{
 					if(typeinfo!=null && typeinfo.getContentInfo()!=null) 
 					{
-						handler.handleAttributeValue(topse.getObject(), null, null, topse.getContent(), typeinfo.getContentInfo(), 
-							readcontext);
+						handler.handleAttributeValue(topse.getObject(), null, null, topse.getContent(), typeinfo.getContentInfo(), readcontext);
 					}
 					else
 					{
-						throw new RuntimeException("No content mapping for: "+topse.getContent()+" tag="+topse.getTag());
+						StackElement	se	= readcontext.getTopStackElement();
+						readcontext.getReporter().report("No content mapping for: "+topse.getContent()+" tag="+topse.getTag(), "link error", se, se.getLocation());													
 					}
 				}
 				
 				// Handle post-processing
 				
-				if(typeinfo!=null && typeinfo.getPostProcessor()!=null)
+				final IPostProcessor postproc = handler.getPostProcessor(topse.getObject(), typeinfo);
+				if(postproc!=null)
 				{
-					final IPostProcessor postproc = typeinfo.getPostProcessor();
 					if(postproc.getPass()==0)
 					{
-						Object changed = typeinfo.getPostProcessor().postProcess(readcontext, topse.getObject());
+						Object changed = postproc.postProcess(readcontext, topse.getObject());
 						if(changed!=null)
 							topse.setObject(changed);
 					}
@@ -479,26 +547,31 @@ public class Reader
 						pathname.add(0, ((StackElement)stack.get(i+1)).getTag());
 					}
 					
-					if(pse.getObject()==null)
-						throw new RuntimeException("No parent object found for: "+SUtil.arrayToString(fullpath));
-					
+					if(pse.getObject()!=null)
+					{
 	//						System.out.println("here: "+parser.getLocalName()+" "+getXMLPath(stack)+" "+topse.getRawAttributes());
 					
-					TypeInfo patypeinfo = pse.getTypeInfo();
-					SubobjectInfo linkinfo = getSubobjectInfoRead(localname, fullpath, patypeinfo, topse.getRawAttributes());
-					bulklink = patypeinfo!=null? patypeinfo.isBulkLink(): this.bulklink;
-					
-					if(!bulklink)
-					{
-						IObjectLinker linker = (IObjectLinker)(typeinfo!=null && typeinfo.getLinker()!=null? typeinfo.getLinker(): handler);
-						linker.linkObject(topse.getObject(), pse.getObject(), linkinfo==null? null: linkinfo, 
-							(QName[])pathname.toArray(new QName[pathname.size()]), readcontext);
+						TypeInfo patypeinfo = pse.getTypeInfo();
+						SubobjectInfo linkinfo = getSubobjectInfoRead(localname, fullpath, patypeinfo, topse.getRawAttributes());
+						bulklink = patypeinfo!=null? patypeinfo.isBulkLink(): this.bulklink;
+						
+						if(!bulklink)
+						{
+							IObjectLinker linker = (IObjectLinker)(typeinfo!=null && typeinfo.getLinker()!=null? typeinfo.getLinker(): handler);
+							linker.linkObject(topse.getObject(), pse.getObject(), linkinfo==null? null: linkinfo, 
+								(QName[])pathname.toArray(new QName[pathname.size()]), readcontext);
+						}
+						else
+						{
+							// Save the finished object as child for its parent.
+							readcontext.addChild(pse.getObject(), new LinkData(topse.getObject(), linkinfo==null? null: linkinfo, 
+								(QName[])pathname.toArray(new QName[pathname.size()])));	
+						}
 					}
 					else
 					{
-						// Save the finished object as child for its parent.
-						readcontext.addChild(pse.getObject(), new LinkData(topse.getObject(), linkinfo==null? null: linkinfo, 
-							(QName[])pathname.toArray(new QName[pathname.size()])));	
+						StackElement	se	= readcontext.getTopStackElement();
+						readcontext.getReporter().report("No parent object found for: "+SUtil.arrayToString(fullpath), "link error", se, se.getLocation());													
 					}
 				}
 			}
@@ -555,19 +628,37 @@ public class Reader
 	 *  @param val The string value.
 	 *  @return The encoded object.
 	 */
+	public static Object objectFromXML(Reader reader, String val, ClassLoader classloader, Object context)
+	{
+		return objectFromByteArray(reader, val.getBytes(), classloader, context);
+	}
+		
+	/**
+	 *  @param val The string value.
+	 *  @return The encoded object.
+	 */
 	public static Object objectFromByteArray(Reader reader, byte[] val, ClassLoader classloader)
+	{
+		return objectFromByteArray(reader, val, classloader, null);
+	}
+	
+	/**
+	 *  @param val The string value.
+	 *  @return The encoded object.
+	 */
+	public static Object objectFromByteArray(Reader reader, byte[] val, ClassLoader classloader, Object context)
 	{
 		try
 		{
 			ByteArrayInputStream bis = new ByteArrayInputStream(val);
-			Object ret = reader.read(bis, classloader, null);
+			Object ret = reader.read(bis, classloader, context);
 			bis.close();
 			return ret;
 		}
 		catch(Throwable t)
 		{
-//			t.printStackTrace();
-//			System.out.println("problem: "+new String(val));
+			t.printStackTrace();
+			System.out.println("problem: "+new String(val));
 			throw new RuntimeException(t);
 		}
 	}

@@ -1,20 +1,24 @@
 package jadex.micro;
 
 import jadex.bridge.ComponentServiceContainer;
+import jadex.bridge.DecouplingServiceInvocationInterceptor;
 import jadex.bridge.IComponentAdapter;
 import jadex.bridge.IComponentIdentifier;
+import jadex.bridge.IComponentListener;
 import jadex.bridge.IComponentManagementService;
+import jadex.bridge.IComponentStep;
 import jadex.bridge.IExternalAccess;
+import jadex.bridge.IInternalAccess;
 import jadex.bridge.IMessageService;
+import jadex.bridge.IModelInfo;
 import jadex.bridge.MessageType;
 import jadex.commons.Future;
-import jadex.commons.ICommand;
 import jadex.commons.IFuture;
 import jadex.commons.concurrent.DefaultResultListener;
 import jadex.commons.concurrent.DelegationResultListener;
 import jadex.commons.concurrent.IResultListener;
-import jadex.commons.service.BasicService;
 import jadex.commons.service.CacheServiceContainer;
+import jadex.commons.service.IInternalService;
 import jadex.commons.service.IServiceContainer;
 import jadex.commons.service.IServiceIdentifier;
 import jadex.commons.service.IServiceProvider;
@@ -31,7 +35,7 @@ import java.util.logging.Logger;
 /**
  *  Base class for application agents.
  */
-public abstract class MicroAgent implements IMicroAgent
+public abstract class MicroAgent implements IMicroAgent, IInternalAccess
 {
 	//-------- attributes --------
 	
@@ -126,7 +130,7 @@ public abstract class MicroAgent implements IMicroAgent
 	/**
 	 *  Get the external access for this agent.
 	 */
-	public IMicroExternalAccess	getExternalAccess()
+	public IExternalAccess	getExternalAccess()
 	{
 		return new ExternalAccess(this, interpreter);
 	}
@@ -175,7 +179,7 @@ public abstract class MicroAgent implements IMicroAgent
 	 */
 	public Object getArgument(String name)
 	{
-		return interpreter.getArguments().get(name);
+		return interpreter.getArguments()==null? null: interpreter.getArguments().get(name);
 	}
 	
 	/**
@@ -221,11 +225,11 @@ public abstract class MicroAgent implements IMicroAgent
 	protected long	longtime	= 0;
 	
 	/**
-	 *  Wait for an secified amount of time.
+	 *  Wait for an specified amount of time.
 	 *  @param time The time.
 	 *  @param run The runnable.
 	 */
-	public IFuture waitFor(final long time, final ICommand run)
+	public IFuture waitFor(final long time, final IComponentStep run)
 	{
 		longtime	= Math.max(longtime, time);
 		final Future ret = new Future();
@@ -241,12 +245,13 @@ public abstract class MicroAgent implements IMicroAgent
 				{
 					public void timeEventOccurred(long currenttime)
 					{
-						interpreter.scheduleStep(new ICommand()
+						interpreter.scheduleStep(new IComponentStep()
 						{
-							public void execute(Object agent)
+							public Object execute(IInternalAccess ia)
 							{
 								timers.remove(ts[0]);
-								run.execute(agent);
+								run.execute(ia);
+								return null;
 							}
 							
 							public String toString()
@@ -278,10 +283,12 @@ public abstract class MicroAgent implements IMicroAgent
 	 *  Wait for the next tick.
 	 *  @param time The time.
 	 */
-	public void waitForTick(final ICommand run)
+	public IFuture waitForTick(final IComponentStep run)
 	{
+		final Future ret = new Future();
+		
 		SServiceProvider.getService(getServiceProvider(), IClockService.class)
-			.addResultListener(createResultListener(new DefaultResultListener()
+			.addResultListener(createResultListener(new IResultListener()
 		{
 			public void resultAvailable(Object source, Object result)
 			{
@@ -291,12 +298,13 @@ public abstract class MicroAgent implements IMicroAgent
 				{
 					public void timeEventOccurred(final long currenttime)
 					{
-						interpreter.scheduleStep(new ICommand()
+						interpreter.scheduleStep(new IComponentStep()
 						{
-							public void execute(Object agent)
+							public Object execute(IInternalAccess ia)
 							{
 								timers.remove(ts[0]);
-								run.execute(agent);
+								run.execute(ia);
+								return null;
 							}
 							
 							public String toString()
@@ -307,8 +315,16 @@ public abstract class MicroAgent implements IMicroAgent
 					}
 				});
 				timers.add(ts[0]);
+				ret.setResult(new TimerWrapper(ts[0]));
+			}
+			
+			public void exceptionOccurred(Object source, Exception exception)
+			{
+				ret.setException(exception);
 			}
 		}));
+		
+		return ret;
 	}
 	
 	/**
@@ -323,17 +339,19 @@ public abstract class MicroAgent implements IMicroAgent
 	/**
 	 *  Kill the agent.
 	 */
-	public void killAgent()
+	public IFuture killAgent()
 	{
+		final Future ret = new Future();
 		SServiceProvider.getService(getServiceProvider(), IComponentManagementService.class)
 			.addResultListener(createResultListener(new DefaultResultListener()
 		{
 			public void resultAvailable(Object source, Object result)
 			{
 				IComponentManagementService cms = (IComponentManagementService)result;
-				cms.destroyComponent(getComponentIdentifier());
+				cms.destroyComponent(getComponentIdentifier()).addResultListener(new DelegationResultListener(ret));
 			}
 		}));
+		return ret;
 	}
 		
 	/**
@@ -451,10 +469,20 @@ public abstract class MicroAgent implements IMicroAgent
 	 *  Schedule a step of the agent.
 	 *  May safely be called from external threads.
 	 *  @param step	Code to be executed as a step of the agent.
-	 */
+	 * /
 	public void	scheduleStep(ICommand step)
 	{
 		interpreter.scheduleStep(step);
+	}*/
+	
+	/**
+	 *  Schedule a step of the agent.
+	 *  May safely be called from external threads.
+	 *  @param step	Code to be executed as a step of the agent.
+	 */
+	public IFuture scheduleStep(IComponentStep step)
+	{
+		return interpreter.scheduleStep(step);		
 	}
 	
 	/**
@@ -463,9 +491,22 @@ public abstract class MicroAgent implements IMicroAgent
 	 *  the old one is removed and shutdowned.
 	 *  @param service The service.
 	 */
-	public void addService(BasicService service)
+	public void addDirectService(IInternalService service)
 	{
 		((IServiceContainer)interpreter.getServiceProvider()).addService(service);
+	}
+	
+	/**
+	 *  Add a service to the platform. 
+	 *  If under the same name and type a service was contained,
+	 *  the old one is removed and shutdowned.
+	 *  @param service The service.
+	 */
+	public void addService(IInternalService service)
+	{
+		IInternalService proxyser = DecouplingServiceInvocationInterceptor
+			.createServiceProxy(getExternalAccess(), getAgentAdapter(), service);
+		((IServiceContainer)interpreter.getServiceProvider()).addService(proxyser);
 	}
 
 	/**
@@ -495,6 +536,50 @@ public abstract class MicroAgent implements IMicroAgent
 	{
 		interpreter.getAgentAdapter().invokeLater(run);
 	}*/
+	
+	/**
+	 *  Get the model of the component.
+	 *  @return	The model.
+	 */
+	public IModelInfo getModel()
+	{
+		return interpreter.getAgentModel();
+	}
+	
+	/**
+	 *  Get the children (if any).
+	 *  @return The children.
+	 */
+	public IFuture getChildren()
+	{
+		return interpreter.getAgentAdapter().getChildrenAccesses();
+	}
+	
+	/**
+	 *  Kill the component.
+	 */
+	public IFuture killComponent()
+	{
+		return killAgent();
+	}
+	
+	/**
+	 *  Add an component listener.
+	 *  @param listener The listener.
+	 */
+	public void addComponentListener(IComponentListener listener)
+	{
+		interpreter.addComponentListener(listener);
+	}
+	
+	/**
+	 *  Remove a component listener.
+	 *  @param listener The listener.
+	 */
+	public void removeComponentListener(IComponentListener listener)
+	{
+		interpreter.removeComponentListener(listener);
+	}
 	
 	//-------- helper classes --------
 	

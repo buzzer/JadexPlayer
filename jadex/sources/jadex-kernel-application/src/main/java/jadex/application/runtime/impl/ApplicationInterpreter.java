@@ -2,47 +2,56 @@ package jadex.application.runtime.impl;
 
 import jadex.application.model.MApplicationInstance;
 import jadex.application.model.MApplicationType;
-import jadex.application.model.MArgument;
 import jadex.application.model.MComponentInstance;
 import jadex.application.model.MComponentType;
 import jadex.application.model.MExpressionType;
+import jadex.application.model.MProvidedServiceType;
 import jadex.application.model.MSpaceInstance;
 import jadex.application.runtime.IApplication;
+import jadex.application.runtime.IApplicationExternalAccess;
 import jadex.application.runtime.ISpace;
+import jadex.bridge.ComponentFactorySelector;
 import jadex.bridge.ComponentResultListener;
 import jadex.bridge.ComponentServiceContainer;
 import jadex.bridge.ComponentTerminatedException;
 import jadex.bridge.CreationInfo;
+import jadex.bridge.DecouplingServiceInvocationInterceptor;
 import jadex.bridge.IArgument;
 import jadex.bridge.IComponentAdapter;
 import jadex.bridge.IComponentAdapterFactory;
 import jadex.bridge.IComponentDescription;
+import jadex.bridge.IComponentFactory;
 import jadex.bridge.IComponentIdentifier;
 import jadex.bridge.IComponentInstance;
+import jadex.bridge.IComponentListener;
 import jadex.bridge.IComponentManagementService;
+import jadex.bridge.IComponentStep;
 import jadex.bridge.IExternalAccess;
+import jadex.bridge.IInternalAccess;
 import jadex.bridge.IMessageAdapter;
 import jadex.bridge.IModelInfo;
+import jadex.commons.ChangeEvent;
 import jadex.commons.Future;
 import jadex.commons.IFuture;
 import jadex.commons.SReflect;
+import jadex.commons.SUtil;
+import jadex.commons.collection.MultiCollection;
 import jadex.commons.concurrent.CollectionResultListener;
 import jadex.commons.concurrent.CounterResultListener;
 import jadex.commons.concurrent.DefaultResultListener;
 import jadex.commons.concurrent.DelegationResultListener;
 import jadex.commons.concurrent.IResultListener;
-import jadex.commons.service.BasicService;
 import jadex.commons.service.CacheServiceContainer;
+import jadex.commons.service.IInternalService;
 import jadex.commons.service.IServiceContainer;
 import jadex.commons.service.IServiceProvider;
 import jadex.commons.service.SServiceProvider;
 import jadex.commons.service.library.ILibraryService;
 import jadex.javaparser.IValueFetcher;
 import jadex.javaparser.SimpleValueFetcher;
-import jadex.javaparser.javaccimpl.JavaCCExpressionParser;
 
 import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -56,7 +65,7 @@ import java.util.logging.Logger;
  *  When the context is deleted all components will be destroyed.
  *  An component must only be in one application context.
  */
-public class ApplicationInterpreter implements IApplication, IComponentInstance
+public class ApplicationInterpreter implements IApplication, IComponentInstance, IInternalAccess
 {
 	//-------- constants --------
 	
@@ -84,7 +93,6 @@ public class ApplicationInterpreter implements IApplication, IComponentInstance
 	protected IComponentAdapter	adapter;
 	
 	/** The application type. */
-//	protected ApplicationModel model;
 	protected MApplicationType model;
 	
 	/** The parent component. */
@@ -96,6 +104,7 @@ public class ApplicationInterpreter implements IApplication, IComponentInstance
 	
 	/** Component type mapping (cid -> modelname) and (modelname->application component type). */
 	protected Map ctypes;
+	protected MultiCollection instances;
 	
 	/** The arguments. */
 	protected Map arguments;
@@ -109,11 +118,16 @@ public class ApplicationInterpreter implements IApplication, IComponentInstance
 	/** The service container. */
 	protected IServiceContainer container;
 	
-	/** The scheduled steps of the agent. */
+	/** The scheduled steps of the component. */
 	protected List steps;
 	
-	/** Stop flag for stopping execution. */
-	protected boolean stop;
+	/** Flag indicating an added step will be executed without the need for calling wakeup(). */
+	// Required for startup bug fix in scheduleStep (synchronization between main thread and executor).
+	// While main is running the root component steps, invoke later must not be called to prevent double execution.
+	protected boolean willdostep;
+	
+	/** The component listeners. */
+	protected List componentlisteners;
 	
 	//-------- constructors --------
 	
@@ -129,9 +143,10 @@ public class ApplicationInterpreter implements IApplication, IComponentInstance
 		this.arguments = arguments==null ? new HashMap() : arguments;
 		this.results = new HashMap();
 		this.properties = new HashMap();
-		this.ctypes = Collections.synchronizedMap(new HashMap()); 
-		// synchronized because of MicroAgentViewPanel, todo
-		this.steps	= Collections.synchronizedList(new ArrayList());
+		this.ctypes = new HashMap(); 
+		this.instances = new MultiCollection(); 
+		this.steps	= new ArrayList();
+		this.willdostep	= true;
 		this.adapter = factory.createComponentAdapter(desc, model.getModelInfo(), this, parent);
 	
 		// Init the arguments with default values.
@@ -175,29 +190,93 @@ public class ApplicationInterpreter implements IApplication, IComponentInstance
 		else
 		{
 			container = new CacheServiceContainer(new ComponentServiceContainer(getComponentAdapter()), 25, 1*30*1000); // 30 secs cache expire
+//			container = new ComponentServiceContainer(getComponentAdapter());
 		}
 		
 		fetcher.setValue("$provider", getServiceProvider());
 		
 		// Schedule the futures (first) init step.
-		addStep(new Runnable()
+		scheduleStep(new IComponentStep()
 		{
-			public void run()
+			public Object execute(final IInternalAccess ia)
 			{
-				List services = model.getServices();
+				final List futures = new ArrayList();
+		
+				List services = model.getProvidedServices();
 				if(services!=null)
 				{
 					for(int i=0; i<services.size(); i++)
 					{
-						MExpressionType exp = (MExpressionType)services.get(i);
-						BasicService service = (BasicService)exp.getParsedValue().getValue(fetcher);
-						container.addService(service);
+						IInternalService service;
+						final MProvidedServiceType st = (MProvidedServiceType)services.get(i);
+						if(st.getParsedValue()!=null)
+						{
+							try
+							{
+								service = (IInternalService)st.getParsedValue().getValue(fetcher);
+								if(!st.isDirect())
+								{
+//									System.out.println("creating decoupled service: "+st.getClassName());
+									service = DecouplingServiceInvocationInterceptor.createServiceProxy(getExternalAccess(), getComponentAdapter(), service);
+								}
+								container.addService(service);
+							}
+							catch(Exception e)
+							{
+//								e.printStackTrace();
+								getLogger().warning("Service creation error: "+st.getParsedValue());
+							}
+						}
+						else 
+						{
+							if(st.getComponentName()!=null)
+							{
+								final Future futu = new Future();
+								futures.add(futu);
+								SServiceProvider.getService(ia.getServiceProvider(), IComponentManagementService.class)
+									.addResultListener(ia.createResultListener(new DelegationResultListener(futu)
+								{
+									public void customResultAvailable(Object source, Object result)
+									{
+										final IComponentManagementService cms = (IComponentManagementService)result;
+										IComponentIdentifier cid = cms.createComponentIdentifier(st.getComponentName(), st.getComponentName().indexOf("@")==-1);
+										IInternalService service = CompositeServiceInvocationInterceptor.createServiceProxy(st.getClazz(), null, 
+											(IApplicationExternalAccess)getExternalAccess(), getModel().getClassLoader(), cid);
+										container.addService(service);
+										futu.setResult(null);
+									}
+								}));
+							}
+							else if(st.getComponentType()==null)
+							{	
+								final Future futu = new Future();
+								futures.add(futu);
+								SServiceProvider.getService(getServiceProvider(), ILibraryService.class)
+									.addResultListener(ia.createResultListener(new DefaultResultListener()
+								{
+									public void resultAvailable(Object source, Object result)
+									{
+										ILibraryService ls = (ILibraryService)result;
+										findComponentType(0, model.getMComponentTypes(), ls, st.getClazz(), futu);
+									}
+								}));
+							}
+							else
+							{
+//								service = (IInternalService)Proxy.newProxyInstance(getClassLoader(), new Class[]{IInternalService.class, st.getClazz()}, 
+//									new CompositeServiceInvocationInterceptor((IApplicationExternalAccess)getExternalAccess(), componenttype, st.getClazz()));
+								service = CompositeServiceInvocationInterceptor.createServiceProxy(st.getClazz(), st.getComponentType(), 
+									(IApplicationExternalAccess)getExternalAccess(), getModel().getClassLoader(), null);
+								container.addService(service);
+							}
+						}
+						
+//						System.out.println("added: "+service+" "+getComponentIdentifier());
 					}
 				}
 		
 				// Evaluate (future) properties.
-				List	futures	= new ArrayList();
-				List	props	= model.getPropertyList();
+				List props	= model.getPropertyList();
 				if(props!=null)
 				{
 					for(int i=0; i<props.size(); i++)
@@ -238,9 +317,9 @@ public class ApplicationInterpreter implements IApplication, IComponentInstance
 					}
 				}
 				
-				final Runnable init2 = new Runnable()
+				final IComponentStep init2 = new IComponentStep()
 				{
-					public void run() 
+					public Object execute(IInternalAccess ia)
 					{
 						container.start().addResultListener(new ComponentResultListener(new IResultListener()
 						{
@@ -269,31 +348,23 @@ public class ApplicationInterpreter implements IApplication, IComponentInstance
 								}
 
 								final List components = config.getMComponentInstances();
-								SServiceProvider.getService(getServiceProvider(), ILibraryService.class).addResultListener(createResultListener(new DefaultResultListener()
+								SServiceProvider.getServiceUpwards(getServiceProvider(), IComponentManagementService.class).addResultListener(createResultListener(new DefaultResultListener()
 								{
 									public void resultAvailable(Object source, Object result)
 									{
-										final ILibraryService ls = (ILibraryService)result;
-										final ClassLoader cl = ls.getClassLoader();
-										SServiceProvider.getServiceUpwards(getServiceProvider(), IComponentManagementService.class).addResultListener(createResultListener(new DefaultResultListener()
-										{
-											public void resultAvailable(Object source, Object result)
-											{
-												// NOTE: in current implementation application waits for subcomponents
-												// to be finished and cms implements a hack to get the external
-												// access of an uninited parent.
-												
-												// (NOTE1: parent cannot wait for subcomponents to be all created
-												// before setting itself inited=true, because subcomponents need
-												// the parent external access.)
-												
-												// (NOTE2: subcomponents must be created one by one as they
-												// might depend on each other (e.g. bdi factory must be there for jcc)).
-												
-												final IComponentManagementService ces = (IComponentManagementService)result;
-												createComponent(components, cl, ces, 0, inited);
-											}
-										}));
+										// NOTE: in current implementation application waits for subcomponents
+										// to be finished and cms implements a hack to get the external
+										// access of an uninited parent.
+										
+										// (NOTE1: parent cannot wait for subcomponents to be all created
+										// before setting itself inited=true, because subcomponents need
+										// the parent external access.)
+										
+										// (NOTE2: subcomponents must be created one by one as they
+										// might depend on each other (e.g. bdi factory must be there for jcc)).
+										
+										final IComponentManagementService ces = (IComponentManagementService)result;
+										createComponent(components, ces, 0, inited);
 									}
 								}));
 							}
@@ -303,70 +374,110 @@ public class ApplicationInterpreter implements IApplication, IComponentInstance
 								inited.setException(exception);
 							}
 						}, adapter));
+						
+						return null;
 					}
 				};
-
-				if(futures.isEmpty())
+				
+				IResultListener	crl	= new CounterResultListener(futures.size(), new IResultListener()
 				{
-					addStep(init2);
-				}
-				else
-				{
-					IResultListener	crl	= new CounterResultListener(futures.size())
+					public void resultAvailable(Object source, Object result)
 					{
-						public void finalResultAvailable(Object source, Object result)
-						{
-							scheduleStep(init2);
-						}
-						public void exceptionOccurred(Object source, Exception exception)
-						{
-							inited.setException(exception);
-						}
-					};
-					for(int i=0; i<futures.size(); i++)
-					{
-						((IFuture)futures.get(i)).addResultListener(crl);
+						scheduleStep(init2);
 					}
+					
+					public void exceptionOccurred(Object source, Exception exception)
+					{
+						inited.setException(exception);
+					}
+				});
+				for(int i=0; i<futures.size(); i++)
+				{
+					((IFuture)futures.get(i)).addResultListener(crl);
 				}
+				return null;
 			}	
-		});		
-	}
-	
-	/**
-	 *  Schedule a step of the agent.
-	 *  May safely be called from external threads.
-	 *  @param step	Code to be executed as a step of the agent.
-	 */
-	public void	scheduleStep(final Runnable step)
-	{
-		adapter.invokeLater(new Runnable()
-		{			
-			public void run()
-			{
-				addStep(step);
-			}
 		});
 	}
 	
 	/**
-	 *  Add a new step.
+	 *  Find component type that provided a specific service.
 	 */
-	protected void addStep(Runnable step)
+	protected void findComponentType(final int i, final List componenttypes, 
+		final ILibraryService ls, final Class servicetype, final Future ret)
 	{
-		steps.add(step);
-//		notifyListeners(new ChangeEvent(this, "addStep", step));
+		final MComponentType ct = (MComponentType)componenttypes.get(i);
+	
+		SServiceProvider.getService(getServiceProvider(), new ComponentFactorySelector(ct.getFilename(), 
+			model.getAllImports(), ls.getClassLoader())).addResultListener(createResultListener(new IResultListener()
+		{
+			public void resultAvailable(Object source, Object result)
+			{
+//				System.out.println("create start2: "+ct.getFilename());
+				
+				final IComponentFactory factory = (IComponentFactory)result;
+				if(factory!=null)
+				{
+					final IModelInfo lmodel = factory.loadModel(ct.getFilename(), model.getAllImports(), ls.getClassLoader());
+					Class[] sers = lmodel.getProvidedServices();
+					if(SUtil.arrayContains(sers, servicetype))
+					{
+						IInternalService service = CompositeServiceInvocationInterceptor.createServiceProxy(servicetype, ct.getName(), 
+							(IApplicationExternalAccess)getExternalAccess(), getModel().getClassLoader(), null);
+						container.addService(service);
+						ret.setResult(result);
+					}
+					else if(i+1<componenttypes.size())
+					{
+						findComponentType(i+1, componenttypes, ls, servicetype, ret);
+					}
+					else
+					{
+						ret.setException(new RuntimeException("No component type offers service type: "+servicetype));
+					}
+				}
+			}
+			
+			public void exceptionOccurred(Object source, Exception exception)
+			{
+				System.out.println("No factory found for: "+ct);
+				if(i+1<componenttypes.size())
+				{
+					findComponentType(i+1, componenttypes, ls, servicetype, ret);
+				}
+				else
+				{
+					ret.setException(new RuntimeException("No component type offers service type: "+servicetype));
+				}
+			}
+		}));
 	}
 	
 	/**
-	 *  Add a new step.
+	 *  Schedule a step of the component.
+	 *  May safely be called from external threads.
+	 *  @param step	Code to be executed as a step of the component.
 	 */
-	protected Object removeStep()
+	public IFuture scheduleStep(final IComponentStep step)
 	{
-		Object ret = steps.remove(0);
-//		notifyListeners(new ChangeEvent(this, "removeStep", new Integer(0)));
+		Future ret = new Future();
+		
+		boolean dowakeup;
+		synchronized(steps)
+		{
+			steps.add(new Object[]{step, ret});
+			dowakeup	= !willdostep;	// only wake up if not already scheduled.
+		}
+//		notifyListeners(new ChangeEvent(this, "addStep", step));
+		
+		if(dowakeup)
+		{
+			adapter.wakeup();
+		}
+		
 		return ret;
 	}
-
+	
 //	/**
 //	 * Load an component model.
 //	 * @param model The model.
@@ -456,7 +567,7 @@ public class ApplicationInterpreter implements IApplication, IComponentInstance
 	 *  @param application	The context to be deleted.
 	 *  @param listener	The listener to be notified when deletion is finished (if any).
 	 */
-	public void	deleteContext(final IResultListener listener)
+	public void deleteContext()
 	{
 		this.setTerminating(true);
 //		final IComponentIdentifier[]	components	= getComponents();
@@ -515,14 +626,14 @@ public class ApplicationInterpreter implements IApplication, IComponentInstance
 //		}
 //		else
 		{
-			for(Iterator it=spaces.values().iterator(); it.hasNext(); )
+			if(spaces!=null && spaces.values()!=null)
 			{
-				ISpace space = (ISpace)it.next();
-				space.terminate();
+				for(Iterator it=spaces.values().iterator(); it.hasNext(); )
+				{
+					ISpace space = (ISpace)it.next();
+					space.terminate();
+				}
 			}
-			
-			if(listener!=null)
-				listener.resultAvailable(this, this);
 		}
 	}
 
@@ -532,57 +643,64 @@ public class ApplicationInterpreter implements IApplication, IComponentInstance
 	 *  The current subcomponents can be accessed by IComponentAdapter.getSubcomponents().
 	 *  @param comp	The newly created component.
 	 */
-	public void	componentCreated(final IComponentDescription desc, final IModelInfo model)
+	public IFuture	componentCreated(final IComponentDescription desc, final IModelInfo model)
 	{
-		// Checks if loaded model is defined in the application component types
-		
 //		System.out.println("comp created: "+desc.getName()+" "+Application.this.getComponentIdentifier()+" "+children);
 
-		IComponentIdentifier comp = desc.getName();
-		
-		String modelname = model.getFullName();
-		String appctype = (String)ctypes.get(modelname);
-		if(appctype==null)
+		// Checks if loaded model is defined in the application component types
+		return scheduleStep(new IComponentStep()
 		{
-			List atypes	= ApplicationInterpreter.this.model.getMComponentTypes();
-			for(int i=0; i<atypes.size(); i++)
+			public Object execute(IInternalAccess ia)
 			{
-				final MComponentType atype = (MComponentType)atypes.get(i);
-				String tmp = atype.getFilename().replace('/', '.');
-				if(tmp.indexOf(modelname)!=-1)
+				IComponentIdentifier cid = desc.getName();
+				
+				String modelname = model.getFullName();
+				String appctype = (String)ctypes.get(modelname);
+				if(appctype==null)
 				{
-					ctypes.put(modelname, atype.getName());
-					appctype = atype.getName();
-					break;
+					List atypes	= ApplicationInterpreter.this.model.getMComponentTypes();
+					for(int i=0; i<atypes.size(); i++)
+					{
+						final MComponentType atype = (MComponentType)atypes.get(i);
+						String tmp = atype.getFilename().replace('/', '.');
+						if(tmp.indexOf(modelname)!=-1)
+						{
+							ctypes.put(modelname, atype.getName());
+							appctype = atype.getName();
+							break;
+						}
+					}
 				}
-			}
-		}
-		if(appctype!=null)
-		{
-			ctypes.put(comp, appctype);
-		}
-		/* TODO: Check removed because WfMS requires adding arbitrary subcomponents (processes).
-		else if(parent!=null)
-		{
-			throw new RuntimeException("Unknown/undefined component type: "+model);
-		}*/
-		
-		ISpace[]	aspaces	= null;
-		synchronized(this)
-		{
-			if(spaces!=null)
-			{
-				aspaces	= (ISpace[])spaces.values().toArray(new ISpace[spaces.size()]);
-			}
-		}
+				if(appctype!=null)
+				{
+					ctypes.put(cid, appctype);
+					instances.put(appctype, cid);
+				}
+				/* TODO: Check removed because WfMS requires adding arbitrary subcomponents (processes).
+				else if(parent!=null)
+				{
+					throw new RuntimeException("Unknown/undefined component type: "+model);
+				}*/
+				
+				ISpace[]	aspaces	= null;
+				synchronized(this)
+				{
+					if(spaces!=null)
+					{
+						aspaces	= (ISpace[])spaces.values().toArray(new ISpace[spaces.size()]);
+					}
+				}
 
-		if(aspaces!=null)
-		{
-			for(int i=0; i<aspaces.length; i++)
-			{
-				aspaces[i].componentAdded(comp);
+				if(aspaces!=null)
+				{
+					for(int i=0; i<aspaces.length; i++)
+					{
+						aspaces[i].componentAdded(cid);
+					}
+				}
+				return null;
 			}
-		}
+		});
 	}
 	
 	/**
@@ -591,32 +709,47 @@ public class ApplicationInterpreter implements IApplication, IComponentInstance
 	 *  The current subcomponents can be accessed by IComponentAdapter.getSubcomponents().
 	 *  @param comp	The destroyed component.
 	 */
-	public void	componentDestroyed(IComponentDescription desc)
+	public IFuture	componentDestroyed(final IComponentDescription desc)
 	{
-//		System.out.println("comp removed: "+desc.getName()+" "+Application.this.getComponentIdentifier()+" "+children);
-		
-		IComponentIdentifier comp = desc.getName();
-		ISpace[]	aspaces	= null;
-		synchronized(this)
+		return scheduleStep(new IComponentStep()
 		{
-			if(spaces!=null)
+			public Object execute(IInternalAccess ia)
 			{
-				aspaces	= (ISpace[])spaces.values().toArray(new ISpace[spaces.size()]);
-			}
-		}
-
-		if(aspaces!=null)
-		{
-			for(int i=0; i<aspaces.length; i++)
-			{
-				aspaces[i].componentRemoved(comp);
-			}
-		}
+		//		System.out.println("comp removed: "+desc.getName()+" "+this.getComponentIdentifier());
+				IComponentIdentifier cid = desc.getName();
+				ISpace[]	aspaces	= null;
+				synchronized(this)
+				{
+					if(spaces!=null)
+					{
+						aspaces	= (ISpace[])spaces.values().toArray(new ISpace[spaces.size()]);
+					}
+				}
 		
-		if(ctypes!=null)
-		{
-			ctypes.remove(comp);
-		}
+				if(aspaces!=null)
+				{
+					for(int i=0; i<aspaces.length; i++)
+					{
+						aspaces[i].componentRemoved(cid);
+					}
+				}
+				
+				if(ctypes!=null)
+				{
+					try
+					{
+						String appctype = (String)ctypes.remove(cid);
+						if(appctype!=null)
+							instances.remove(appctype, cid);
+					}
+					catch(Exception e)
+					{
+						e.printStackTrace();
+					}
+				}
+				return null;
+			}
+		});
 	}
 	
 	/**
@@ -910,7 +1043,7 @@ public class ApplicationInterpreter implements IApplication, IComponentInstance
 	}
 	
 	//-------- methods to be called by adapter --------
-
+	
 	/**
 	 *  Can be called on the component thread only.
 	 * 
@@ -927,21 +1060,49 @@ public class ApplicationInterpreter implements IApplication, IComponentInstance
 	{
 		try
 		{
-			if(!steps.isEmpty())
+			Object[] step	= null;
+			synchronized(steps)
 			{
-				Runnable step = (Runnable)removeStep();
-//				String steptext = ""+step;
-				step.run();
-//				addHistoryEntry(steptext);
+				if(!steps.isEmpty())
+				{
+					step = (Object[])steps.remove(0);
+				}
 			}
-	
-			boolean ret = !stop && !steps.isEmpty();
-			stop = false;
+
+			if(step!=null)
+			{
+				Future future = (Future)step[1];
+				try
+				{
+					Object res = ((IComponentStep)step[0]).execute(this);
+					if(res instanceof IFuture)
+					{
+						((IFuture)res).addResultListener(new DelegationResultListener(future));
+					}
+					else
+					{
+						future.setResult(res);
+					}
+				}
+				catch(RuntimeException e)
+				{
+//					e.printStackTrace();
+					future.setException(e);
+					throw e;
+				}
+			}
+			
+			boolean ret;
+			synchronized(steps)
+			{
+				ret = !steps.isEmpty();
+				willdostep	= ret;
+			}
 			return ret;
 		}
 		catch(ComponentTerminatedException ate)
 		{
-			// Todo: fix microkernel bug.
+			// Todo: fix kernel bug.
 			ate.printStackTrace();
 			return false; 
 		}
@@ -970,6 +1131,27 @@ public class ApplicationInterpreter implements IApplication, IComponentInstance
 	 */
 	public IFuture cleanupComponent()
 	{
+		if(componentlisteners!=null)
+		{
+			for(int i=0; i<componentlisteners.size(); i++)
+			{
+				IComponentListener lis = (IComponentListener)componentlisteners.get(i);
+				lis.componentTerminating(new ChangeEvent(getComponentIdentifier()));
+			}
+		}
+		
+		// todo: call some application functionality for terminating?!
+		deleteContext();
+		
+		if(componentlisteners!=null)
+		{
+			for(int i=0; i<componentlisteners.size(); i++)
+			{
+				IComponentListener lis = (IComponentListener)componentlisteners.get(i);
+				lis.componentTerminated(new ChangeEvent(getComponentIdentifier()));
+			}
+		}
+		
 		return new Future(null);
 //		return adapter.getServiceContainer().shutdown(); // done in adapter
 	}
@@ -1087,7 +1269,7 @@ public class ApplicationInterpreter implements IApplication, IComponentInstance
 	}	
 	
 	/**
-	 *  Create a result listener which is executed as an agent step.
+	 *  Create a result listener which is executed as an component step.
 	 *  @param The original listener to be called.
 	 *  @return The listener.
 	 */
@@ -1102,26 +1284,39 @@ public class ApplicationInterpreter implements IApplication, IComponentInstance
 	 *  because they need the external access of the parent, which is available only
 	 *  after init is finished (otherwise there is a cyclic init dependency between parent and subcomps). 
 	 */
-	protected void createComponent(final List components, final ClassLoader cl, 
-		final IComponentManagementService ces, final int i, final Future inited)
+	protected void createComponent(final List components, final IComponentManagementService ces, final int i, final Future inited)
 	{
 		if(i<components.size())
 		{
 			final MComponentInstance component = (MComponentInstance)components.get(i);
 //			System.out.println("Create: "+component.getName()+" "+component.getTypeName()+" "+component.getConfiguration()+" "+Thread.currentThread());
-			int num = getNumber(component, cl);
+			int num = getNumber(component);
 			IResultListener	crl	= new CollectionResultListener(num, false, new IResultListener()
 			{
 				public void resultAvailable(Object source, Object result)
 				{
 //					System.out.println("Create finished: "+component.getName()+" "+component.getTypeName()+" "+component.getConfiguration()+" "+Thread.currentThread());
-					scheduleStep(new Runnable()
-					{
-						public void run()
+//					if(getParent()==null)
+//					{
+//						addStep(new Runnable()
+//						{
+//							public void run()
+//							{
+//								createComponent(components, cl, ces, i+1, inited);
+//							}
+//						});
+//					}
+//					else
+//					{
+						scheduleStep(new IComponentStep()
 						{
-							createComponent(components, cl, ces, i+1, inited);
-						}
-					});
+							public Object execute(IInternalAccess ia)
+							{
+								createComponent(components, ces, i+1, inited);
+								return null;
+							}
+						});
+//					}
 				}
 				
 				public void exceptionOccurred(Object source, Exception exception)
@@ -1131,19 +1326,53 @@ public class ApplicationInterpreter implements IApplication, IComponentInstance
 			});
 			for(int j=0; j<num; j++)
 			{
-				IFuture ret = ces.createComponent(component.getName(), component.getType(model).getFilename(),
-					new CreationInfo(component.getConfiguration(), getArguments(component, cl), adapter.getComponentIdentifier(),
-					component.isSuspended(), component.isMaster(), component.isDaemon(), model.getAllImports()), null);
-				ret.addResultListener(crl);
+				MComponentType	type	= component.getType(model);
+				if(type!=null)
+				{
+					Boolean	suspend	= component.getSuspend()!=null ? component.getSuspend() : type.getSuspend();
+					Boolean	master	= component.getMaster()!=null ? component.getMaster() : type.getMaster();
+					Boolean	daemon	= component.getDaemon()!=null ? component.getDaemon() : type.getDaemon();
+					Boolean	autoshutdown	= component.getAutoShutdown()!=null ? component.getAutoShutdown() : type.getAutoShutdown();
+					IFuture ret = ces.createComponent(component.getName(), component.getType(model).getFilename(),
+						new CreationInfo(component.getConfiguration(), getArguments(component), adapter.getComponentIdentifier(),
+						suspend, master, daemon, autoshutdown, model.getAllImports()), null);
+					ret.addResultListener(crl);
+				}
+				else
+				{
+					crl.exceptionOccurred(this, new RuntimeException("No such component type: "+component.getTypeName()));
+				}
 			}
 		}
 		else
 		{
-			// Init is now finished. Notify cms and stop execution.
+			// Init is now finished. Notify cms.
 //			System.out.println("Application init finished: "+ApplicationInterpreter.this);
-			stop = true;
+
+			// master, daemon, autoshutdown
+//			Boolean[] bools = new Boolean[3];
+//			bools[2] = model.getAutoShutdown();
+			
 			inited.setResult(new Object[]{ApplicationInterpreter.this, adapter});
 		}
+	}
+	
+	/**
+	 *  Get the file name of a component type.
+	 *  @param ctype The component type.
+	 *  @return The file name of this component type.
+	 */
+	public String getFileName(String ctype)
+	{
+		String ret = null;
+		List componenttypes = model.getMComponentTypes();
+		for(int i=0; ret==null && i<componenttypes.size(); i++)
+		{
+			MComponentType at = (MComponentType)componenttypes.get(i);
+			if(at.getName().equals(ctype))
+				ret = at.getFilename();
+		}
+		return ret;
 	}
 
 	/**
@@ -1178,23 +1407,19 @@ public class ApplicationInterpreter implements IApplication, IComponentInstance
 	 *  Get the arguments.
 	 *  @return The arguments as a map of name-value pairs.
 	 */
-	public Map getArguments(MComponentInstance component, ClassLoader classloader)
+	public Map getArguments(MComponentInstance component)
 	{
 		Map ret = null;		
-		List	arguments	= component.getMArguments();
+		List	arguments	= component.getArguments();
 
 		if(arguments!=null && !arguments.isEmpty())
 		{
 			ret = new HashMap();
 
-			JavaCCExpressionParser	parser = new JavaCCExpressionParser();
-			String[] imports = getApplicationType().getAllImports();
 			for(int i=0; i<arguments.size(); i++)
 			{
-				MArgument p = (MArgument)arguments.get(i);
-				String valtext = p.getValue();
-				
-				Object val = parser.parseExpression(valtext, imports, null, classloader).getValue(fetcher);
+				MExpressionType p = (MExpressionType)arguments.get(i);
+				Object val = p.getParsedValue().getValue(fetcher);
 				ret.put(p.getName(), val);
 			}
 		}
@@ -1206,19 +1431,9 @@ public class ApplicationInterpreter implements IApplication, IComponentInstance
 	 *  Get the number of components to start.
 	 *  @return The number.
 	 */
-	// todo: hack, remove clock somehow
-	public int getNumber(MComponentInstance component, ClassLoader classloader)
+	public int getNumber(MComponentInstance component)
 	{
-//		SimpleValueFetcher fetcher = new SimpleValueFetcher();
-//		fetcher.setValue("$provider", context.getServiceContainer());
-//		fetcher.setValue("$args", context.getArguments());
-//		fetcher.setValue("$results", context.getResults());
-//		fetcher.setValue("$clock", clock);
-
-		String[] imports = getApplicationType().getAllImports();
-		JavaCCExpressionParser	parser = new JavaCCExpressionParser();
-			
-		Object val = component.getNumberText()!=null? parser.parseExpression(component.getNumberText(), imports, null, classloader).getValue(fetcher): null;
+		Object val = component.getNumber()!=null? component.getNumber().getValue(fetcher): null;
 		
 		return val instanceof Integer? ((Integer)val).intValue(): 1;
 	}
@@ -1240,4 +1455,44 @@ public class ApplicationInterpreter implements IApplication, IComponentInstance
 	{
 		return container;
 	}
+	
+	/**
+	 *  Get the children (if any).
+	 *  @return The children.
+	 */
+	public Collection getChildren(final String type)
+	{
+		return (Collection)instances.get(type);
+	}
+	
+	/**
+	 *  Get the children (if any).
+	 *  @return The children.
+	 */
+	public IFuture getChildren()
+	{
+		return adapter.getChildrenAccesses();
+	}
+	
+	/**
+	 *  Add an component listener.
+	 *  @param listener The listener.
+	 */
+	public void addComponentListener(IComponentListener listener)
+	{
+		if(componentlisteners==null)
+			componentlisteners = new ArrayList();
+		componentlisteners.add(listener);
+	}
+	
+	/**
+	 *  Remove a component listener.
+	 *  @param listener The listener.
+	 */
+	public void removeComponentListener(IComponentListener listener)
+	{
+		if(componentlisteners!=null)
+			componentlisteners.remove(listener);
+	}
+	
 }

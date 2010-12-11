@@ -2,8 +2,8 @@ package jadex.bdi.runtime.impl.flyweights;
 
 import jadex.bdi.model.IMElement;
 import jadex.bdi.model.impl.flyweights.MCapabilityFlyweight;
-import jadex.bdi.runtime.IAgentListener;
 import jadex.bdi.runtime.IBDIExternalAccess;
+import jadex.bdi.runtime.IBDIInternalAccess;
 import jadex.bdi.runtime.IBeliefbase;
 import jadex.bdi.runtime.ICapability;
 import jadex.bdi.runtime.IEventbase;
@@ -11,22 +11,29 @@ import jadex.bdi.runtime.IExpressionbase;
 import jadex.bdi.runtime.IGoalbase;
 import jadex.bdi.runtime.IPlanbase;
 import jadex.bdi.runtime.IPropertybase;
-import jadex.bdi.runtime.impl.eaflyweights.ExternalAccessFlyweight;
 import jadex.bdi.runtime.interpreter.BDIInterpreter;
 import jadex.bdi.runtime.interpreter.OAVBDIRuntimeModel;
+import jadex.bridge.ComponentResultListener;
 import jadex.bridge.IComponentAdapter;
 import jadex.bridge.IComponentIdentifier;
+import jadex.bridge.IComponentListener;
 import jadex.bridge.IExternalAccess;
 import jadex.bridge.IModelInfo;
+import jadex.commons.IFuture;
+import jadex.commons.SUtil;
+import jadex.commons.concurrent.IResultListener;
 import jadex.commons.service.IServiceProvider;
 import jadex.rules.state.IOAVState;
 
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.StringTokenizer;
 import java.util.logging.Logger;
 
 /**
  *  Flyweight for a capability.
  */
-public class CapabilityFlyweight extends ElementFlyweight implements ICapability
+public class CapabilityFlyweight extends ElementFlyweight implements ICapability, IBDIInternalAccess
 {
 	//-------- attributes --------
 	
@@ -446,11 +453,12 @@ public class CapabilityFlyweight extends ElementFlyweight implements ICapability
 	/**
 	 *  Kill the agent.
 	 */
-	public void killAgent()
+	public IFuture killAgent()
 	{
+		IFuture ret = null;
 		if(getInterpreter().isExternalThread())
 		{
-			new AgentInvocation()
+			AgentInvocation invoc = new AgentInvocation()
 			{
 				public void run()
 				{
@@ -459,10 +467,11 @@ public class CapabilityFlyweight extends ElementFlyweight implements ICapability
 						|| OAVBDIRuntimeModel.AGENTLIFECYCLESTATE_INITING1.equals(cs)
 						|| OAVBDIRuntimeModel.AGENTLIFECYCLESTATE_ALIVE.equals(cs))
 					{
-						getInterpreter().killAgent();
+						object = getInterpreter().killAgent();
 					}
 				}
 			};
+			ret = (IFuture)invoc.object;
 		}
 		else
 		{
@@ -473,17 +482,18 @@ public class CapabilityFlyweight extends ElementFlyweight implements ICapability
 			{
 				//	System.out.println("set to terminating");
 				getInterpreter().startMonitorConsequences();
-				getInterpreter().killAgent();
+				ret = getInterpreter().killAgent();
 				getInterpreter().endMonitorConsequences();
 			}
 		}
+		return ret;
 	}
 
 	/**
-	 *  Add an agent listener
+	 *  Add an component listener
 	 *  @param listener The listener.
 	 */
-	public void addAgentListener(IAgentListener listener)
+	public void addComponentListener(IComponentListener listener)
 	{
 		if(getInterpreter().isExternalThread())
 		{
@@ -504,8 +514,7 @@ public class CapabilityFlyweight extends ElementFlyweight implements ICapability
 	 *  Add an agent listener
 	 *  @param listener The listener.
 	 */
-	//public void removeAgentListener(final IAgentListener listener)
-	public void removeAgentListener(IAgentListener listener)
+	public void removeComponentListener(IComponentListener listener)
 	{
 		if(getInterpreter().isExternalThread())
 		{
@@ -513,13 +522,13 @@ public class CapabilityFlyweight extends ElementFlyweight implements ICapability
 			{
 				public void run()
 				{
-					addEventListener(arg, agent);
+					removeEventListener(arg, agent, false);
 				}
 			};
 		}
 		else
 		{
-			addEventListener(listener, agent);
+			removeEventListener(listener, agent, false);
 		}
 	}
 	
@@ -530,6 +539,15 @@ public class CapabilityFlyweight extends ElementFlyweight implements ICapability
 	public IComponentAdapter	getAgentAdapter()
 	{
 		return adapter;
+	}
+	
+	/**
+	 *  Create a result listener that is executed on the
+	 *  component thread.
+	 */
+	public IResultListener createResultListener(IResultListener listener)
+	{
+		return new ComponentResultListener(listener, adapter);
 	}
 	
 //	/**
@@ -593,6 +611,159 @@ public class CapabilityFlyweight extends ElementFlyweight implements ICapability
 		{
 			Object mscope = getState().getAttributeValue(getScope(), OAVBDIRuntimeModel.element_has_model);
 			return new MCapabilityFlyweight(getState(), mscope);
+		}
+	}
+	
+	/**
+	 *  Get the children (if any).
+	 *  @return The children.
+	 */
+	public IFuture getChildren()
+	{
+		if(getInterpreter().isExternalThread())
+		{
+			AgentInvocation invoc = new AgentInvocation()
+			{
+				public void run()
+				{
+					object = getInterpreter().getAgentAdapter().getChildrenAccesses();
+				}
+			};
+			return (IFuture)invoc.object;
+		}
+		else
+		{
+			return getInterpreter().getAgentAdapter().getChildrenAccesses();
+		}
+	}
+	
+	/**
+	 *  Get the model of the component.
+	 *  @return	The model.
+	 */
+	public IModelInfo getModel()
+	{
+		// todo: return fitting capability model info.
+		
+		if(getInterpreter().isExternalThread())
+		{
+			AgentInvocation invoc = new AgentInvocation()
+			{
+				public void run()
+				{
+					object = getInterpreter().getModel().getModelInfo();
+				}
+			};
+			return (IModelInfo)invoc.object;
+		}
+		else
+		{
+			return getInterpreter().getModel().getModelInfo();
+		}
+	}
+
+	/**
+	 *  Kill the component.
+	 */
+	public IFuture killComponent()
+	{
+		return killAgent();
+	}
+
+	/**
+	 *  Get subcapability names.
+	 *  @return The future with array of subcapability names.
+	 */
+	public String[]	getSubcapabilityNames()
+	{
+		if(getInterpreter().isExternalThread())
+		{
+			AgentInvocation invoc = new AgentInvocation()
+			{
+				public void run()
+				{
+					String[] res = SUtil.EMPTY_STRING_ARRAY;
+					Collection coll = getState().getAttributeValues(getHandle(), OAVBDIRuntimeModel.capability_has_subcapabilities);
+					if(coll!=null)
+					{
+						res = new String[coll.size()];
+						int i=0;
+						for(Iterator it=coll.iterator(); it.hasNext(); i++)
+						{
+							Object cref = it.next();
+							String name = (String)getState().getAttributeValue(cref, OAVBDIRuntimeModel.capabilityreference_has_name);
+							res[i] = name;
+						}
+					}
+					this.sarray	= res;
+				}
+			};
+			return invoc.sarray;
+		}
+		else
+		{
+			String[] res = SUtil.EMPTY_STRING_ARRAY;
+			Collection coll = getState().getAttributeValues(getHandle(), OAVBDIRuntimeModel.capability_has_subcapabilities);
+			if(coll!=null)
+			{
+				res = new String[coll.size()];
+				int i=0;
+				for(Iterator it=coll.iterator(); it.hasNext(); i++)
+				{
+					Object cref = it.next();
+					String name = (String)getState().getAttributeValue(cref, OAVBDIRuntimeModel.capabilityreference_has_name);
+					res[i] = name;
+				}
+			}
+			return res;
+		}
+	}
+
+	/**
+	 *  Get external access of subcapability.
+	 *  @param name The capability name.
+	 *  @return The future with external access.
+	 */
+	public ICapability	getSubcapability(final String name)
+	{
+		if(getInterpreter().isExternalThread())
+		{
+			AgentInvocation invoc = new AgentInvocation()
+			{
+				public void run()
+				{
+					StringTokenizer stok = new StringTokenizer(name, ".");
+					Object handle = getHandle();
+					while(stok.hasMoreTokens())
+					{
+						String subcapname = stok.nextToken();
+						Object subcapref = getState().getAttributeValue(handle, OAVBDIRuntimeModel.capability_has_subcapabilities, subcapname);
+						if(subcapref==null)
+						{
+							throw new RuntimeException("Capability not found: "+subcapname);
+						}
+						handle = getState().getAttributeValue(subcapref, OAVBDIRuntimeModel.capabilityreference_has_capability);
+					}
+					this.object	= new CapabilityFlyweight(getState(), handle);
+				}
+			};
+			return (ICapability)invoc.object;
+		}
+		else
+		{
+			StringTokenizer stok = new StringTokenizer(name, ".");
+			Object handle = getHandle();
+			while(stok.hasMoreTokens())
+			{
+				String subcapname = stok.nextToken();
+				Object subcapref = getState().getAttributeValue(handle, OAVBDIRuntimeModel.capability_has_subcapabilities, subcapname);
+				if(subcapref==null)
+				{
+					throw new RuntimeException("Capability not found: "+subcapname);
+				}
+				handle = getState().getAttributeValue(subcapref, OAVBDIRuntimeModel.capabilityreference_has_capability);
+			}
+			return new CapabilityFlyweight(getState(), handle);
 		}
 	}
 }

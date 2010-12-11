@@ -1,10 +1,7 @@
 package jadex.tools.simcenter;
 
-import jadex.base.service.simulation.ISimulationService;
 import jadex.commons.TimeFormat;
-import jadex.commons.concurrent.SwingDefaultResultListener;
 import jadex.commons.service.IServiceProvider;
-import jadex.commons.service.SServiceProvider;
 
 import java.awt.BorderLayout;
 import java.text.DateFormat;
@@ -77,15 +74,15 @@ public class SimCenterPanel extends JPanel
 		
 		add(sp, "Center");
 		
-		SServiceProvider.getService(simcenter.getJCC().getServiceProvider(),
-			ISimulationService.class).addResultListener(new SwingDefaultResultListener(SimCenterPanel.this)
-		{
-			public void customResultAvailable(Object source, Object result)
-			{
-				if(result==null)
-					throw new RuntimeException("Could not find simulation service.");
-			}
-		});
+//		SServiceProvider.getService(simcenter.getJCC().getServiceProvider(),
+//			ISimulationService.class).addResultListener(new SwingDefaultResultListener(SimCenterPanel.this)
+//		{
+//			public void customResultAvailable(Object source, Object result)
+//			{
+//				if(result==null)
+//					throw new RuntimeException("Could not find simulation service.");
+//			}
+//		});
 		
 		
 		/*Timer t = new Timer(100, new ActionListener()
