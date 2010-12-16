@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<!-- 
+	<H3>Tests naming of initial and end elements.</H3>
+	Uses worker agent to perform the test.
+ -->
+<agent xmlns="http://jadex.sourceforge.net/jadex-bdi"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://jadex.sourceforge.net/jadex-bdi
+						http://jadex.sourceforge.net/jadex-bdi-2.0.xsd"
+	name="ConfigElementRef"
+	package="jadex.bdi.testcases.misc">
+	
+	<imports>
+		<import>jadex.base.fipa.*</import>
+		<import>jadex.base.test.*</import>
+		<import>jadex.bdi.testcases.ResultPlan</import>
+	</imports>
+	
+	<capabilities>
+		<capability name="testcap" file="jadex.bdi.planlib.test.Test"/>
+		<capability name="cmscap" file="jadex.bdi.planlib.cms.CMS"/>
+		<capability name="dfcap" file="jadex.bdi.planlib.df.DF"/>
+	</capabilities>
+	
+	<beliefs>
+		<beliefref name="timeout"  exported="true">
+			<concrete ref="testcap.timeout"/>
+		</beliefref>
+		<beliefref name="testresults"  result="true">
+			<concrete ref="testcap.testresults"/>
+		</beliefref>
+	</beliefs>
+	
+	<plans>
+		<plan name="configelementref_plan">
+			<body class="ConfigElementRefPlan"/>
+		</plan>
+	</plans>
+
+	<events>
+		<messageevent name="inform_reports" type="fipa" description="receive">
+			<parameter name="performative" class="String">
+				<value>SFipa.INFORM</value>
+			</parameter>
+		</messageevent>
+	</events>
+	
+	<configurations>
+		<configuration name="default">
+			<beliefs>
+				<initialbelief ref="testcap.testcase_cnt">
+					<fact>14</fact>
+				</initialbelief>
+			</beliefs>
+			<plans>
+				<initialplan ref="configelementref_plan"/>
+			</plans>
+		</configuration>
+	</configurations>
+	
+</agent>

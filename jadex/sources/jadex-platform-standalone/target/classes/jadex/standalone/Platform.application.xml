@@ -1,0 +1,268 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Bootstrap platform properties.
+-->
+<applicationtype xmlns="http://jadex.sourceforge.net/jadex-application"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://jadex.sourceforge.net/jadex-application
+						http://jadex.sourceforge.net/jadex-application-2.0.xsd"
+	name="Platform" package="jadex.standalone">
+	
+	<imports>
+		<import>jadex.commons.*</import>
+		<import>jadex.bridge.*</import>
+		<import>jadex.commons.service.*</import>
+		<import>jadex.commons.service.clock.*</import>
+		<import>jadex.commons.service.execution.*</import>
+		<import>jadex.commons.service.library.*</import>
+		<import>jadex.commons.service.threadpool.*</import>
+		<import>jadex.base.fipa.*</import>
+		<import>jadex.base.*</import>
+		<import>jadex.base.service.simulation.*</import>
+		<import>jadex.base.service.remote.*</import>
+		<import>jadex.commons.concurrent.*</import>
+		<import>jadex.standalone.service.*</import>
+		<import>jadex.standalone.transport.*</import>
+		<import>jadex.standalone.transport.localmtp.*</import>
+		<import>jadex.standalone.transport.tcpmtp.*</import>
+		<import>jadex.standalone.transport.niotcpmtp.*</import>
+		<import>jadex.application.*</import>
+		<import>jadex.application.space.envsupport.*</import>
+		<import>jadex.application.space.agr.*</import>
+		<import>java.util.*</import>
+		<import>java.lang.reflect.*</import>
+	</imports>
+	
+	<arguments>
+		<argument name="platformname">"jadex"</argument>
+		<argument name="simulation">false</argument>
+		<argument name="libpath"></argument>
+		<argument name="tcpport">9876</argument>
+		<argument name="niotcpport">8765</argument>
+		
+		<!-- todo?! -->
+		<!-- <argument name="welcome">true</argument>
+		<argument name="autoshutdown">true</argument>
+		<argument name="platform_shutdown_time">1000</argument> -->
+	</arguments>
+	
+	<componenttypes>
+		<componenttype filename="jadex/micro/KernelMicro.application.xml" name="kernel_micro"/>
+		<componenttype filename="jadex/bdi/KernelBDI.application.xml" name="kernel_bdi"/>
+		<componenttype filename="jadex/bdibpmn/KernelBDIBPMN.application.xml" name="kernel_bdibpmn"/>
+		<componenttype filename="jadex/bpmn/KernelBPMN.application.xml" name="kernel_bpmn"/>
+		<componenttype filename="jadex/base/service/remote/RemoteServiceManagementAgent.class" name="rms"/>
+		<componenttype filename="jadex/base/service/awareness/AwarenessAgent.class" name="awa"/>
+
+		<componenttype filename="jadex/tools/jcc/JCC.agent.xml" name="jcc"/>
+		<componenttype filename="jadex/bdi/benchmarks/AgentCreation.agent.xml" name="CreationBDI"/>
+		<componenttype filename="jadex/micro/benchmarks/AgentCreationAgent.class" name="CreationMicro"/>
+		<componenttype filename="jadex/bpmn/benchmarks/AgentCreation2.bpmn" name="CreationBPMN"/>
+	</componenttypes>
+	
+	<services>
+		<!-- Using no cached container for root makes creation tests very slow. -->
+		<!-- <container class="IServiceContainer">new ComponentServiceContainer($component.getComponentAdapter())</container>-->
+		
+		<providedservice class="IThreadPool" direct="true">
+			new ThreadPoolService(new ThreadPool(new DefaultThreadPoolStrategy(0, 20, 30000, 0)), $component.getServiceProvider())
+		</providedservice>
+		<providedservice class="IExecutionService" direct="true">
+			$args.simulation
+			? new SyncExecutionService($component.getServiceProvider(), SUtil.createHashMap(new Object[]{
+				RemoteServiceManagementService.REMOTE_UNCACHED}, new Object[]{new String[]{"isIdle", "getTasks"}}))
+			: new AsyncExecutionService($component.getServiceProvider(), SUtil.createHashMap(new Object[]{
+				RemoteServiceManagementService.REMOTE_UNCACHED}, new Object[]{new String[]{"isIdle", "getTasks"}}))
+			//$args.simulation
+			//? new SyncExecutionService($component.getServiceProvider(), SUtil.createHashMap(new Object[]{"componentviewer.viewerclass", 
+			//	RemoteServiceManagementService.REMOTE_UNCACHED}, new Object[]{"jadex.base.gui.componentviewer.executionservice.ExecutionServiceViewer", 
+			//	new String[]{"isIdle", "getTasks"}}))
+			//: new AsyncExecutionService($component.getServiceProvider(), SUtil.createHashMap(new Object[]{"componentviewer.viewerclass", 
+			//	RemoteServiceManagementService.REMOTE_UNCACHED}, new Object[]{"jadex.base.gui.componentviewer.executionservice.ExecutionServiceViewer", 
+			//	new String[]{"isIdle", "getTasks"}}))
+		</providedservice>
+		<providedservice class="ILibraryService" direct="true">
+			new LibraryService($args.libpath, $component.getComponentIdentifier(), 
+				SUtil.createHashMap(new Object[]{"componentviewer.viewerclass", RemoteServiceManagementService.REMOTE_EXCLUDED}, 
+				new Object[]{"jadex.base.gui.componentviewer.libservice.LibServiceBrowser", new String[]{"getClassLoader"}})
+				)
+		</providedservice>
+		<providedservice class="IComponentManagementService" direct="true">
+			new ComponentManagementService($component.getServiceProvider(), $component.getComponentAdapter())
+		</providedservice>
+		<providedservice class="IDF" direct="true">
+			new DirectoryFacilitatorService($component.getServiceProvider(), SUtil.createHashMap(
+				new Object[]{"componentviewer.viewerclass"}, 
+				new Object[]{"jadex.base.gui.componentviewer.dfservice.DFBrowserPanel"}))
+		</providedservice>
+		<providedservice class="IMessageService" direct="true">
+			new MessageService($component.getServiceProvider(),
+				new ITransport[]
+				{
+					new LocalTransport($component.getServiceProvider()),
+					new NIOTCPTransport($component.getServiceProvider(), $args.niotcpport)
+					//new TCPTransport($component.getServiceProvider(), $args.tcpport)
+				},
+				new MessageType[]
+				{
+					new FIPAMessageType()
+				})
+		</providedservice>
+		<providedservice class="IClockService" direct="true">
+			$args.simulation
+			? new ClockService(new ClockCreationInfo(IClock.TYPE_EVENT_DRIVEN, "simulation_clock", System.currentTimeMillis(), 100), $component.getServiceProvider(),
+				SUtil.createHashMap(new Object[]{RemoteServiceManagementService.REMOTE_UNCACHED}, 
+				new Object[]{new String[]{"getState", "getTime", "getTick", "getStarttime", "getDelta", "getDilation", "getNextTimer", "getTimers", "getClockType", "advanceEvent"}}))
+			: new ClockService(new ClockCreationInfo(IClock.TYPE_SYSTEM, "simulation_clock", System.currentTimeMillis(), 100), $component.getServiceProvider(),
+				SUtil.createHashMap(new Object[]{RemoteServiceManagementService.REMOTE_UNCACHED}, 
+				new Object[]{new String[]{"getState", "getTime", "getTick", "getStarttime", "getDelta", "getDilation", "getNextTimer", "getTimers", "getClockType", "advanceEvent"}}))
+		</providedservice>
+		<providedservice class="ISimulationService" direct="true">
+			new SimulationService($component.getServiceProvider(),
+				SUtil.createHashMap(new Object[]{RemoteServiceManagementService.REMOTE_UNCACHED}, 
+				new Object[]{new String[]{"getMode", "isExecuting"}}))
+		</providedservice>
+		<providedservice class="IComponentFactory" direct="true">
+			new ApplicationComponentFactory(
+				new Set[]
+				{
+					MEnvSpaceType.getXMLMapping(),
+					MAGRSpaceType.getXMLMapping()
+				}, 
+				$component.getServiceProvider()
+			)		
+		</providedservice>
+	</services>
+
+	<properties>
+		<property name="componentviewer.viewerclass">"jadex.base.gui.componentviewer.DefaultComponentServiceViewerPanel"</property>
+	</properties>
+	
+	<applications>
+		<application name="all_kernels auto (rms, awa, jcc)">
+			<arguments>
+				<argument name="tcpport">0</argument>
+				<argument name="niotcpport">0</argument>
+				<argument name="platformname">null</argument>
+			</arguments>
+			<components>
+				<component name="kernel_micro" type="kernel_micro" daemon="true"/>
+				<!-- <component type="kernel_bdi" daemon="true"/> -->
+				<component name="kernel_bdibpmn" type="kernel_bdibpmn" daemon="true"/>
+				<component name="kernel_bpmn" type="kernel_bpmn" daemon="true"/>
+				<component name="rms" type="rms" daemon="true"/>
+				<component name="awa" type="awa"/>
+				<component name="jcc" type="jcc"/>
+			</components>
+		</application>
+	
+		<application name="all_kernels (rms, awa, jcc)">
+			<components>
+				<component name="kernel_micro" type="kernel_micro" daemon="true"/>
+				<!-- <component type="kernel_bdi" daemon="true"/> -->
+				<component name="kernel_bdibpmn" type="kernel_bdibpmn" daemon="true"/>
+				<component name="kernel_bpmn" type="kernel_bpmn" daemon="true"/>
+				<component name="rms" type="rms" daemon="true"/>
+				<component name="awa" type="awa" daemon="true"/>
+				<component name="jcc" type="jcc"/>
+			</components>
+		</application>
+		
+		<application name="all_kernels (rms, jcc)">
+			<components>
+				<component name="kernel_micro" type="kernel_micro" daemon="true"/>
+				<!-- <component type="kernel_bdi" daemon="true"/> -->
+				<component name="kernel_bdibpmn" type="kernel_bdibpmn" daemon="true"/>
+				<component name="kernel_bpmn" type="kernel_bpmn" daemon="true"/>
+				<component name="rms" type="rms" daemon="true"/>
+				<component name="jcc" type="jcc"/>
+			</components>
+		</application>
+		
+		<application name="all_kernels (rms, awa)">
+			<components>
+				<component name="kernel_micro" type="kernel_micro" daemon="true"/>
+				<!-- <component type="kernel_bdi" daemon="true"/> -->
+				<component name="kernel_bdibpmn" type="kernel_bdibpmn" daemon="true"/>
+				<component name="kernel_bpmn" type="kernel_bpmn" daemon="true"/>
+				<component name="rms" type="rms" daemon="true"/>
+				<component name="awa" type="awa" daemon="true"/>
+			</components>
+		</application>
+		
+		<application name="all_kernels (rms)">
+			<components>
+				<component name="kernel_micro" type="kernel_micro" daemon="true"/>
+				<!-- <component type="kernel_bdi" daemon="true"/> -->
+				<component name="kernel_bdibpmn" type="kernel_bdibpmn" daemon="true"/>
+				<component name="kernel_bpmn" type="kernel_bpmn" daemon="true"/>
+				<component name="rms" type="rms" daemon="true"/>
+			</components>
+		</application>
+		
+		<application name="all_kernels (jcc)">
+			<components>
+				<component name="kernel_micro" type="kernel_micro" daemon="true"/>
+				<!-- <component type="kernel_bdi" daemon="true"/> -->
+				<component name="kernel_bdibpmn" type="kernel_bdibpmn" daemon="true"/>
+				<component name="kernel_bpmn" type="kernel_bpmn" daemon="true"/>
+				<component name="jcc" type="jcc"/>
+			</components>
+		</application>
+		
+		<!-- todo remove: support autoshutdown as instance level flag. -->
+		<application name="all_kernels_no_daemons">
+			<components>
+				<component name="kernel_micro" type="kernel_micro"/>
+				<!-- <component type="kernel_bdi"/> -->
+				<component name="kernel_bdibpmn" type="kernel_bdibpmn"/>
+				<component name="kernel_bpmn" type="kernel_bpmn"/>
+				<component name="rms" type="rms"/>
+			</components>
+		</application>
+		
+		<!-- Configuration used by jadex.base.test.ComponentTestSuite -->
+		<application name="testcases">
+			<components>
+				<component name="kernel_micro" type="kernel_micro"/>
+				<component name="kernel_bdibpmn" type="kernel_bdibpmn"/>
+				<component name="kernel_bpmn" type="kernel_bpmn"/>
+			</components>
+		</application>
+		
+		<application name="creation_test_bdi">
+			<arguments>
+				<argument name="libpath">new Object[]{"../jadex-applications-bdi/target/classes"}</argument>
+			</arguments>
+			<components>
+				<component type="kernel_bdi" daemon="true"/>
+				<component type="CreationBDI"/>
+			</components>
+		</application>
+		
+		<application name="creation_test_micro">
+			<arguments>
+				<argument name="libpath">new Object[]{"../jadex-applications-micro/target/classes"}</argument>
+			</arguments>
+			<components>
+				<component type="kernel_micro" daemon="true"/>
+				<component type="CreationMicro">
+					<arguments>
+						<argument name="max">10000</argument>
+					</arguments>
+				</component>
+			</components>
+		</application>
+
+		<application name="creation_test_bpmn">
+			<arguments>
+				<argument name="libpath">new Object[]{"../jadex-applications-bpmn/target/classes"}</argument>
+			</arguments>
+			<components>
+				<component type="kernel_bpmn" daemon="true"/>
+				<component type="CreationBPMN"/>
+			</components>
+		</application>		
+	</applications>
+	
+</applicationtype>

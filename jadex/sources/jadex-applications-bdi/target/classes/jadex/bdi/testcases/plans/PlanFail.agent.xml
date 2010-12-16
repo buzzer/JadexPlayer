@@ -1,0 +1,102 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+	<H3>Test the plan's failed() method.</H3>
+	Tests if waitFor() and subgoals in the failed() method
+	work as expected.
+-->
+<agent xmlns="http://jadex.sourceforge.net/jadex-bdi"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://jadex.sourceforge.net/jadex-bdi
+	                    http://jadex.sourceforge.net/jadex-bdi-2.0.xsd"
+	name="PlanFail"
+	package="jadex.bdi.testcases.plans">
+
+	<imports>
+		<import>jadex.base.test.*</import>
+		<import>jadex.bdi.testcases.ResultPlan</import>
+		<import>jadex.rules.rulesystem.rules.functions.*</import>
+	</imports>
+
+	<capabilities>
+		<capability name="testcap" file="jadex.bdi.planlib.test.Test"/>
+	</capabilities>
+
+	<beliefs>
+		<beliefref name="timeout"  exported="true">
+			<concrete ref="testcap.timeout"/>
+		</beliefref>
+		<beliefref name="testresults"  result="true">
+			<concrete ref="testcap.testresults"/>
+		</beliefref>
+	</beliefs>
+
+	<goals>
+		<!-- goal succeeds without plan -->
+		<achievegoal name="successgoal">
+			<targetcondition language="jcl">
+				true
+				// (test (Identity true))
+			</targetcondition>
+		</achievegoal>
+		<!-- goal fails without plan -->
+		<achievegoal name="failuregoal">
+			<targetcondition language="jcl">
+				false
+				// (test (Identity false))
+			</targetcondition>
+		</achievegoal>
+		<!-- goal succeeds after plan -->
+		<achievegoal name="successgoal2"/>
+		<!-- goal fails after plan -->
+		<achievegoal name="failuregoal2"/>
+	</goals>
+
+	<plans>
+        <plan name="test_fail">
+			<body class="TestFailPlan"/>
+		</plan>
+		
+		<plan name="successplan">
+			<parameter name="wait" class="long">
+				<value>10L</value>
+			</parameter>
+			<body class="ResultPlan"/>
+			<trigger>
+				<goal ref="successgoal2"/>
+			</trigger>
+		</plan>
+		
+		<plan name="failureplan">
+			<parameter name="wait" class="long">
+				<value>10L</value>
+			</parameter>
+			<parameter name="success" class="boolean">
+				<value>false</value>
+			</parameter>
+			<body class="ResultPlan"/>
+			<trigger>
+				<goal ref="failuregoal2"/>
+			</trigger>
+		</plan>
+	</plans>
+
+	<properties>
+		<property name="logging.level">java.util.logging.Level.SEVERE</property>
+		<property name="debugging">false</property>
+	</properties>
+
+	<configurations>
+		<configuration name="default">
+			<beliefs>
+				<initialbelief ref="testcap.testcase_cnt">
+					<fact>4</fact>
+				</initialbelief>
+			</beliefs>
+			<plans>
+				<initialplan ref="test_fail"/>
+			</plans>
+		</configuration>
+	</configurations>
+
+</agent>
+

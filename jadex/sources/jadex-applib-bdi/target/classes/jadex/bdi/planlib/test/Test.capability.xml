@@ -1,0 +1,105 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  The Test capability is responsible for tracking
+  test results and publishes results either to a
+  test center or on console.
+-->
+<capability xmlns="http://jadex.sourceforge.net/jadex-bdi"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xsi:schemaLocation="http://jadex.sourceforge.net/jadex-bdi
+	                    http://jadex.sourceforge.net/jadex-bdi-2.0.xsd"
+	package="jadex.bdi.planlib.test"
+	name="Test">
+
+	<imports>
+		<import>jadex.base.test.*</import>
+	</imports>
+
+	<beliefs>
+		<!-- The number of testcases. -->
+		<belief name="testcase_cnt" class="int" exported="true">
+			<fact>1</fact>
+		</belief>
+
+		<!-- Default timeout is never. -->
+		<belief name="timeout" class="long" exported="true">
+			<!--  <fact>0L</fact>-->
+			<fact>20000L</fact>
+		</belief>
+
+		<!-- The results have to be published by the agent. -->
+		<belief name="testresults" class="Testcase" exported="true" evaluationmode="pull">
+			<fact>new Testcase($beliefbase.testcase_cnt, $beliefbase.reports)</fact>
+		</belief>
+
+		<!-- The off flag. -->
+		<belief name="off" class="boolean">
+			<fact>false</fact>
+		</belief>
+
+		<!-- The start time. -->
+		<belief name="starttime" class="long">
+			<fact>$scope.getTime()</fact>
+		</belief>
+
+		<!-- The indicator for a timeout (when no time left and reports incomplete). -->
+		<belief name="timeout_failure" class="boolean" updaterate="1000">
+			<fact>((Number)$beliefbase.getBelief("timeout").getFact()).longValue()>0 
+				&amp;&amp; ((Number)$beliefbase.getBelief("starttime").getFact()).longValue()
+					+((Number)$beliefbase.getBelief("timeout").getFact()).longValue() &lt;= $scope.getTime()
+				&amp;&amp; ((Number)$beliefbase.getBelief("testcase_cnt").getFact()).intValue()
+					!=$beliefbase.getBeliefSet("reports").getFacts().length</fact>
+		</belief>
+
+		<!-- The testcase reports. -->
+		<beliefset name="reports" class="TestReport" exported="true"/>
+	</beliefs>
+
+	<goals>
+		<achievegoal name="tests_finished">
+			<creationcondition language="jcl">
+				$beliefbase.testcase_cnt==$beliefbase.reports.length
+				
+				// ?rbel_off = (belief (element_has_model ?mbel_off) (belief_has_fact false))
+				// ?mbel_off = (mbelief (melement_has_name "off"))
+				// ?rbel_rep = (beliefset (element_has_model ?mbel_rep) (beliefset_has_facts $?reports))
+				// ?mbel_rep = (mbeliefset (melement_has_name "reports"))
+				// ?rbel_cnt = (belief (element_has_model ?mbel_cnt) (belief_has_fact == (jadex.rules.rulesystem.rules.functions.Length $?reports)))
+				// ?mbel_cnt = (mbelief (melement_has_name "testcase_cnt"))
+			</creationcondition>		
+		</achievegoal>
+		<achievegoal name="test_timeout">
+			<creationcondition language="jcl">
+				$beliefbase.timeout_failure
+				
+				// ?rbel_off = (belief (element_has_model ?mbel_off) (belief_has_fact false))
+				// ?mbel_off = (mbelief (melement_has_name "off"))
+				// ?rbel_tof = (belief (element_has_model ?mbel_tof) (belief_has_fact true))
+				// ?mbel_tof = (mbelief (melement_has_name "timeout_failure"))
+			</creationcondition>		
+		</achievegoal>
+	</goals>
+
+	<plans>
+		<!-- Stop the test agent. -->
+		<plan name="finished_plan">
+			<body class="FinishedPlan" />
+			<trigger>
+				<goal ref="tests_finished"/>
+				<goal ref="test_timeout"/>
+			</trigger>
+		</plan>
+	</plans>
+
+	<configurations>
+		<configuration name="default" />
+		<configuration name="off">
+			<beliefs>
+				<initialbelief ref="off">
+					<fact>true</fact>
+				</initialbelief>
+			</beliefs>
+		</configuration>
+	</configurations>
+
+</capability>
