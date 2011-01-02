@@ -23,10 +23,14 @@
 
 default:
 	@echo "Available start configurations:"
+	@echo "make start      - default"
 	@echo "make jadex      - no gui"
 	@echo "make jadexgui   - with gui"
 	@echo "make jadexplain - no daemons"
 	@echo "make jadexrobot - robot configuration"
+
+start:
+	java -jar jadex/lib/jadex-platform-standalone-launch-2.0-rc6.jar
 
 jadex:
 	java -jar jadex/lib/jadex-platform-standalone-launch-2.0-rc6.jar \
